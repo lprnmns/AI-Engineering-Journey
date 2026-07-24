@@ -2,7 +2,7 @@
 
 **Tarih:** 24 Temmuz 2026
 
-**Durum:** Qwen3 4B kurulumu ve ilk ölçüm tamamlandı; ikinci model karşılaştırması için Gemma 3 4B indiriliyor.
+**Durum:** Qwen3 4B ve Gemma 3 4B kuruldu; ilk latency ve talimat-uyumu gözlemleri tamamlandı. Kapsamlı iki-model benchmarkı sırada.
 
 ## Amaç
 
@@ -99,9 +99,29 @@ Bu türev ilk kısa testte reasoning etiketini kapatsa da modelin meta-muhakeme 
 
 Template değişikliği yalnız ilkini etkiler; modelin öğrenilmiş üretim eğilimini tek başına değiştiremez.
 
-## İkinci model ve karşılaştırma planı
+## İkinci model: Gemma 3 4B ve ilk kontrol
 
-İkinci aday `gemma3:4b` indirilmekte. Aynı 4B sınıfında olduğu için Qwen3 ile karşılaştırma daha anlamlı olacaktır.
+`gemma3:4b` indirildi. Aynı 4B sınıfında olması, Qwen3 ile kalite–hız–bellek karşılaştırmasını daha anlamlı kılar.
+
+Kontrollü kısa istek:
+
+```text
+Yalnızca şu kelimeyi yaz: hazır
+```
+
+| Koşul | Toplam süre | Model yükleme | Üretilen token | Görünür cevap |
+|---|---:|---:|---:|---|
+| Gemma 3 4B, ilk istek | 8.89 sn | 7.61 sn | 4 | `hazır` |
+| Gemma 3 4B, sıcak istek | 1.86 sn | 0.91 sn | 4 | `hazır` |
+
+Bu yalnız bir smoke testtir. Dört üretilen token üzerinden “Gemma her görevde daha hızlı veya daha iyi” sonucu çıkarılamaz. Ancak şu iki gözlem savunulabilir:
+
+- Aynı kısa Türkçe talimatı ilk denemede doğrudan takip etti.
+- Bu koşulda Qwen3 Thinking artifact'inin yaşadığı görünür-cevap bütçesi sorununu yaşamadı.
+
+Qwen ve Gemma testleri henüz tam eşdeğer parametrelerle ve yeterli görev sayısıyla çalıştırılmadığı için, token/sn veya kalite açısından nihai sıralama yapılmayacaktır.
+
+## Kapsamlı karşılaştırma planı
 
 Her iki modelde de aşağıdaki koşullar sabit tutulacak:
 
@@ -128,10 +148,11 @@ Değerlendirme yalnız hız üzerinden yapılmayacak:
 - Qwen resmî tokenizer/chat template'i: https://huggingface.co/Qwen/Qwen3-4B/blob/main/tokenizer_config.json
 - Ollama Qwen3 kütüphane kaydı: https://ollama.com/library/qwen3
 - Open WebUI resmî imajı: https://github.com/open-webui/open-webui
+- Gemma 3 resmî model kartı: https://huggingface.co/google/gemma-3-4b-it
 
 ## Sıradaki adım
 
-1. Gemma 3 4B indirmesini tamamla ve aynı kısa testle ilk latency ölçümünü al.
-2. Open WebUI içinden iki modelin de görünürlüğünü doğrula.
-3. System prompt ile user message deney setini versioned dosya olarak oluştur.
-4. Aynı test setini iki modelde çalıştır; sonuçları tablo ve yorum raporuna dönüştür.
+1. Open WebUI içinden iki modelin de görünürlüğünü doğrula.
+2. System prompt ile user message deney setini versioned dosya olarak oluştur.
+3. Aynı test setini iki modelde çalıştır; sonuçları tablo ve yorum raporuna dönüştür.
+4. Qwen3 Thinking modunun kalite/latency katkısını ayrı bir karşılaştırma olarak ölç.
