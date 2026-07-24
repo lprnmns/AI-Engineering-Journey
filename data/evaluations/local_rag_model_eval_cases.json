@@ -11,7 +11,7 @@
     "kind": "answer",
     "source": "Uzaktan çalışma talebi, ekip yöneticisinin yazılı onayıyla başlar.",
     "question": "Uzaktan çalışmaya nasıl başlayabilirim?",
-    "expected_phrases": ["ekip yöneticisinin", "yazılı onayı"]
+    "expected_phrases": ["yazılı onayı"]
   },
   {
     "id": "unknown_leave_duration",

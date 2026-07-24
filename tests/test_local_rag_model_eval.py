@@ -1,3 +1,5 @@
+import pytest
+
 from labs.model_eval.local_rag_model_eval import EvaluationCase, build_messages, response_passes
 
 
@@ -28,3 +30,16 @@ def test_response_passes_requires_every_expected_phrase() -> None:
 
     assert response_passes(case, "Ekip yöneticisinin yazılı onayı gerekir.")
     assert not response_passes(case, "Ekip yöneticisinin onayı gerekir.")
+
+
+def test_response_passes_ignores_case_and_terminal_punctuation() -> None:
+    case = EvaluationCase("case", "no_answer", "", "", ["YETERLİ BAĞLAM YOK"])
+
+    assert response_passes(case, "Yeterli bağlam yok.")
+
+
+def test_build_messages_rejects_an_unknown_prompt_policy() -> None:
+    case = EvaluationCase("case", "answer", "source", "question", ["source"])
+
+    with pytest.raises(KeyError):
+        build_messages(case, prompt_policy="does_not_exist")
