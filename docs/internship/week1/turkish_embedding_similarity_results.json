@@ -1,0 +1,63 @@
+{
+  "model_name": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "sentence_count": 10,
+  "embedding_dimension": 384,
+  "pair_results": [
+    {
+      "left_id": "venv_create",
+      "right_id": "venv_setup",
+      "left_text": "Python projesi için sanal ortam nasıl oluşturulur?",
+      "right_text": "Python'da venv kurmak için hangi adımları izlemeliyim?",
+      "expectation": "yakın anlam",
+      "cosine_similarity": 0.5120978398239262
+    },
+    {
+      "left_id": "venv_create",
+      "right_id": "pip_install",
+      "left_text": "Python projesi için sanal ortam nasıl oluşturulur?",
+      "right_text": "Python paketlerini pip ile nasıl yüklerim?",
+      "expectation": "aynı teknik alan, farklı görev",
+      "cosine_similarity": 0.4443283821238739
+    },
+    {
+      "left_id": "leave_request",
+      "right_id": "leave_duration",
+      "left_text": "Yıllık izin talebi en az 10 gün önce iletilmelidir.",
+      "right_text": "Çalışanın yıllık izin hakkı kaç gündür?",
+      "expectation": "aynı alan, farklı özellik",
+      "cosine_similarity": 0.5925160311914013
+    },
+    {
+      "left_id": "venv_create",
+      "right_id": "python_snake",
+      "left_text": "Python projesi için sanal ortam nasıl oluşturulur?",
+      "right_text": "Python yılanı sıcak iklimlerde yaşayan bir sürüngendir.",
+      "expectation": "ortak kelime, farklı anlam",
+      "cosine_similarity": 0.32735634932362445
+    },
+    {
+      "left_id": "venv_create",
+      "right_id": "recipe",
+      "left_text": "Python projesi için sanal ortam nasıl oluşturulur?",
+      "right_text": "Akşam yemeği için sebzeli makarna tarifi arıyorum.",
+      "expectation": "ilgisiz",
+      "cosine_similarity": 0.021964371792767483
+    },
+    {
+      "left_id": "pr_review",
+      "right_id": "weather",
+      "left_text": "Pull request açmadan önce kod incelemesi yapılmalıdır.",
+      "right_text": "İstanbul'da yarın hava yağmurlu olacak mı?",
+      "expectation": "ilgisiz",
+      "cosine_similarity": 0.0501114411317769
+    },
+    {
+      "left_id": "vector_search",
+      "right_id": "venv_setup",
+      "left_text": "Vektör veritabanı anlamsal arama için embedding saklar.",
+      "right_text": "Python'da venv kurmak için hangi adımları izlemeliyim?",
+      "expectation": "aynı genel teknik alan, farklı görev",
+      "cosine_similarity": 0.24539095080628165
+    }
+  ]
+}
