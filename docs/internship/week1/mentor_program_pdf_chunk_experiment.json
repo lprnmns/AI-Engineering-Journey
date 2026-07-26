@@ -1,0 +1,69 @@
+{
+  "pdf_filename": "Alperen_Manas_Staj_Programi_1_Hafta 1.pdf",
+  "results": [
+    {
+      "configuration": {
+        "name": "small_2_sentences_overlap_1",
+        "sentences_per_chunk": 2,
+        "overlap": 1
+      },
+      "chunk_count": 53,
+      "average_chunk_characters": 252.20754716981133,
+      "searches": [
+        {
+          "query": "İlk haftanın amacı nedir?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_004",
+          "score": 0.5967003195387949,
+          "chunk_characters": 248,
+          "chunk_preview": "Programın Amacı Bu ilk hafta, eğitim videosu izleyip not çıkardığın klasik bir baslangic haftasi olmayacak. Daha önce veri temizleme, temel makine öğrenmesi, RAG ve vektör veritabanlariyla caliştigin için seni yeniden en basa döndürmek işte"
+        },
+        {
+          "query": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_002",
+          "score": 0.536395191095996,
+          "chunk_characters": 359,
+          "chunk_preview": "Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verinin mantığını kavra KUR Yerel model ve küçük uygulamalar oluştur OLC Sonuçları karşılaştır ve yorumla Bu haftanı"
+        },
+        {
+          "query": "Teslim paketinde hangi çalışmalar bulunur?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_006",
+          "score": 0.451211590961121,
+          "chunk_characters": 214,
+          "chunk_preview": "Amacimiz bildiğin konulari sağlam bir mühendişlik zeminine oturtmak, eksik kalan yerleri netlestirmek ve ilerleyen haftalarda geliştirecegin ürünün temelini kurmak. Hafta boyunca her konu bir çıktıyla tamamlanacak."
+        }
+      ]
+    },
+    {
+      "configuration": {
+        "name": "large_5_sentences_overlap_1",
+        "sentences_per_chunk": 5,
+        "overlap": 1
+      },
+      "chunk_count": 14,
+      "average_chunk_characters": 638.5714285714286,
+      "searches": [
+        {
+          "query": "İlk haftanın amacı nedir?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_005",
+          "score": 0.502429203291923,
+          "chunk_characters": 275,
+          "chunk_preview": "Denediğin yolları, aldığın hatayı ve kendi yorumunu birlikte getir. İlk Haftanın Çalışma Akışı Takvim günlere bölünmedi. Aşağıdaki sırayı koruyarak ilerlemen yeterli. Bir aşamayi tamamlamadan diğerine geçme. Her aşamanin sonunda ortaya çıkm"
+        },
+        {
+          "query": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_001",
+          "score": 0.49057878794609844,
+          "chunk_characters": 719,
+          "chunk_preview": "BILGEADAM TEKNOLOJI | STAJYER GELİŞİM PROGRAMI Sayfa YAPAY ZEKA MÜHENDİSLİĞİ GELİŞİM PROGRAMI Alperen Manas 1. Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verin"
+        },
+        {
+          "query": "Teslim paketinde hangi çalışmalar bulunur?",
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_001",
+          "score": 0.4536638764144227,
+          "chunk_characters": 719,
+          "chunk_preview": "BILGEADAM TEKNOLOJI | STAJYER GELİŞİM PROGRAMI Sayfa YAPAY ZEKA MÜHENDİSLİĞİ GELİŞİM PROGRAMI Alperen Manas 1. Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verin"
+        }
+      ]
+    }
+  ]
+}
