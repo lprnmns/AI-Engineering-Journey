@@ -59,5 +59,178 @@
       "expectation": "aynı genel teknik alan, farklı görev",
       "cosine_similarity": 0.24539095080628165
     }
+  ],
+  "query_rankings": [
+    {
+      "query_id": "search_venv",
+      "query_text": "Python için venv oluşturmak istiyorum.",
+      "expected_sentence_id": "venv_create",
+      "ranked_results": [
+        {
+          "sentence_id": "venv_setup",
+          "text": "Python'da venv kurmak için hangi adımları izlemeliyim?",
+          "cosine_similarity": 0.8015936277899695
+        },
+        {
+          "sentence_id": "venv_create",
+          "text": "Python projesi için sanal ortam nasıl oluşturulur?",
+          "cosine_similarity": 0.6134605662818882
+        },
+        {
+          "sentence_id": "pip_install",
+          "text": "Python paketlerini pip ile nasıl yüklerim?",
+          "cosine_similarity": 0.5664561843553186
+        },
+        {
+          "sentence_id": "python_snake",
+          "text": "Python yılanı sıcak iklimlerde yaşayan bir sürüngendir.",
+          "cosine_similarity": 0.4589765716605401
+        },
+        {
+          "sentence_id": "vector_search",
+          "text": "Vektör veritabanı anlamsal arama için embedding saklar.",
+          "cosine_similarity": 0.2823085138498291
+        },
+        {
+          "sentence_id": "recipe",
+          "text": "Akşam yemeği için sebzeli makarna tarifi arıyorum.",
+          "cosine_similarity": 0.18721879957072154
+        },
+        {
+          "sentence_id": "pr_review",
+          "text": "Pull request açmadan önce kod incelemesi yapılmalıdır.",
+          "cosine_similarity": 0.14681107573993207
+        },
+        {
+          "sentence_id": "weather",
+          "text": "İstanbul'da yarın hava yağmurlu olacak mı?",
+          "cosine_similarity": 0.04397975686384088
+        },
+        {
+          "sentence_id": "leave_request",
+          "text": "Yıllık izin talebi en az 10 gün önce iletilmelidir.",
+          "cosine_similarity": 0.02579518398584497
+        },
+        {
+          "sentence_id": "leave_duration",
+          "text": "Çalışanın yıllık izin hakkı kaç gündür?",
+          "cosine_similarity": -0.05793632819555205
+        }
+      ]
+    },
+    {
+      "query_id": "search_leave_request",
+      "query_text": "İzin başvurumu ne zaman göndermeliyim?",
+      "expected_sentence_id": "leave_request",
+      "ranked_results": [
+        {
+          "sentence_id": "leave_request",
+          "text": "Yıllık izin talebi en az 10 gün önce iletilmelidir.",
+          "cosine_similarity": 0.575281338711356
+        },
+        {
+          "sentence_id": "leave_duration",
+          "text": "Çalışanın yıllık izin hakkı kaç gündür?",
+          "cosine_similarity": 0.4276359949151306
+        },
+        {
+          "sentence_id": "pr_review",
+          "text": "Pull request açmadan önce kod incelemesi yapılmalıdır.",
+          "cosine_similarity": 0.29047651078448
+        },
+        {
+          "sentence_id": "pip_install",
+          "text": "Python paketlerini pip ile nasıl yüklerim?",
+          "cosine_similarity": 0.16096221585876722
+        },
+        {
+          "sentence_id": "venv_setup",
+          "text": "Python'da venv kurmak için hangi adımları izlemeliyim?",
+          "cosine_similarity": 0.1561162521892927
+        },
+        {
+          "sentence_id": "weather",
+          "text": "İstanbul'da yarın hava yağmurlu olacak mı?",
+          "cosine_similarity": 0.11340905983786673
+        },
+        {
+          "sentence_id": "python_snake",
+          "text": "Python yılanı sıcak iklimlerde yaşayan bir sürüngendir.",
+          "cosine_similarity": 0.05967904719675753
+        },
+        {
+          "sentence_id": "venv_create",
+          "text": "Python projesi için sanal ortam nasıl oluşturulur?",
+          "cosine_similarity": 0.0016383268871991423
+        },
+        {
+          "sentence_id": "recipe",
+          "text": "Akşam yemeği için sebzeli makarna tarifi arıyorum.",
+          "cosine_similarity": -0.06521312504151332
+        },
+        {
+          "sentence_id": "vector_search",
+          "text": "Vektör veritabanı anlamsal arama için embedding saklar.",
+          "cosine_similarity": -0.12440261789126156
+        }
+      ]
+    },
+    {
+      "query_id": "search_weather",
+      "query_text": "Yarın İstanbul'da hava nasıl olacak?",
+      "expected_sentence_id": "weather",
+      "ranked_results": [
+        {
+          "sentence_id": "weather",
+          "text": "İstanbul'da yarın hava yağmurlu olacak mı?",
+          "cosine_similarity": 0.9254338575356705
+        },
+        {
+          "sentence_id": "recipe",
+          "text": "Akşam yemeği için sebzeli makarna tarifi arıyorum.",
+          "cosine_similarity": 0.16425469991253086
+        },
+        {
+          "sentence_id": "leave_request",
+          "text": "Yıllık izin talebi en az 10 gün önce iletilmelidir.",
+          "cosine_similarity": 0.13887630834635623
+        },
+        {
+          "sentence_id": "leave_duration",
+          "text": "Çalışanın yıllık izin hakkı kaç gündür?",
+          "cosine_similarity": 0.13837409407589685
+        },
+        {
+          "sentence_id": "vector_search",
+          "text": "Vektör veritabanı anlamsal arama için embedding saklar.",
+          "cosine_similarity": 0.1212959468041158
+        },
+        {
+          "sentence_id": "venv_create",
+          "text": "Python projesi için sanal ortam nasıl oluşturulur?",
+          "cosine_similarity": 0.06393689868100394
+        },
+        {
+          "sentence_id": "python_snake",
+          "text": "Python yılanı sıcak iklimlerde yaşayan bir sürüngendir.",
+          "cosine_similarity": 0.03539447859698219
+        },
+        {
+          "sentence_id": "venv_setup",
+          "text": "Python'da venv kurmak için hangi adımları izlemeliyim?",
+          "cosine_similarity": 0.0319983529313935
+        },
+        {
+          "sentence_id": "pip_install",
+          "text": "Python paketlerini pip ile nasıl yüklerim?",
+          "cosine_similarity": 0.002248585197040021
+        },
+        {
+          "sentence_id": "pr_review",
+          "text": "Pull request açmadan önce kod incelemesi yapılmalıdır.",
+          "cosine_similarity": -0.00499545303185126
+        }
+      ]
+    }
   ]
 }

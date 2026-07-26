@@ -19,5 +19,22 @@
     {"left_id": "venv_create", "right_id": "recipe", "expectation": "ilgisiz"},
     {"left_id": "pr_review", "right_id": "weather", "expectation": "ilgisiz"},
     {"left_id": "vector_search", "right_id": "venv_setup", "expectation": "aynı genel teknik alan, farklı görev"}
+  ],
+  "queries": [
+    {
+      "id": "search_venv",
+      "text": "Python için venv oluşturmak istiyorum.",
+      "expected_sentence_id": "venv_create"
+    },
+    {
+      "id": "search_leave_request",
+      "text": "İzin başvurumu ne zaman göndermeliyim?",
+      "expected_sentence_id": "leave_request"
+    },
+    {
+      "id": "search_weather",
+      "text": "Yarın İstanbul'da hava nasıl olacak?",
+      "expected_sentence_id": "weather"
+    }
   ]
 }

@@ -27,6 +27,18 @@ Embedding modeli cümleleri 384 boyutlu vektörlere dönüştürdü. Vektörler 
 
 İzin örneği, retrieval ile answerability arasındaki farkı gösterir. Vektör arama, yıllık izinle ilgili chunk'ı doğru biçimde üst sıralara getirebilir; fakat bu chunk kullanıcının sorduğu **izin süresi** bilgisini içermez. Bu nedenle production RAG sistemi yalnız yüksek cosine skoruna dayanarak cevap üretmemelidir. V3 prompt deneyindeki “özelliği ayır” kuralı ve no-answer denetimi bu boşluğu kapatmaya çalışır.
 
+## Küçük anlamsal arama deneyi
+
+Üç kullanıcı sorgusu, aynı 10 cümlenin tamamına karşı sıralandı:
+
+| Sorgu | İlk sonuç | İlk skor | Yorum |
+| --- | --- | ---: | --- |
+| `Python için venv oluşturmak istiyorum.` | `Python'da venv kurmak için hangi adımları izlemeliyim?` | 0.802 | Doğru anlam alanı. Başlangıçta beklenen cümle ikinci sıradaydı; fakat o da aynı görevi anlatır. Tek bir “doğru belge” etiketi bu sorgu için gereğinden katıdır. |
+| `İzin başvurumu ne zaman göndermeliyim?` | `Yıllık izin talebi en az 10 gün önce iletilmelidir.` | 0.575 | Doğru kaynak ilk sırada. İzin süresi cümlesi ikinci sırada kaldı; aynı alan yakınlığı yine görülüyor. |
+| `Yarın İstanbul'da hava nasıl olacak?` | `İstanbul'da yarın hava yağmurlu olacak mı?` | 0.925 | Neredeyse aynı anlam; beklenen güçlü eşleşme. |
+
+Bu deneyde retrieval değerlendirmesi için yeni bir kural ortaya çıktı: bazı sorguların tek doğru dokümanı değil, birden fazla kabul edilebilir doğru dokümanı olabilir. Bu nedenle gerçek RAG eval setinde tek `expected_doc_id` yerine gerektiğinde kabul edilebilir belge/fragment kümesi tanımlanmalıdır.
+
 ## Sınırlılıklar
 
 - 10 cümle ve 7 çift, model kalitesi için benchmark değildir.

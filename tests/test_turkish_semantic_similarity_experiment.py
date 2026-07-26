@@ -1,5 +1,6 @@
 from labs.embeddings.turkish_semantic_similarity_experiment import (
     PairCase,
+    SearchQuery,
     SentenceCase,
     evaluate_pairs,
 )
@@ -23,6 +24,7 @@ def test_evaluate_pairs_reports_expected_cosine_score() -> None:
             SentenceCase("right", "sağ"),
         ],
         pairs=[PairCase("left", "right", "ilgisiz")],
+        queries=[SearchQuery("query", "sol", "left")],
         vectorizer=FakeVectorizer(),
     )
 
@@ -30,3 +32,4 @@ def test_evaluate_pairs_reports_expected_cosine_score() -> None:
     assert report.sentence_count == 2
     assert report.embedding_dimension == 2
     assert report.pair_results[0].cosine_similarity == 0.0
+    assert report.query_rankings[0].ranked_results[0].sentence_id == "left"

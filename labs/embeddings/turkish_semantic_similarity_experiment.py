@@ -30,6 +30,13 @@ class PairCase:
 
 
 @dataclass(frozen=True)
+class SearchQuery:
+    query_id: str
+    text: str
+    expected_sentence_id: str
+
+
+@dataclass(frozen=True)
 class PairResult:
     left_id: str
     right_id: str
@@ -40,14 +47,30 @@ class PairResult:
 
 
 @dataclass(frozen=True)
+class SearchResult:
+    sentence_id: str
+    text: str
+    cosine_similarity: float
+
+
+@dataclass(frozen=True)
+class QueryRanking:
+    query_id: str
+    query_text: str
+    expected_sentence_id: str
+    ranked_results: list[SearchResult]
+
+
+@dataclass(frozen=True)
 class ExperimentReport:
     model_name: str
     sentence_count: int
     embedding_dimension: int
     pair_results: list[PairResult]
+    query_rankings: list[QueryRanking]
 
 
-def load_cases(path: Path) -> tuple[list[SentenceCase], list[PairCase]]:
+def load_cases(path: Path) -> tuple[list[SentenceCase], list[PairCase], list[SearchQuery]]:
     raw: dict[str, list[dict[str, Any]]] = json.loads(path.read_text(encoding="utf-8"))
     sentences = [SentenceCase(sentence_id=item["id"], text=item["text"]) for item in raw["sentences"]]
     pairs = [
@@ -58,12 +81,21 @@ def load_cases(path: Path) -> tuple[list[SentenceCase], list[PairCase]]:
         )
         for item in raw["pairs"]
     ]
-    return sentences, pairs
+    queries = [
+        SearchQuery(
+            query_id=item["id"],
+            text=item["text"],
+            expected_sentence_id=item["expected_sentence_id"],
+        )
+        for item in raw["queries"]
+    ]
+    return sentences, pairs, queries
 
 
 def evaluate_pairs(
     sentences: list[SentenceCase],
     pairs: list[PairCase],
+    queries: list[SearchQuery],
     vectorizer: Vectorizer,
 ) -> ExperimentReport:
     text_by_id = {sentence.sentence_id: sentence.text for sentence in sentences}
@@ -85,12 +117,36 @@ def evaluate_pairs(
         )
         for pair in pairs
     ]
+    query_rankings = []
+    for query in queries:
+        query_vector = vectorizer.vectorize(query.text)
+        ranked_results = sorted(
+            (
+                SearchResult(
+                    sentence_id=sentence_id,
+                    text=text_by_id[sentence_id],
+                    cosine_similarity=cosine_similarity(query_vector, vector),
+                )
+                for sentence_id, vector in vectors_by_id.items()
+            ),
+            key=lambda item: item.cosine_similarity,
+            reverse=True,
+        )
+        query_rankings.append(
+            QueryRanking(
+                query_id=query.query_id,
+                query_text=query.text,
+                expected_sentence_id=query.expected_sentence_id,
+                ranked_results=ranked_results,
+            )
+        )
     dimension = len(next(iter(vectors_by_id.values()))) if vectors_by_id else 0
     return ExperimentReport(
         model_name=getattr(vectorizer, "model_name", DEFAULT_MODEL_NAME),
         sentence_count=len(sentences),
         embedding_dimension=dimension,
         pair_results=results,
+        query_rankings=query_rankings,
     )
 
 
@@ -100,8 +156,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
-    sentences, pairs = load_cases(args.cases)
-    report = evaluate_pairs(sentences, pairs, DenseVectorizer())
+    sentences, pairs, queries = load_cases(args.cases)
+    report = evaluate_pairs(sentences, pairs, queries, DenseVectorizer())
     serialized = json.dumps(asdict(report), ensure_ascii=False, indent=2)
     print(serialized)
     if args.output is not None:
