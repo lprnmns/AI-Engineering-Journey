@@ -1,6 +1,6 @@
 # Staj 1. Hafta — Model Temelleri Çalışma Notu
 
-**Durum:** Tamamlandı — `%100`
+**Durum:** Teknik artefaktlar tamamlandı; öğrenme walkthrough'u devam ediyor — `%75`
 
 **Başlangıç tarihi:** 20 Temmuz 2026
 
@@ -33,8 +33,8 @@ Her deneyde kullanılan varsayım, ölçüm, beklenmeyen sonuç ve sınırlama a
 | --- | --- |
 | Transformer ve context mantığı | Tamamlandı |
 | Prompt rolleri ve yerel deneyler | Tamamlandı; ölçümler ayrı deney notlarında kayıtlı |
-| Model ailesi karşılaştırması | Tamamlandı; resmi kaynak karar tablosu yazıldı |
-| Nihai 2–3 sayfalık teknik değerlendirme | Tamamlandı: `day1_technical_evaluation.md` |
+| Model ailesi karşılaştırması | Karar tablosu yazıldı; lisans, parametre, quantization ve yerel seçim walkthrough'u bekliyor |
+| Nihai 2–3 sayfalık teknik değerlendirme | Taslak tamamlandı: `day1_technical_evaluation.md`; walkthrough sonrasında nihai olarak işaretlenecek |
 
 ## 1. Model neden doğrudan kelimelerle çalışmaz?
 
