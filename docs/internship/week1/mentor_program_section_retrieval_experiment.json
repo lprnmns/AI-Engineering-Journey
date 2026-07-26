@@ -1,0 +1,58 @@
+{
+  "pdf_filename": "Alperen_Manas_Staj_Programi_1_Hafta 1.pdf",
+  "ingestion": {
+    "strategy": "configured_section_markers_with_repeated_header_removal",
+    "section_count": 7,
+    "chunking": {
+      "sentences_per_chunk": 2,
+      "overlap": 1,
+      "chunk_count": 48
+    }
+  },
+  "dense_retrieval": {
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "top_k": 5
+  },
+  "reranker": {
+    "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "top_k": 1
+  },
+  "results": [
+    {
+      "query": "İlk haftanın amacı nedir?",
+      "expected_section_id": "purpose",
+      "dense_expected_rank": 1,
+      "dense_top_chunk_id": "purpose_chunk_015",
+      "dense_top_section_id": "purpose",
+      "dense_top_score": 0.6831199623996356,
+      "reranked_chunk_id": "purpose_chunk_001",
+      "reranked_section_id": "purpose",
+      "reranker_score": 2.638878583908081,
+      "reranked_preview": "Programın Amacı Bu ilk hafta, eğitim videosu izleyip not çıkardığın klasik bir baslangic haftasi olmayacak. Daha önce veri temizleme, temel makine öğrenmesi, RAG ve vektör veritabanlariyla caliştigin için seni yeniden en basa döndürmek işte"
+    },
+    {
+      "query": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+      "expected_section_id": "local_model",
+      "dense_expected_rank": 1,
+      "dense_top_chunk_id": "local_model_chunk_006",
+      "dense_top_section_id": "local_model",
+      "dense_top_score": 0.6626828281539524,
+      "reranked_chunk_id": "local_model_chunk_006",
+      "reranked_section_id": "local_model",
+      "reranker_score": -2.0275704860687256,
+      "reranked_preview": "Cevapları yalnızca hız açısından değil, doğruluk, tutarlılık ve gereksiz bilgi üretme açısından da incele. Beklenen çıktı Kurulum notu, ortak test seti, ölçüm tablosu ve model seçim yorumu"
+    },
+    {
+      "query": "Teslim paketinde hangi çalışmalar bulunur?",
+      "expected_section_id": "deliverables",
+      "dense_expected_rank": 4,
+      "dense_top_chunk_id": "purpose_chunk_003",
+      "dense_top_section_id": "purpose",
+      "dense_top_score": 0.46578455728730905,
+      "reranked_chunk_id": "deliverables_chunk_001",
+      "reranked_section_id": "deliverables",
+      "reranker_score": 2.368920087814331,
+      "reranked_preview": "Teslim Paketi Teslimat İçerik Model araştırma notu Model ailelerini teknik ve kurumsal açıdan karşılaştıran kısa rapor Embedding deneyi Kod, benzerlik sonuçları ve yorumlar RAG tasarımı Mimari diyagram, chunk deneyi ve teknoloji seçimi Yere"
+    }
+  ]
+}
