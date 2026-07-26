@@ -1,0 +1,135 @@
+{
+  "pdf_filename": "Alperen_Manas_Staj_Programi_1_Hafta 1.pdf",
+  "chunking": {
+    "sentences_per_chunk": 2,
+    "overlap": 1,
+    "chunk_count": 53
+  },
+  "dense_retrieval": {
+    "top_k": 5,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  },
+  "reranker": {
+    "model": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "top_k": 1
+  },
+  "results": [
+    {
+      "query": "İlk haftanın amacı nedir?",
+      "dense_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_004",
+          "dense_score": 0.5967003195387949,
+          "chunk_preview": "Programın Amacı Bu ilk hafta, eğitim videosu izleyip not çıkardığın klasik bir baslangic haftasi olmayacak. Daha önce veri temizleme, temel makine öğrenmesi, RAG ve vektör veritabanlariyla caliştigin için seni yeniden en basa döndürmek işte"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_018",
+          "dense_score": 0.5630611255464351,
+          "chunk_preview": "İlk Haftanın Çalışma Akışı Takvim günlere bölünmedi. Aşağıdaki sırayı koruyarak ilerlemen yeterli."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_047",
+          "dense_score": 0.5401347040976515,
+          "chunk_preview": "Beklenen çıktı 4-5 sayfalık mini analiz ve ilk ürün fikri Haftayı Nasıl Kapatacaksın Hafta sonunda tüm çalışmaları tek bir teknik anlatıda birleştirmeni iştiyoruz. Yaklaşık 15 dakikalık sunumda önce modelin temel çalışma mantığını, sonra em"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_017",
+          "dense_score": 0.5346779278055024,
+          "chunk_preview": "Denediğin yolları, aldığın hatayı ve kendi yorumunu birlikte getir. İlk Haftanın Çalışma Akışı Takvim günlere bölünmedi."
+        },
+        {
+          "rank": 5,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_046",
+          "dense_score": 0.5199676652315365,
+          "chunk_preview": "Popüler olduğu için değil, ihtiyaca uygun olduğu için teknoloji seç. Beklenen çıktı 4-5 sayfalık mini analiz ve ilk ürün fikri Haftayı Nasıl Kapatacaksın Hafta sonunda tüm çalışmaları tek bir teknik anlatıda birleştirmeni iştiyoruz."
+        }
+      ],
+      "reranked_chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_004",
+      "reranked_dense_score": 0.5967003195387949,
+      "reranker_score": 0.2685331106185913,
+      "reranked_chunk_preview": "Programın Amacı Bu ilk hafta, eğitim videosu izleyip not çıkardığın klasik bir baslangic haftasi olmayacak. Daha önce veri temizleme, temel makine öğrenmesi, RAG ve vektör veritabanlariyla caliştigin için seni yeniden en basa döndürmek işte"
+    },
+    {
+      "query": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+      "dense_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_002",
+          "dense_score": 0.536395191095996,
+          "chunk_preview": "Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verinin mantığını kavra KUR Yerel model ve küçük uygulamalar oluştur OLC Sonuçları karşılaştır ve yorumla Bu haftanı"
+        },
+        {
+          "rank": 2,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_029",
+          "dense_score": 0.5148154987392538,
+          "chunk_preview": "Sadece sonuçu lişteleme, modelin neden o eşleşmeyi yaptığını yorumla. Beklenmeyen bir sonuç çıkarsa onu saklama; tam tersine nedenini araştır ve not et."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_028",
+          "dense_score": 0.49884196483693394,
+          "chunk_preview": "Benzer ve ilgişiz cümlelerin cosine similarity skorlarını hesapla. Sadece sonuçu lişteleme, modelin neden o eşleşmeyi yaptığını yorumla."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_048",
+          "dense_score": 0.4968461692523649,
+          "chunk_preview": "Yaklaşık 15 dakikalık sunumda önce modelin temel çalışma mantığını, sonra embedding ve RAG akışlarını, ardından yerel ortamda yaptığın model karşılaştırmasını anlat. Son bölümde işe seçtiğin kurumsal problemi ve sonraki haftalarda geliştirm"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_053",
+          "dense_score": 0.48180241422626324,
+          "chunk_preview": "Teslim Paketi Teslimat İçerik Model araştırma notu Model ailelerini teknik ve kurumsal açıdan karşılaştıran kısa rapor Embedding deneyi Kod, benzerlik sonuçları ve yorumlar RAG tasarımı Mimari diyagram, chunk deneyi ve teknoloji seçimi Yere"
+        }
+      ],
+      "reranked_chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_002",
+      "reranked_dense_score": 0.536395191095996,
+      "reranker_score": -4.289618015289307,
+      "reranked_chunk_preview": "Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verinin mantığını kavra KUR Yerel model ve küçük uygulamalar oluştur OLC Sonuçları karşılaştır ve yorumla Bu haftanı"
+    },
+    {
+      "query": "Teslim paketinde hangi çalışmalar bulunur?",
+      "dense_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_006",
+          "dense_score": 0.451211590961121,
+          "chunk_preview": "Amacimiz bildiğin konulari sağlam bir mühendişlik zeminine oturtmak, eksik kalan yerleri netlestirmek ve ilerleyen haftalarda geliştirecegin ürünün temelini kurmak. Hafta boyunca her konu bir çıktıyla tamamlanacak."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_001",
+          "dense_score": 0.44887938535832783,
+          "chunk_preview": "BILGEADAM TEKNOLOJI | STAJYER GELİŞİM PROGRAMI Sayfa YAPAY ZEKA MÜHENDİSLİĞİ GELİŞİM PROGRAMI Alperen Manas 1. Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_002",
+          "dense_score": 0.44266387796274204,
+          "chunk_preview": "Hafta Çalışma Planı Araştıran, kuran, ölçen ve sonuçunu savunabilen bir mühendişlik bakışı için hazırlandı. ANLA Modelin ve verinin mantığını kavra KUR Yerel model ve küçük uygulamalar oluştur OLC Sonuçları karşılaştır ve yorumla Bu haftanı"
+        },
+        {
+          "rank": 4,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_053",
+          "dense_score": 0.43130732572168834,
+          "chunk_preview": "Teslim Paketi Teslimat İçerik Model araştırma notu Model ailelerini teknik ve kurumsal açıdan karşılaştıran kısa rapor Embedding deneyi Kod, benzerlik sonuçları ve yorumlar RAG tasarımı Mimari diyagram, chunk deneyi ve teknoloji seçimi Yere"
+        },
+        {
+          "rank": 5,
+          "chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_052",
+          "dense_score": 0.41235297676406846,
+          "chunk_preview": "Neyi neden seçtiğini anlatabildiğin zaman bu haftayi başarıyla tamamlamış olacaksın. Teslim Paketi Teslimat İçerik Model araştırma notu Model ailelerini teknik ve kurumsal açıdan karşılaştıran kısa rapor Embedding deneyi Kod, benzerlik sonu"
+        }
+      ],
+      "reranked_chunk_id": "alperen_manas_staj_programi_1_hafta_1_chunk_052",
+      "reranked_dense_score": 0.41235297676406846,
+      "reranker_score": 1.5644338130950928,
+      "reranked_chunk_preview": "Neyi neden seçtiğini anlatabildiğin zaman bu haftayi başarıyla tamamlamış olacaksın. Teslim Paketi Teslimat İçerik Model araştırma notu Model ailelerini teknik ve kurumsal açıdan karşılaştıran kısa rapor Embedding deneyi Kod, benzerlik sonu"
+    }
+  ]
+}
