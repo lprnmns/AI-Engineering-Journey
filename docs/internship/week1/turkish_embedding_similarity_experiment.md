@@ -19,6 +19,8 @@ Vektör boyutu: 384
 
 Ham veri: [JSON](turkish_embedding_similarity_results.json)
 
+Çalıştırma kanıtı: [terminal ekran görüntüsü](assets/day2_embedding_experiment/01_terminal_similarity_and_search_results.png)
+
 ## Bu skorlar ne anlatır?
 
 Embedding modeli cümleleri 384 boyutlu vektörlere dönüştürdü. Vektörler normalize edildiği için cosine similarity, vektör uzunluğundan çok yönlerinin ne kadar benzer olduğunu ölçer. `1` aynı yön, `0` yaklaşık ilişkisizlik, negatif değer ise zıt yön anlamına gelebilir. Gerçek cümle embeddinglerinde evrensel bir “0.50 üstü kesin alakalıdır” eşiği yoktur; eşik görev, dil, doküman ve modele göre değerlendirme verisiyle seçilir.
