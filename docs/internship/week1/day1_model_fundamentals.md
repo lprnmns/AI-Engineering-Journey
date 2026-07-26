@@ -1,6 +1,6 @@
 # Staj 1. Hafta — Model Temelleri Çalışma Notu
 
-**Durum:** Devam ediyor
+**Durum:** Devam ediyor — yaklaşık `%75`
 
 **Başlangıç tarihi:** 20 Temmuz 2026
 
@@ -18,14 +18,23 @@ Her deneyde kullanılan varsayım, ölçüm, beklenmeyen sonuç ve sınırlama a
 
 ## Çalışma sırası
 
-- [ ] Metin → token → token ID → embedding akışını açıkla
-- [ ] Position bilgisi ve context window ilişkisini açıkla
-- [ ] Self-attention içinde query, key ve value rollerini örnekle açıkla
-- [ ] Causal mask ve sıradaki token üretimini açıkla
-- [ ] Transformer bloğundaki attention, residual, normalization ve MLP katmanlarını bağla
-- [ ] Aynı soruyla system prompt/user message kontrollü deneyi yap
+- [x] Metin → token → token ID → embedding akışını açıkla
+- [x] Position bilgisi ve context window ilişkisini açıkla
+- [x] Self-attention içinde query, key ve value rollerini örnekle açıkla
+- [x] Causal mask ve sıradaki token üretimini açıkla
+- [x] Transformer bloğundaki attention, residual, normalization ve MLP katmanlarını bağla
+- [x] Aynı soruyla system prompt/user message kontrollü deneyi yap
 - [ ] Llama, Qwen, Gemma, Mistral ve DeepSeek ailelerini resmi kaynaklarla karşılaştır
 - [ ] Sonuçları 2–3 sayfalık teknik değerlendirme ve tabloya dönüştür
+
+## İlerleme takibi
+
+| Alan | Durum |
+| --- | --- |
+| Transformer ve context mantığı | Tamamlandı |
+| Prompt rolleri ve yerel deneyler | Tamamlandı; ölçümler ayrı deney notlarında kayıtlı |
+| Model ailesi karşılaştırması | Devam ediyor; resmi kaynak notları toplandı, karar tablosu yazılacak |
+| Nihai 2–3 sayfalık teknik değerlendirme | Bekliyor |
 
 ## 1. Model neden doğrudan kelimelerle çalışmaz?
 
