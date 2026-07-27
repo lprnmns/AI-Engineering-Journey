@@ -94,10 +94,10 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 - [ ] İki farklı chunk boyutu/overlap ayarıyla parça sayısı ve bağlam bütünlüğünü karşılaştır
 - [ ] Mevcut dense/hybrid retrieval katmanını PDF chunkları üzerinde çalıştır
 - [ ] Retrieval adaylarını cross-encoder reranker'a bağla ve öncesi/sonrası metriğini ölç
-- [ ] ChromaDB, Qdrant, Milvus ve Pinecone için teknoloji seçim notu yaz
+- [x] ChromaDB, Qdrant, Milvus ve Pinecone için teknoloji seçim notu yaz
 - [ ] Seçilen yerel vector DB ile kalıcı index oluştur
 - [ ] Gerçek LLM ile kaynaklı cevap ve no-answer akışını tamamla
-- [ ] RAG mimari diyagramını hazırla
+- [x] RAG mimari diyagramını hazırla
 
 ### 4. Yerel model karşılaştırmasını yap
 
