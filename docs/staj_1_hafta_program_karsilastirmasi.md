@@ -95,8 +95,8 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 - [ ] Mevcut dense/hybrid retrieval katmanını PDF chunkları üzerinde çalıştır
 - [ ] Retrieval adaylarını cross-encoder reranker'a bağla ve öncesi/sonrası metriğini ölç
 - [x] ChromaDB, Qdrant, Milvus ve Pinecone için teknoloji seçim notu yaz
-- [ ] Seçilen yerel vector DB ile kalıcı index oluştur
-- [ ] Gerçek LLM ile kaynaklı cevap ve no-answer akışını tamamla
+- [x] Seçilen yerel vector DB ile kalıcı index oluştur (Qdrant, 48 point, restart sonrası kalıcılık ve payload filter doğrulandı)
+- [x] Gerçek LLM ile kaynaklı cevap ve no-answer akışını tamamla (Gemma 3 4B ile ölçüldü; retrieval sınırları raporlandı)
 - [x] RAG mimari diyagramını hazırla
 
 ### 4. Yerel model karşılaştırmasını yap

@@ -40,7 +40,7 @@ flowchart LR
     Qdrant --> Search
 ```
 
-Bu diyagram hedef mimaridir. Şu an PDF parser, chunking, embedding, dense retrieval, reranking, parent-section context ve Gemma ile üretim çalışıyor. Qdrant katmanı bir sonraki uygulama adımında in-memory store'un kalıcı karşılığı olarak eklenecek. Answerability şu anda prompt/no-answer policy ile ölçülüyor; bağımsız retrieval threshold kalibrasyonu sonraki değerlendirme adımıdır.
+Bu diyagram hedef mimaridir. Şu an PDF parser, chunking, embedding, dense retrieval, reranking, parent-section context ve Gemma ile üretim çalışıyor. Qdrant katmanı da in-memory store'un kalıcı karşılığı olarak eklendi: 48 chunk, 384 boyutlu collection'a idempotent upsert ile yazıldı ve Qdrant restart sonrasında aynı 48 point korundu. Answerability şu anda prompt/no-answer policy ile ölçülüyor; bağımsız retrieval threshold kalibrasyonu sonraki değerlendirme adımıdır.
 
 ## Karşılaştırma
 
@@ -73,14 +73,16 @@ Bu karar “Qdrant her projede en iyidir” iddiası değildir. Karar; mevcut ve
 | `chunk_index` | payload | Sıra ve komşu chunk yönetimi |
 | `ingestion_version` | payload | Chunking/embedding değişince yeniden indeksleme takibi |
 
-## Kabul kriterleri — sonraki uygulama
+## Kabul kriterleri — uygulama sonucu
 
-- Docker Compose ile yalnız `127.0.0.1` üzerinden erişilebilen Qdrant servisi.
-- 384 boyutlu collection ve disk üzerinde kalıcı volume.
-- Mentor PDF chunklarının idempotent upsert ile kaydı.
-- Uygulama yeniden başlasa da aynı collection'ın bulunması.
-- En az bir source/section payload filtresi testi.
-- Mevcut in-memory dense retrieval ile Qdrant sonuçlarının aynı sabit sorgularda karşılaştırılması.
+- [x] Docker Compose ile yalnız `127.0.0.1` üzerinden erişilebilen Qdrant servisi.
+- [x] 384 boyutlu collection ve disk üzerinde kalıcı volume.
+- [x] Mentor PDF chunklarının idempotent upsert ile kaydı (iki ingestion sonunda 48 point).
+- [x] Qdrant yeniden başlasa da aynı collection'ın bulunması (restart sonrası 48 point).
+- [x] `section_id=local_model` payload filtresi testi.
+- [x] Mevcut in-memory dense retrieval ile aynı sabit sorgularda sonuç karşılaştırması.
+
+Ayrıntılı ölçüm ve sınırlar: [Qdrant kalıcı indeks deneyi](qdrant_persistent_index_experiment.md).
 
 ## Resmî kaynaklar
 

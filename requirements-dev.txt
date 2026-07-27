@@ -6,5 +6,6 @@ pandas-stubs
 scikit-learn
 sentence-transformers
 pypdf
+qdrant-client
 kaggle
 matplotlib
