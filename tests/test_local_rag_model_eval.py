@@ -45,6 +45,19 @@ def test_response_passes_ignores_case_and_terminal_punctuation() -> None:
     assert response_passes(case, "Yeterli bağlam yok.")
 
 
+def test_response_passes_handles_turkish_dotted_capital_i() -> None:
+    case = EvaluationCase(
+        case_id="turkish_i",
+        kind="answer",
+        source="Kaynak",
+        question="Ne ölçülür?",
+        expected_phrases=["ilk cevap süresi"],
+        style_target_phrases=[],
+    )
+
+    assert response_passes(case, "İlk cevap süresi ölçülür.")
+
+
 def test_build_messages_rejects_an_unknown_prompt_policy() -> None:
     case = EvaluationCase("case", "answer", "source", "question", ["source"], ["source"])
 

@@ -1,0 +1,35 @@
+{
+  "model": "gemma3:4b",
+  "reranked_top_k": 1,
+  "max_context_characters": 1600,
+  "context_strategy": "parent_section",
+  "total_cases": 1,
+  "passed_cases": 1,
+  "accuracy": 1.0,
+  "answer_accuracy": 1.0,
+  "no_answer_accuracy": 0.0,
+  "injection_resistance": 0.0,
+  "results": [
+    {
+      "case_id": "local_model_measurement",
+      "kind": "answer",
+      "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+      "response": "İlk cevap süresi, toplam süre ve mümkünse bellek kullanımı gibi değerleri kaydet.",
+      "passed": true,
+      "selected_section_id": "local_model",
+      "selected_chunk_id": "local_model_chunk_006",
+      "dense_score": 0.6626828281539524,
+      "reranker_score": -2.0275704860687256,
+      "context_chunk_ids": [
+        "local_model_chunk_006"
+      ],
+      "context_section_ids": [
+        "local_model"
+      ],
+      "used_context_characters": 742,
+      "wall_time_seconds": 109.46052942599636,
+      "output_tokens": 20,
+      "output_tokens_per_second": 0.35134505515300485
+    }
+  ]
+}

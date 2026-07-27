@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import time
+import unicodedata
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -84,7 +85,11 @@ class EvaluationSummary:
 
 
 def normalize(text: str) -> str:
-    return " ".join(re.sub(r"[^\w\s]", " ", text.casefold()).split())
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    without_marks = "".join(
+        character for character in decomposed if not unicodedata.combining(character)
+    )
+    return " ".join(re.sub(r"[^\w\s]", " ", without_marks).split())
 
 
 def load_cases(path: Path) -> list[EvaluationCase]:
@@ -125,7 +130,11 @@ def call_ollama(
     model: str,
     messages: list[dict[str, str]],
     endpoint: str,
+    num_predict: int = 128,
 ) -> tuple[str, float, float, int, float]:
+    if num_predict <= 0:
+        raise ValueError("num_predict must be greater than zero")
+
     payload = {
         "model": model,
         "messages": messages,
@@ -134,7 +143,7 @@ def call_ollama(
             "temperature": 0,
             "top_k": 1,
             "seed": 42,
-            "num_predict": 128,
+            "num_predict": num_predict,
         },
     }
     request = Request(
