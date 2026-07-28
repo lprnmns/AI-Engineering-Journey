@@ -4,9 +4,9 @@ from labs.rag.mentor_program_pdf_local_rag_eval import (
     PdfRagEvaluationCase,
     build_messages,
     evaluate_pdf_rag,
-    parent_section_as_context_result,
     response_passes,
 )
+from labs.rag.parent_section import parent_section_as_context_result
 from labs.rag.reranker import RerankedChunkResult
 from labs.rag.sample_docs import Document
 from labs.model_eval.local_rag_model_eval import call_ollama
@@ -66,6 +66,15 @@ def test_evaluate_pdf_rag_rejects_non_positive_context_budget() -> None:
             pdf_path=Path("not-read.pdf"),
             cases=[],
             max_context_characters=0,
+        )
+
+
+def test_evaluate_pdf_rag_rejects_unknown_retrieval_backend() -> None:
+    with pytest.raises(ValueError, match="retrieval_backend"):
+        evaluate_pdf_rag(
+            pdf_path=Path("not-read.pdf"),
+            cases=[],
+            retrieval_backend="unknown",
         )
 
 

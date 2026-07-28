@@ -53,3 +53,7 @@ Bu nedenle pipeline eşiği ancak `--min-dense-score` ile açıkça istenirse uy
 ```
 
 Bu komut LLM çağrısı yapmaz; yalnız kanıt zincirini gösterir. Böylece retrieval problemi ile modelin üretim problemi birbirinden ayrılır.
+
+## Gerçek yerel model doğrulaması
+
+Qdrant akışı daha sonra Gemma 3 4B ile aynı beş sabit vakada çalıştırıldı. Sonuç 4/5 (%80), no-answer %100 ve prompt-injection reddi %100 oldu. Aynı koşullar altında in-memory backend de 4/5 üretti; seçilen kanıtlar ve cevaplar aynıydı. Bu, Qdrant'ın retrieval kalitesini sihirli biçimde değiştirmediğini; kalıcılık ve filtreleme katmanı olduğunu doğrular. Ayrıntılı, soğuk/sıcak model ayrımını da içeren rapor: [Qdrant ve in-memory karşılaştırması](qdrant_vs_memory_local_llm_evaluation.md).

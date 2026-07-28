@@ -5,8 +5,8 @@ from typing import Protocol
 
 from labs.rag.chunking import ChunkSearchResult
 from labs.rag.context_builder import build_context
-from labs.rag.mentor_program_pdf_local_rag_eval import parent_section_as_context_result
 from labs.rag.no_answer_detection import RetrievalDecision, decide_answerability
+from labs.rag.parent_section import parent_section_as_context_result
 from labs.rag.reranker import CrossEncoderReranker, RerankedChunkResult
 from labs.rag.sample_docs import Document
 

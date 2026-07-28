@@ -18,6 +18,9 @@ from labs.rag.mentor_program_section_retrieval_experiment import (
     MENTOR_SECTION_MARKERS,
 )
 from labs.rag.reranker import CrossEncoderReranker, RerankedChunkResult
+from labs.rag.parent_section import parent_section_as_context_result
+from labs.rag.qdrant_rag_pipeline import QdrantRagPipeline
+from labs.rag.qdrant_vector_store import QdrantVectorStore
 from labs.rag.sample_docs import Document
 from labs.rag.structured_pdf_ingestion import pdf_to_section_documents
 
@@ -64,6 +67,7 @@ class PdfRagCaseResult:
 @dataclass(frozen=True)
 class PdfRagEvaluationSummary:
     model: str
+    retrieval_backend: str
     reranked_top_k: int
     max_context_characters: int | None
     context_strategy: str
@@ -121,26 +125,6 @@ def to_chunk_search_result(result: RerankedChunkResult) -> ChunkSearchResult:
     )
 
 
-def parent_section_as_context_result(
-    selected: RerankedChunkResult,
-    documents_by_id: dict[str, Document],
-) -> ChunkSearchResult:
-    try:
-        document = documents_by_id[selected.doc_id]
-    except KeyError as error:
-        raise RuntimeError(f"selected section is missing: {selected.doc_id}") from error
-
-    return ChunkSearchResult(
-        chunk_id=f"{document.doc_id}_parent_section",
-        doc_id=document.doc_id,
-        title=document.title,
-        text=document.text,
-        source=document.source,
-        chunk_index=0,
-        score=selected.retrieval_score,
-    )
-
-
 def percentage(results: list[PdfRagCaseResult], kind: str) -> float:
     matching = [result for result in results if result.kind == kind]
     return 0.0 if not matching else sum(result.passed for result in matching) / len(matching)
@@ -154,6 +138,7 @@ def evaluate_pdf_rag(
     reranked_top_k: int = 1,
     max_context_characters: int | None = None,
     context_strategy: str = "reranked_chunks",
+    retrieval_backend: str = "memory",
 ) -> PdfRagEvaluationSummary:
     if reranked_top_k <= 0:
         raise ValueError("reranked_top_k must be greater than zero")
@@ -161,6 +146,8 @@ def evaluate_pdf_rag(
         raise ValueError("max_context_characters must be greater than zero")
     if context_strategy not in {"reranked_chunks", "parent_section"}:
         raise ValueError("context_strategy must be reranked_chunks or parent_section")
+    if retrieval_backend not in {"memory", "qdrant"}:
+        raise ValueError("retrieval_backend must be memory or qdrant")
 
     documents = pdf_to_section_documents(
         pdf_path,
@@ -168,24 +155,50 @@ def evaluate_pdf_rag(
         repeated_prefix=MENTOR_HEADER,
     )
     documents_by_id = {document.doc_id: document for document in documents}
-    chunks = chunk_documents(documents, sentences_per_chunk=2, overlap=1)
-    store = DenseVectorStore(vectorizer=DenseVectorizer())
-    store.add_chunks(chunks)
     reranker = CrossEncoderReranker()
+    pipeline: QdrantRagPipeline | None = None
+    store: DenseVectorStore | None = None
+    if retrieval_backend == "qdrant":
+        pipeline = QdrantRagPipeline(
+            retriever=QdrantVectorStore(),
+            documents_by_id=documents_by_id,
+            reranker=reranker,
+        )
+    else:
+        chunks = chunk_documents(documents, sentences_per_chunk=2, overlap=1)
+        store = DenseVectorStore(vectorizer=DenseVectorizer())
+        store.add_chunks(chunks)
     results: list[PdfRagCaseResult] = []
 
     for case in cases:
-        candidates = store.search(case.question, top_k=5)
-        reranked = reranker.rerank(case.question, candidates, top_k=reranked_top_k)
+        if pipeline is not None:
+            pipeline_result = pipeline.retrieve_and_build_context(
+                case.question,
+                candidate_top_k=5,
+                reranked_top_k=reranked_top_k,
+                context_strategy=context_strategy,
+                max_context_characters=max_context_characters,
+            )
+            candidates = pipeline_result.dense_candidates
+            reranked = pipeline_result.reranked_candidates
+            context = pipeline_result.context
+        else:
+            if store is None:
+                raise RuntimeError("memory store was not initialized")
+            candidates = store.search(case.question, top_k=5)
+            reranked = reranker.rerank(case.question, candidates, top_k=reranked_top_k)
+            if not reranked:
+                raise RuntimeError("reranker returned no result for non-empty dense candidates")
+            selected = reranked[0]
+            if context_strategy == "parent_section":
+                context_chunks = [parent_section_as_context_result(selected, documents_by_id)]
+            else:
+                context_chunks = [to_chunk_search_result(result) for result in reranked]
+            context = build_context(context_chunks, max_chars=max_context_characters)
+
         if not reranked:
             raise RuntimeError("reranker returned no result for non-empty dense candidates")
-
         selected = reranked[0]
-        if context_strategy == "parent_section":
-            context_chunks = [parent_section_as_context_result(selected, documents_by_id)]
-        else:
-            context_chunks = [to_chunk_search_result(result) for result in reranked]
-        context = build_context(context_chunks, max_chars=max_context_characters)
         response, wall_time, _, output_tokens, tokens_per_second = call_ollama(
             model=model,
             messages=build_messages(case.question, context),
@@ -215,6 +228,7 @@ def evaluate_pdf_rag(
     total_cases = len(results)
     return PdfRagEvaluationSummary(
         model=model,
+        retrieval_backend=retrieval_backend,
         reranked_top_k=reranked_top_k,
         max_context_characters=max_context_characters,
         context_strategy=context_strategy,
@@ -237,6 +251,7 @@ def main() -> None:
     parser.add_argument("--model", default="gemma3:4b")
     parser.add_argument("--max-output-tokens", type=int, default=64)
     parser.add_argument("--reranked-top-k", type=int, default=1)
+    parser.add_argument("--retrieval-backend", choices=["memory", "qdrant"], default="memory")
     parser.add_argument("--max-context-characters", type=int)
     parser.add_argument(
         "--context-strategy",
@@ -261,6 +276,7 @@ def main() -> None:
         reranked_top_k=args.reranked_top_k,
         max_context_characters=args.max_context_characters,
         context_strategy=args.context_strategy,
+        retrieval_backend=args.retrieval_backend,
     )
     serialized = json.dumps(asdict(summary), ensure_ascii=False, indent=2)
     args.output.parent.mkdir(parents=True, exist_ok=True)
