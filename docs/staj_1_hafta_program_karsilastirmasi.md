@@ -93,7 +93,7 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 - [ ] Gizlilik açısından uygun gerçek bir PDF seç ve parse et
 - [ ] İki farklı chunk boyutu/overlap ayarıyla parça sayısı ve bağlam bütünlüğünü karşılaştır
 - [ ] Mevcut dense/hybrid retrieval katmanını PDF chunkları üzerinde çalıştır
-- [ ] Retrieval adaylarını cross-encoder reranker'a bağla ve öncesi/sonrası metriğini ölç
+- [x] Retrieval adaylarını cross-encoder reranker'a bağla; Qdrant → reranker → parent-section context akışını test et ve kanıt zincirini raporla
 - [x] ChromaDB, Qdrant, Milvus ve Pinecone için teknoloji seçim notu yaz
 - [x] Seçilen yerel vector DB ile kalıcı index oluştur (Qdrant, 48 point, restart sonrası kalıcılık ve payload filter doğrulandı)
 - [x] Gerçek LLM ile kaynaklı cevap ve no-answer akışını tamamla (Gemma 3 4B ile ölçüldü; retrieval sınırları raporlandı)
