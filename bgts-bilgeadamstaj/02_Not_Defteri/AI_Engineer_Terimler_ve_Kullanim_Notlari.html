@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>AI Engineer Journey — Terimler ve Kısa Kullanım Notlarım</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 17mm 17mm 18mm 17mm;
+      @bottom-center {
+        content: counter(page);
+        font-family: "Noto Sans", sans-serif;
+        font-size: 8pt;
+      }
+    }
+    body {
+      color: #111;
+      font-family: "Noto Sans", "DejaVu Sans", sans-serif;
+      font-size: 10.2pt;
+      line-height: 1.42;
+      margin: 0;
+    }
+    h1 {
+      font-size: 18pt;
+      font-weight: 650;
+      margin: 0 0 6mm 0;
+    }
+    h2 {
+      border-bottom: 1px solid #aaa;
+      font-size: 12.5pt;
+      font-weight: 650;
+      margin: 8mm 0 3.5mm 0;
+      padding-bottom: 1.5mm;
+      break-after: avoid;
+    }
+    p {
+      margin: 0 0 3mm 0;
+    }
+    ul {
+      margin: 0;
+      padding-left: 5.5mm;
+    }
+    li {
+      margin: 0 0 2.6mm 0;
+      break-inside: avoid;
+    }
+    strong {
+      font-weight: 650;
+    }
+    code {
+      background: #f2f2f2;
+      border-radius: 2px;
+      font-family: "DejaVu Sans Mono", monospace;
+      font-size: 8.7pt;
+      padding: 0.2mm 0.8mm;
+    }
+    .meta {
+      color: #444;
+      font-size: 9pt;
+      margin-bottom: 5mm;
+    }
+    .note {
+      border-left: 2px solid #777;
+      padding-left: 3mm;
+      margin-bottom: 5mm;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Engineer Journey — Terimler ve Kısa Kullanım Notlarım</h1>
+  <p class="meta">Repo çalışmalarından çıkarılmış kişisel başvuru notu · 26 Temmuz 2026</p>
+  <p class="note">Bu belgede yalnızca repoda çalıştığım veya deneyle kullandığım kavramlar var. Her maddede terimin kısa anlamı, nerede işe yaradığı ve küçük bir örnek bulunuyor. Amaç formül ezberlemek değil; ileride bir ML, LLM veya RAG sistemi kurarken doğru kavramı doğru yerde hatırlamak.</p>
+
+  <h2>1. Yazılım ve çalışma düzeni</h2>
+  <ul>
+    <li><strong>CLI / terminal:</strong> Programları grafik arayüz yerine komutlarla çalıştırdığım ortamdır. Otomasyon, test ve sunucu işleri için kullanılır. Örnek: <code>pytest -q</code> ile tüm testleri tek komutla çalıştırmak.</li>
+    <li><strong>Mutlak ve göreli yol:</strong> Mutlak yol dosyanın sistemdeki tam adresidir; göreli yol bulunduğum klasöre göre hesaplanır. Örnek: <code>/home/alperen/ai-engineering-journey</code> mutlak, <code>docs/report.md</code> göreli yoldur.</li>
+    <li><strong>Shell script:</strong> Tekrar eden terminal komutlarını bir dosyada toplar. Kurulum veya kontrol adımlarını unutmayı azaltır. Örnek: haftalık testleri çalıştıran <code>run_week1_checks.sh</code>.</li>
+    <li><strong>Virtual environment:</strong> Python paketlerini sistemden ve diğer projelerden ayırır. Sürüm çakışmasını önler. Örnek: bu projenin <code>.venv</code> ortamına <code>sentence-transformers</code> kurulması.</li>
+    <li><strong>Dependency:</strong> Kodun çalışmak için kullandığı dış pakettir. Sürümü ve amacı bilinmelidir. Örnek: PDF metni okumak için <code>pypdf</code>, embedding için <code>sentence-transformers</code>.</li>
+    <li><strong>Module / package / import:</strong> Module tek Python dosyası, package ilişkili modüllerin klasörüdür; import bunları kullanıma alır. Örnek: <code>labs.rag.reranker</code> modülündeki sınıfı PDF deneyinde kullanmak.</li>
+    <li><strong>OOP:</strong> Veriyi ve o veriyle ilgili davranışları sınıflarda toplama yaklaşımıdır. Karmaşık AI uygulamalarında bileşen sınırlarını netleştirir. Örnek: bir <code>Milestone</code> nesnesinin kendi ilerleme doğrulamasını taşıması.</li>
+    <li><strong>Dataclass:</strong> Veri taşıyan Python sınıflarını daha kısa ve açık yazmayı sağlar. Örnek: arama sonucunda <code>chunk_id</code>, metin ve skoru birlikte tutan sonuç nesnesi.</li>
+    <li><strong>Enum:</strong> Bir alanın alabileceği sınırlı değerleri tanımlar. Yazım hatalarını ve geçersiz durumları azaltır. Örnek: artifact türünün rastgele metin yerine önceden tanımlı değerlerden seçilmesi.</li>
+    <li><strong>Validation:</strong> Veri sisteme girmeden önce kurallara uygunluğunu kontrol eder. Hatanın daha erken ve anlaşılır çıkmasını sağlar. Örnek: <code>top_k</code> değerinin sıfırdan büyük olmasını zorunlu tutmak.</li>
+    <li><strong>Unicode / text normalization:</strong> Metni karşılaştırmadan önce büyük-küçük harf, noktalama ve Unicode birleşik işaretlerini tutarlı hale getirmektir. Türkçe <code>İlk</code> ifadesinin casefold sonrası <code>i</code> + nokta işaretine ayrılması, evaluator'ın doğru cevabı yanlış saymasına yol açtı; bu yüzden normalizasyon da test edilir.</li>
+    <li><strong>Type hint:</strong> Fonksiyonun hangi veri tipini alıp döndürdüğünü açıklar. Büyük pipeline'larda yanlış bileşen bağlantılarını erken fark ettirir. Örnek: arama fonksiyonunun <code>list[ChunkSearchResult]</code> döndürmesi.</li>
+    <li><strong>mypy:</strong> Kodu çalıştırmadan type hint uyumsuzluklarını kontrol eder. Örnek: reranker'ın beklediği aday tipiyle vector store çıktısının uyuştuğunu doğrulamak.</li>
+    <li><strong>Unit test / pytest:</strong> Küçük bir davranışın beklenen sonucu verdiğini otomatik kontrol eder. Örnek: boş aday listesinde reranker'ın boş sonuç döndürmesi.</li>
+    <li><strong>Mock / fake bileşen:</strong> Testte ağır model veya dış servisin yerine kontrollü sahte nesne kullanılır. Test hızlı ve deterministik olur. Örnek: gerçek cross-encoder indirmeden PDF reranking veri akışını test etmek.</li>
+    <li><strong>Refactor:</strong> Davranışı değiştirmeden kodun yapısını iyileştirmektir. Örnek: tekrar eden validation kurallarını ortak yardımcı fonksiyona çıkarmak.</li>
+    <li><strong>Logging ve debugging:</strong> Logging çalışma sırasında olayları kaydeder; debugging hatanın nerede ve neden oluştuğunu araştırır. Örnek: model yüklenirken veya retrieval sonucu beklenmedik olduğunda ara değerleri görmek.</li>
+    <li><strong>Profiling ve benchmark:</strong> Profiling zamanın hangi fonksiyonlarda harcandığını, benchmark ise belirli işlemin süresini ölçer. Örnek: saf Python matris çarpımıyla NumPy sürümünü karşılaştırmak.</li>
+    <li><strong>Git branch / commit / Pull Request:</strong> Branch değişikliği ana koddan ayırır, commit anlamlı bir kayıt oluşturur, PR değişikliğin incelenip birleştirilmesini sağlar. Bu geçmiş yapılan işi kanıtlar ve geri izlemeyi kolaylaştırır.</li>
+    <li><strong>Conventional Commit:</strong> Commit mesajını <code>type(scope): açıklama</code> biçiminde standardize eder. Örnek: <code>feat(rag): rerank PDF retrieval candidates</code>.</li>
+    <li><strong>Artifact ve reproducibility:</strong> Artifact yapılan işin görünür çıktısıdır; reproducibility aynı ayarlarla deneyin yeniden üretilebilmesidir. Kod, test, JSON sonucu ve raporu birlikte saklamak bu nedenle önemlidir.</li>
+  </ul>
+
+  <h2>2. Matematik, veri ve hazırlama</h2>
+  <ul>
+    <li><strong>Scalar, vector ve dimension:</strong> Scalar tek sayıdır; vector sıralı sayılar listesidir; dimension listedeki sayı adedidir. Örnek: bir cümle embedding'i 384 sayıdan oluşuyorsa 384 boyutludur.</li>
+    <li><strong>Dot product:</strong> İki vektörün karşılıklı elemanlarını çarpıp toplar. Benzer yönleri ölçen cosine similarity hesabının temel parçalarından biridir.</li>
+    <li><strong>Norm:</strong> Vektörün uzunluğunu hesaplar. Cosine similarity'de vektör büyüklüğünün sonucu yanıltmasını önlemek için kullanılır.</li>
+    <li><strong>Cosine similarity:</strong> İki vektör arasındaki açının benzerliğini ölçer; yön aynılaştıkça skor 1'e yaklaşır. RAG'de soru embedding'iyle chunk embedding'ini karşılaştırmak için kullanılır. Yüksek skor tek başına “bu parça soruyu cevaplar” demek değildir.</li>
+    <li><strong>Matrix:</strong> Satır ve sütunlardan oluşan sayı tablosudur. Transformer ağırlıkları ve toplu embedding işlemleri matris işlemleriyle yürür.</li>
+    <li><strong>Transpose ve matrix multiplication:</strong> Transpose satırlarla sütunları değiştirir; matris çarpımı bir temsili başka boyuta dönüştürür. Attention'daki query–key skorları da matris çarpımlarıyla hesaplanır.</li>
+    <li><strong>Sparse vector:</strong> Elemanlarının çoğu sıfır olan vektördür. Kelime tabanlı TF-IDF gösterimi buna örnektir; sözlük büyür ama bir metin yalnız az sayıda kelime içerir.</li>
+    <li><strong>Dense vector:</strong> Çoğu elemanı dolu olan sabit boyutlu vektördür. Sentence Transformer'ın ürettiği 384 sayılık cümle embedding'i buna örnektir.</li>
+    <li><strong>DataFrame ve Series:</strong> pandas'ta DataFrame satır–sütun tablosu, Series tek sütunluk dizidir. CSV yükleme, eksik değer kontrolü ve feature hazırlamada kullanılır.</li>
+    <li><strong>Raw ve processed data:</strong> Raw data kaynaktan geldiği ilk haldir; processed data temizlenip model kullanımına hazırlanmıştır. Ham veri doğrudan modele verilmemelidir.</li>
+    <li><strong>Missing value ve imputation:</strong> Missing value eksik veridir; imputation bunu bir kuralla doldurur. Örnek: Titanic yaş bilgisini genel ortalama yerine unvan, sınıf ve cinsiyet grubuna göre tahmin etmek.</li>
+    <li><strong>EDA:</strong> Exploratory Data Analysis, model kurmadan önce veri dağılımını, eksikleri ve ilişkileri incelemektir. Amaç “veri ne söylüyor?” sorusuna raporla cevap vermektir.</li>
+    <li><strong>SQL:</strong> Veritabanından doğru satırları seçmek, filtrelemek, sıralamak ve gruplamak için kullanılır. Örnek: <code>GROUP BY</code> ile bir grubun ortalama başarı değerini bulmak.</li>
+    <li><strong>Feature (X) ve target (y):</strong> Feature modelin girdisi, target öğrenmeye çalıştığı sonuçtur. Titanic'te yaş, sınıf ve cinsiyet X; hayatta kalma y'dir.</li>
+    <li><strong>Train/test split:</strong> Verinin bir bölümü öğrenme, görülmemiş bölümü değerlendirme için ayrılır. Test verisine bakarak karar vermek gerçek performansı bozar.</li>
+    <li><strong>Numerical ve categorical feature:</strong> Numerical sayısal ölçüm, categorical sınırlı kategori bilgisidir. Yaş sayısal; biniş limanı veya unvan kategoriktir.</li>
+    <li><strong>Encoding ve scaling:</strong> Encoding kategorileri modele uygun sayılara dönüştürür; scaling sayısal sütunları karşılaştırılabilir ölçeğe getirir. Logistic Regression pipeline'ında preprocessing parçasıdır.</li>
+    <li><strong>Pipeline:</strong> Veri hazırlama ve model adımlarını aynı sırada bağlar. Örnek: eksik doldurma → one-hot encoding → model. Eğitim ve tahminde aynı işlemlerin uygulanmasını sağlar.</li>
+    <li><strong>Data leakage:</strong> Modelin normalde tahmin anında bilemeyeceği bilgiyi eğitimde görmesidir. Örnek: tüm veri üzerinde imputation hesaplayıp sonra cross-validation yapmak skoru yapay olarak yükseltebilir.</li>
+  </ul>
+
+  <h2>3. Makine öğrenmesi ve deney değerlendirme</h2>
+  <ul>
+    <li><strong>Baseline:</strong> Daha gelişmiş yöntemleri kıyaslamak için kurulan ilk basit çalışan modeldir. İyileştirmenin gerçekten değerli olup olmadığını baseline'a göre ölçeriz.</li>
+    <li><strong>Classification:</strong> Girdiyi sınıflardan birine atama problemidir. Örnek: öğrencinin başarılı/başarısız veya Titanic yolcusunun hayatta kaldı/kalmadı tahmini.</li>
+    <li><strong>Logistic Regression:</strong> Sınıf olasılığı üreten sade ve yorumlanabilir bir baseline modelidir. Karmaşık modelden önce veri pipeline'ının çalıştığını göstermek için uygundur.</li>
+    <li><strong>Random Forest:</strong> Birçok karar ağacının tahminini birleştirir. Doğrusal olmayan ilişkileri yakalayabilir; fakat daha büyük ve daha az yorumlanabilir olabilir.</li>
+    <li><strong>Histogram Gradient Boosting:</strong> Hataları sırayla düzelten ağaç tabanlı güçlü bir model ailesidir. Titanic model karşılaştırmasında aynı feature setinde en yüksek yerel CV ortalamasını verdi.</li>
+    <li><strong>Accuracy:</strong> Tüm tahminlerin ne kadarının doğru olduğunu ölçer. Sınıflar dengesizse tek başına yanıltıcı olabilir.</li>
+    <li><strong>Precision:</strong> Modelin pozitif dediği örneklerin ne kadarının gerçekten pozitif olduğunu ölçer. Yanlış cevap vermenin pahalı olduğu RAG no-answer kararlarında önemlidir.</li>
+    <li><strong>Recall:</strong> Gerçek pozitif örneklerin ne kadarını yakaladığımızı ölçer. Cevaplanabilir soruları gereksiz reddetmemek istediğimizde önemlidir.</li>
+    <li><strong>F1 score:</strong> Precision ve recall arasında denge kurar. Tek metrik kullanmak gerekirse iki hata türünü birlikte gözetir.</li>
+    <li><strong>True/false positive ve true/false negative:</strong> Kararların dört temel sonucudur. RAG örneği: kaynakta olmayan hava durumu sorusuna cevap vermek false positive; kaynakta olan venv sorusunu reddetmek false negative'dir.</li>
+    <li><strong>Cross-validation:</strong> Veriyi farklı train/validation parçalarına bölerek modeli birkaç kez ölçer. Tek şanslı bölünmeye güvenmeyi azaltır.</li>
+    <li><strong>Stratified K-Fold:</strong> Her fold'da sınıf oranlarını yaklaşık koruyan cross-validation türüdür. Titanic gibi sınıflandırma problemlerinde kullanıldı.</li>
+    <li><strong>Repeated cross-validation:</strong> Cross-validation'ı farklı bölünmelerle tekrarlar. Küçük veri setinde sonucun ne kadar kararlı olduğunu daha iyi gösterir.</li>
+    <li><strong>Mean ve standard deviation:</strong> CV mean ortalama performansı, CV std fold'lar arasındaki oynaklığı gösterir. Bir modelin ortalaması yüksek ama std'si çok büyükse kararsız olabilir.</li>
+    <li><strong>Random seed:</strong> Rastgele işlemleri tekrar üretilebilir yapar. Örnek: <code>random_state=42</code> kullanarak aynı veri bölünmesini elde etmek.</li>
+    <li><strong>Feature engineering:</strong> Ham sütunlardan probleme daha anlamlı yeni özellikler üretmektir. Örnek: isimden <code>Title</code>, aile üyelerinden <code>FamilySize</code> oluşturmak.</li>
+    <li><strong>Hyperparameter:</strong> Modelin veriden öğrenmediği, deneyi yapanın seçtiği ayardır. Örnek: ağaç derinliği, regularization gücü veya retrieval'daki top-k.</li>
+    <li><strong>Ablation study:</strong> Bir özelliği veya bileşeni çıkarıp sonucun nasıl değiştiğini ölçer. Titanic deneyinde iyileşmenin çoğunu <code>Title</code> özelliğinin getirdiği bu şekilde görüldü.</li>
+    <li><strong>Controlled comparison:</strong> Tek seferde yalnız bir değişkeni değiştiririz. Örnek: aynı feature, aynı CV, farklı model; böylece farkın modelden geldiğini söyleyebiliriz.</li>
+    <li><strong>Experiment logging:</strong> Modeli, ayarları, metrikleri ve notları her deneyde kaydetmektir. Aynı deneyi tekrarlamayı ve yalnız iyi sonuçları hatırlama hatasını önler.</li>
+    <li><strong>Out-of-fold prediction:</strong> Her satır için o satırı eğitimde görmeyen fold modelinin ürettiği tahmindir. Daha dürüst hata analizi ve ensemble çalışmaları için kullanılır.</li>
+    <li><strong>Ensemble:</strong> Birden fazla modelin tahminini birleştirir. Modeller farklı hatalar yapıyorsa tek modelden daha kararlı olabilir; benzer modelleri toplamak otomatik olarak fayda sağlamaz.</li>
+    <li><strong>Error analysis:</strong> Yalnız skora değil, hangi satırların neden yanlış tahmin edildiğine bakmaktır. Yeni feature fikri veya veri sorunu buradan çıkar.</li>
+    <li><strong>Overfitting:</strong> Modelin eğitim veya yerel validation ayrıntılarını ezberleyip yeni veride kötüleşmesidir. Çok sayıda deneyi yalnız public leaderboard'a göre seçmek de leaderboard overfitting oluşturabilir.</li>
+    <li><strong>Negative result:</strong> Beklenen iyileşmenin oluşmaması da sonuçtur. Örnek: yeni feature CV'yi artırmıyorsa saklanır ve neden fayda vermediği raporlanır.</li>
+    <li><strong>Risky flip guard:</strong> Yeni modelin eski tahminden değiştirdiği satırları inceleyen güvenlik kontrolüdür. Toplam skor artmış görünse bile riskli değişiklikleri körlemesine göndermemeyi sağlar.</li>
+  </ul>
+
+  <h2>4. LLM ve Transformer temelleri</h2>
+  <ul>
+    <li><strong>Tokenizer:</strong> Ham metni modelin sözlüğündeki parçalara böler. Model kelimeleri doğrudan değil, bu token dizisini işler.</li>
+    <li><strong>Subword token:</strong> Kelimeden küçük, karakterden büyük tekrar kullanılabilir parçadır. Türkçedeki ekleri ve sözlükte olmayan kelimeleri yönetmeye yardımcı olur.</li>
+    <li><strong>Token ID:</strong> Tokenın sözlükteki sıra numarasıdır; tek başına anlam taşımaz. Anlamlı sayısal temsil embedding tablosundan alınır.</li>
+    <li><strong>Token embedding:</strong> Her token ID'sini öğrenilmiş sayılar dizisine dönüştürür. LLM katmanları bu vektörler üzerinde işlem yapar; sentence embedding ile aynı amaçta değildir.</li>
+    <li><strong>Position bilgisi:</strong> Aynı tokenların farklı sırada oluşunu ayırt etmek için dizideki konumu temsile ekler. “Köpek adamı ısırdı” ile “adam köpeği ısırdı” bu nedenle aynı değildir.</li>
+    <li><strong>Transformer:</strong> Token temsillerini attention ve MLP katmanlarıyla tekrar tekrar güncelleyen model mimarisidir. Modern LLM'lerin temelidir.</li>
+    <li><strong>Self-attention:</strong> Her tokenın aynı metindeki diğer görünür tokenlardan ne kadar bilgi alacağını hesaplar. “Onu” gibi bir tokenın hangi önceki kişiye bağlandığını bağlama göre kurmaya çalışır.</li>
+    <li><strong>Query, Key, Value:</strong> Attention'ın üç temsilidir. Query “hangi bilgiye ihtiyacım var?”, Key “bende hangi bilgi var?”, Value “eşleşirsek aktaracağım içerik” şeklinde düşünülebilir.</li>
+    <li><strong>Causal mask:</strong> Sıradaki token tahmin edilirken gelecekteki tokenların görünmesini engeller. Böylece model eğitimde cevabın devamını gizlice okuyamaz.</li>
+    <li><strong>Residual connection, normalization ve MLP:</strong> Residual önceki bilgiyi taşır, normalization sayısal akışı dengeler, MLP her token temsilini dönüştürür. Transformer block yalnız attention'dan oluşmaz.</li>
+    <li><strong>Next-token prediction:</strong> LLM, bağlama göre bir sonraki tokenın olasılıklarını üretir ve seçilen tokenı dizinin sonuna ekler. Akıcı metin üretmesi otomatik olarak doğru bilgi verdiği anlamına gelmez.</li>
+    <li><strong>Context window:</strong> Modelin tek istekte görebildiği toplam token sınırıdır. System prompt, sohbet geçmişi, RAG chunkları, soru ve üretilecek cevap aynı bütçeyi paylaşır.</li>
+    <li><strong>Token budget:</strong> Context window içinde hangi parçaya ne kadar alan ayrıldığını anlatır. Çok fazla ilgisiz chunk eklemek cevaba yer bırakmayabilir ve modeli dağıtabilir.</li>
+    <li><strong>System prompt ve user message:</strong> System uygulamanın genel davranış talimatını, user mevcut isteği taşır. Ancak gerçek öncelik modelin chat template'ine ve uygulama katmanına da bağlıdır; system prompt tek başına güvenlik duvarı değildir.</li>
+    <li><strong>Chat template:</strong> System, user ve assistant mesajlarının modele gönderilmeden önce hangi özel tokenlarla birleştirileceğini belirler. Aynı prompt farklı template'te farklı davranabilir.</li>
+    <li><strong>Base model:</strong> Esas olarak sonraki token tahmini için eğitilmiş ham modeldir. Tamamlama, araştırma ve fine-tuning için uygundur; doğrudan sohbet talimatlarına her zaman iyi uymaz.</li>
+    <li><strong>Instruct model:</strong> Kullanıcı talimatlarını izleme ve sohbet formatında cevap verme için ayrıca eğitilmiş modeldir. Yerel asistan veya RAG cevaplayıcı için genellikle base modelden daha uygundur.</li>
+    <li><strong>Parameter count:</strong> Modelde öğrenilmiş ağırlık sayısıdır. Daha fazla parametre kapasiteyi artırabilir ama “her görevde daha iyi” garantisi vermez; RAM ve gecikme maliyeti de yükselir.</li>
+    <li><strong>Quantization:</strong> Model ağırlıklarını daha düşük hassasiyetle saklayarak RAM kullanımını azaltır. 32 GB RAM'li, GPU'suz bilgisayarda 4B sınıfı modelleri çalıştırmayı kolaylaştırır; küçük bir kalite kaybı olabilir.</li>
+    <li><strong>Temperature ve deterministik ayar:</strong> Temperature yükseldikçe örnekleme çeşitlenir; düşük değer daha tutarlı sonuç verir. Prompt sürümlerini karşılaştırırken aynı ayar ve düşük rastgelelik kullanmak gerekir.</li>
+    <li><strong>Cold ve warm latency:</strong> Cold latency model ilk yüklenirken geçen süreyi, warm latency model bellekteyken sonraki istek süresini anlatır. Yerel model karşılaştırmasında ikisi ayrı ölçülmelidir.</li>
+    <li><strong>Local inference:</strong> Modelin bulut API yerine kendi bilgisayarımda çalışmasıdır. Veri kontrolü sağlar; donanım sınırı, RAM ve hız sorumluluğu bana geçer.</li>
+    <li><strong>Cold start / warm start:</strong> Cold start, model ağırlıkları ilk kez RAM'e yüklenirken yapılan ilk çağrıdır; warm start model zaten yüklüyken sonraki çağrıdır. Yerel Gemma deneyinde soğuk ve sıcak süreleri ayrı yorumlamazsak vector DB gecikmesini yanlış ölçebiliriz.</li>
+    <li><strong>Thinking token ve görünür cevap:</strong> Bazı reasoning modelleri token bütçesinin bir bölümünü iç düşünmeye harcar. API'de bu düşünce ayrı alan olarak gelebilir veya yanlış template ile görünür metne karışabilir; <code>num_predict</code> biterse kullanıcıya final cevap hiç dönmeyebilir.</li>
+    <li><strong>Serving / template uyumu:</strong> Aynı model ağırlıkları farklı chat template, system prompt veya thinking ayarıyla bambaşka ürün davranışı verebilir. Qwen deneyi, model seçiminin yalnız ağırlık seçmek değil, doğru serving konfigürasyonunu da ölçmek olduğunu gösterdi.</li>
+    <li><strong>Ollama ve Open WebUI:</strong> Ollama yerel modeli indirip servis eder; Open WebUI tarayıcıdan sohbet arayüzü sağlar. Arayüz model değildir, yalnız modele erişim katmanıdır.</li>
+    <li><strong>Prompt injection:</strong> Kullanıcı veya doküman içeriğinin “önceki kuralları yok say” gibi talimatlarla sistemi yönlendirmeye çalışmasıdır. Sadece prompt yazarak tamamen çözülemez; uygulama izinleri ve çıktı kontrolleri gerekir.</li>
+    <li><strong>Hallucination:</strong> Modelin akıcı ama kaynaksız veya yanlış bilgi üretmesidir. V2 promptunun kaynakta olmayan izin süresini söylemesi buna örnektir.</li>
+    <li><strong>Prompt evaluation:</strong> Prompt değişikliğini birkaç sabit vakada ölçmektir. V1 aşırı reddetti, V2 cevapladı ama yanlış çıkarım yaptı, V3 özellik–değer bağını koruyarak daha iyi denge kurdu; V4 üslubu düzeltirken no-answer davranışını bozdu.</li>
+    <li><strong>Model selection:</strong> Model yalnız benchmark veya parametre sayısına göre seçilmez. Lisans, Türkçe ve kod performansı, RAM, gecikme, quantization, context ve yerel görev testleri birlikte değerlendirilir.</li>
+    <li><strong>MVP ve scope boundary:</strong> MVP, en az özellikle değil, tek bir kullanıcı problemini güvenli biçimde sınayacak en dar ürün sürümüdür. Klinik Akış için bu; idari WhatsApp randevu akışı ve insan devralmadır; teşhis, ödeme ve tam hasta kaydı kapsam dışıdır.</li>
+    <li><strong>Shadow mode:</strong> Sistemin gerçek iş akışında öneri veya taslak üretip, sonucu insan onayı olmadan dışarı göndermediği çalışma modudur. Sağlık gibi riskli alanda otomasyondan önce kalite ve hata oranını ölçmek için kullanılır.</li>
+  </ul>
+
+  <h2>5. Embedding, retrieval ve RAG</h2>
+  <ul>
+    <li><strong>RAG:</strong> Retrieval-Augmented Generation, cevap üretmeden önce dış dokümanlardan kanıt bulup modele bağlam olarak verme yaklaşımıdır. Amaç modelin yalnız ezberine güvenmemektir.</li>
+    <li><strong>Document:</strong> Sisteme giren anlamlı kaynak birimidir. PDF, politika metni veya teknik doküman bir document olabilir; kimlik, başlık, kaynak ve metin taşır.</li>
+    <li><strong>Ingestion:</strong> Kaynağı okuyup normalize ederek RAG sisteminin kullanacağı document/chunk yapısına dönüştürme sürecidir. Örnek: PDF'den seçilebilir metni <code>pypdf</code> ile çıkarmak.</li>
+    <li><strong>Structured / section-aware ingestion:</strong> PDF'i yalnız düz metin değil, mantıksal başlık ve bölüm yapısıyla sisteme almaktır. Mentor PDF'inde <code>04 Yerel modeli...</code> ve <code>Teslim Paketi</code> başlıklarını chunk metadata'sına taşıyınca doğru bölümün adaylara girme oranı iyileşti.</li>
+    <li><strong>Document-specific parser:</strong> Belirli bir belge ailesinin bilinen başlık, tablo veya üst bilgi kurallarını kullanan parser'dır. Güçlü olabilir ama genelleştirilmemelidir; örnek: bu mentor PDF'inin yedi bilinen başlığını configuration olarak vermek ve farklı PDF türünde ayrı test etmek.</li>
+    <li><strong>Chunk:</strong> Uzun dokümanın retrieval için ayrılmış küçük parçasıdır. Chunk her zaman “bir dosya” değildir; dosyanın birkaç cümlesi veya belirli token aralığı olabilir.</li>
+    <li><strong>Overlap:</strong> Komşu chunkların bir miktar ortak metin taşımasıdır. Bilginin chunk sınırında ikiye ayrılmasını azaltır. Örnek: 2 cümlelik chunkta 1 cümle overlap.</li>
+    <li><strong>Metadata:</strong> Chunk metnine eklenen sayfa, başlık, bölüm, tarih veya kaynak bilgisidir. Doğru filtreleme, kaynak gösterme ve daha isabetli retrieval için kullanılır.</li>
+    <li><strong>Chunk-size trade-off:</strong> Küçük chunk daha nokta atışı olabilir ama bağlamı eksiltebilir; büyük chunk daha fazla bağlam taşır ama genel metinle skoru şişirebilir. Mentor PDF'inde 2 cümlelik chunk, amaç sorusunda 5 cümlelik chunktan daha isabetliydi.</li>
+    <li><strong>Vectorization:</strong> Metni matematiksel olarak karşılaştırılabilir sayı temsiline çevirme işlemidir. TF-IDF de embedding de vectorization yapar; çalışma mantıkları farklıdır.</li>
+    <li><strong>Term Frequency:</strong> Bir kelimenin dokümanda kaç kez geçtiğini ölçer. “Python” kelimesi iki kez geçiyorsa o terimin frekansı buna göre artar; anlamdaş kelimeleri anlayamaz.</li>
+    <li><strong>IDF:</strong> Her yerde geçen kelimelerin önemini azaltıp nadir kelimelerin önemini artırır. “ve” düşük, “venv” daha yüksek ayırt edici ağırlık alabilir.</li>
+    <li><strong>TF-IDF:</strong> Kelimenin ilgili belgede sık, tüm koleksiyonda ise nadir olmasını ödüllendiren sparse gösterimdir. Tam teknik terim ve ürün kodu aramalarında güçlüdür.</li>
+    <li><strong>Lexical retrieval:</strong> Kelime veya parça eşleşmesine dayalı aramadır. “python -m venv” gibi exact ifadeleri iyi yakalar; farklı kelimelerle aynı anlamı bulmakta zorlanabilir.</li>
+    <li><strong>Sentence embedding:</strong> Cümle veya paragrafın genel anlamını sabit boyutlu dense vektöre çevirir. Kullandığımız çok dilli MiniLM modeli her metin için 384 sayı üretir.</li>
+    <li><strong>384 dimension:</strong> Cümlenin 384 ayrı insan-tanımlı özelliği demek değildir. Modelin eğitim sırasında faydalı bulduğu dağıtık sayısal temsil alanıdır; tek bir sayıya “bu Python anlamıdır” diyemeyiz.</li>
+    <li><strong>Bi-encoder:</strong> Soru ve chunkları birbirinden bağımsız embed eder. Chunk vektörleri önceden hesaplanabildiği için çok sayıda metinde hızlı candidate search yapılır.</li>
+    <li><strong>Semantic search:</strong> Aynı kelimeler geçmese de anlamı yakın metinleri embedding ile bulur. Örnek: “sanal ortam oluşturma” sorgusunun “venv kurulumu” parçasını getirmesi.</li>
+    <li><strong>Vector store:</strong> Chunkları, embeddinglerini ve metadata'yı saklayıp benzerlik araması yapan katmandır. Repoda önce in-memory sürümü kuruldu; Chroma/Qdrant gibi kalıcı ürünler aynı temel ihtiyacı daha büyük ölçekte çözer.</li>
+    <li><strong>Vector database:</strong> Vektörleri ve metadata'yı kalıcı, client/server tabanlı bir collection içinde saklayan vector store türüdür. In-memory liste süreç kapanınca kaybolur; Qdrant gibi bir DB ile PDF chunkları yeniden başlatmada da aranabilir kalır.</li>
+    <li><strong>Collection:</strong> Aynı embedding boyutu ve şemaya sahip vektör kayıtlarının mantıksal grubudur. Örnek: mentor PDF'inin 384 boyutlu chunk embeddingleri için tek bir Qdrant collection.</li>
+    <li><strong>Payload / metadata filtering:</strong> Vektörün yanında saklanan, aramayı daraltan alanlardır. Örnek: yalnız <code>section_id=local_model</code> olan chunklarda arama yapmak veya cevaba doğru source bilgisini eklemek.</li>
+    <li><strong>Upsert:</strong> Kimliği daha önce yoksa kayıt ekleme, varsa aynı kaydı güncelleme işlemidir. Mentor PDF'i ikinci kez ingest edilince 48 chunk'ın 96'ya çıkmaması upsert sayesindedir.</li>
+    <li><strong>Idempotency:</strong> Aynı işlemi birden fazla kez uygulamanın aynı nihai durumu üretmesidir. İndeksleme hata sonrası tekrar çalıştırılabildiği için RAG ingestion'ında kritik bir güvenilirlik özelliğidir.</li>
+    <li><strong>Persistent volume:</strong> Container silinse veya yeniden başlatılsa bile veriyi container dışındaki bağlı diskte saklayan volume'dür. Qdrant'ın named volume'u restart sonrasında 48 point'in korunmasını sağladı.</li>
+    <li><strong>RAG orchestration:</strong> Retrieval, reranking, context builder, no-answer policy ve LLM çağrısını doğru sırayla birleştiren uygulama katmanıdır. Her bileşen tek başına çalışsa bile bu sıra kurulmazsa kanıtın nerede kaybolduğu anlaşılamaz.</li>
+    <li><strong>Threshold calibration:</strong> “Hangi retrieval skoru yeterli kanıt demektir?” sorusunu sabit vakalarda ölçerek yanıtlama sürecidir. Başka bir veri setindeki <code>0.50</code> eşiğini yeni PDF'e doğrudan taşımak false negative üretebilir.</li>
+    <li><strong>Self-hosted ve managed service:</strong> Self-hosted servisi kendi Docker/sunucunda işletmektir; managed serviste sağlayıcı operasyonu yönetir. İlkinde veri kontrolü ve operasyon sorumluluğu, ikincisinde kolaylık ve sağlayıcı/maliyet bağımlılığı trade-off'u vardır.</li>
+    <li><strong>Retrieval:</strong> Soruya en ilgili document veya chunk adaylarını bulma aşamasıdır. İyi LLM yanlış chunklarla doğru cevap veremez; RAG kalitesinin ilk kapısıdır.</li>
+    <li><strong>Top-k:</strong> Retrieval'ın döndüreceği en yüksek skorlu aday sayısıdır. <code>top_k=5</code>, en iyi beş chunkı sonraki aşamaya geçirir. Çok düşük k doğru kanıtı kaçırabilir, çok yüksek k gürültü ve maliyet getirir.</li>
+    <li><strong>Candidate generation:</strong> Hızlı retrieval ile küçük bir aday kümesi oluşturma aşamasıdır. Reranker yalnız bu adaylar arasından seçebilir; doğru parça top-k'ya girmediyse onu geri getiremez.</li>
+    <li><strong>Hybrid retrieval:</strong> Lexical ve semantic skorları birleştirir. Böylece hem exact anahtar kelimeyi hem paraphrase anlamını yakalamaya çalışır.</li>
+    <li><strong>Score normalization ve weight:</strong> Farklı retriever skorlarını aynı aralığa getirip ne kadar etkili olacaklarını ayarlarız. Örnek: <code>0.6 dense + 0.4 lexical</code>; en iyi ağırlık varsayımla değil eval setiyle seçilir.</li>
+    <li><strong>Reranker / cross-encoder:</strong> Soru ve her adayı birlikte okuyup daha hassas relevance skoru üretir. Pahalı olduğu için tüm koleksiyona değil top-k adaylara uygulanır.</li>
+    <li><strong>PDF reranking örneği:</strong> “Teslim paketinde ne var?” sorusunda doğru tablo parçası dense sıralamada 5. adaydı; cross-encoder onu 1. sıraya taşıdı. Yerel model sorusunda doğru bölüm top-5'e girmediği için reranker düzeltemedi.</li>
+    <li><strong>Context builder:</strong> Seçilen chunkları kaynak bilgileriyle düzenleyip LLM'e verilecek bağlamı hazırlar. Sıra, ayırıcılar ve token bütçesi burada yönetilir.</li>
+    <li><strong>Context budget:</strong> LLM'e gönderilecek kanıt için koyduğumuz karakter veya token üst sınırıdır. Gereğinden çok context gecikmeyi artırır ve modelin dikkatini dağıtabilir; az context ise cevabı eksik bırakabilir.</li>
+    <li><strong>Small-to-big retrieval / parent-section expansion:</strong> Küçük child chunklarla doğru yeri bulup, cevap üretirken bağlı olduğu daha geniş parent section'ı kullanma desenidir. Yerel model ölçüm sorusunda tek chunk no-answer verirken tam <code>local_model</code> section'ı doğru metrikleri içeren cevap üretti.</li>
+    <li><strong>Grounded answer:</strong> Cevabın verilen kanıta dayanmasıdır. Model yalnız contextte bulunan bilgiyi söylemeli ve mümkünse kaynağı göstermelidir.</li>
+    <li><strong>Evidence filtering:</strong> Skoru çok zayıf chunkların context'e girmesini engeller. İlgisiz kanıt modelin uydurma yapmasını kolaylaştırabilir.</li>
+    <li><strong>Answerability:</strong> Bulunan kanıtın soruyu gerçekten cevaplamaya yetip yetmediği kararıdır. Semantik yakınlıkla aynı değildir: “izin süresi” parçası “izin talebi ne zaman yapılır?” sorusuna yakın olabilir ama doğru özelliği cevaplamaz.</li>
+    <li><strong>Threshold:</strong> Cevap vermek için gereken minimum skor sınırıdır. Çok düşük threshold false positive, çok yüksek threshold false negative üretir; sabit eval vakalarıyla ayarlanmalıdır.</li>
+    <li><strong>Score margin:</strong> Birinci ve ikinci aday arasındaki farktır. En iyi skor yüksek görünse bile ikinci adayla fark çok küçükse sistem kararsız olabilir.</li>
+    <li><strong>Answerability profile:</strong> Loose, balanced veya conservative gibi farklı threshold politikalarıdır. Riskli kurumsal kullanımda conservative profil daha çok reddedebilir; yardım odaklı sistem daha dengeli profil seçebilir.</li>
+    <li><strong>No-answer detection:</strong> Yeterli kanıt yoksa cevap üretmek yerine “yeterli bağlam yok” deme yoludur. Similarity skorunu teknik sayıdan ürün kararına dönüştürür.</li>
+    <li><strong>Golden query:</strong> Beklenen doğru document/chunk bilgisi önceden etiketlenmiş test sorusudur. Retriever değişikliklerini aynı sorular üzerinde adil biçimde ölçmek için kullanılır.</li>
+    <li><strong>Rank:</strong> Beklenen doğru sonucun listede kaçıncı sırada olduğunu gösterir. Rank 1 en iyi durumdur; sonuç top-k içinde yoksa rank bulunamaz.</li>
+    <li><strong>Hit@1 ve Hit@K:</strong> Hit@1 doğru cevabın ilk sırada, Hit@K ilk k sonuç içinde bulunma oranıdır. Reranker kullanılacaksa Hit@K candidate kalitesini, son cevap için Hit@1 hassasiyeti gösterir.</li>
+    <li><strong>Reciprocal Rank ve MRR:</strong> Doğru sonucun sırası <code>r</code> ise reciprocal rank <code>1/r</code>'dir; MRR tüm soruların ortalamasıdır. Doğru sonucu üst sıralara getiren sistemi ödüllendirir.</li>
+    <li><strong>Retrieval benchmark:</strong> Retriever'ı kolay ve zor golden query setinde düzenli ölçmektir. Yalnız birkaç güzel demo sorusu sistemin güvenilir olduğunu kanıtlamaz.</li>
+    <li><strong>Paraphrase robustness:</strong> Aynı niyet farklı kelimelerle sorulduğunda sistemin davranışını korumasıdır. Dense embedding lexical yönteme göre bu konuda genellikle daha güçlüdür; yine de ölçülmelidir.</li>
+    <li><strong>Repeatability:</strong> Aynı soru ve ayarlarda sonucun tekrarlar boyunca ne kadar kararlı olduğudur. Yerel Gemma V3 promptu 8 vaka × 3 tekrarda denenerek küçük ölçekte kontrol edildi.</li>
+  </ul>
+
+  <h2>6. Kurduğum zihinsel akış</h2>
+  <p><strong>Veri/ML:</strong> ham veri → temizlik → EDA → feature/target → preprocessing pipeline → baseline → cross-validation → feature/model deneyi → hata analizi → kayıtlı karar.</p>
+  <p><strong>LLM:</strong> metin → token → token ID → token + position embedding → Transformer katmanları → sıradaki token olasılıkları → üretilen cevap.</p>
+  <p><strong>RAG:</strong> kaynak → ingestion → document → chunk + metadata → sparse/dense embedding → vector store → top-k retrieval → hybrid/reranking → evidence filtering → answerability → context → LLM cevabı veya no-answer.</p>
+  <p><strong>Genel mühendislik kuralım:</strong> Çalışan çıktı tek başına yeterli değildir. Varsayımı yaz, ölçümü sabitle, hatayı saklama, başarısız deneyi kaydet, testi çalıştır ve kararı kanıtla.</p>
+</body>
+</html>

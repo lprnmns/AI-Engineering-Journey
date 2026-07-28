@@ -1,0 +1,88 @@
+{
+  "results": [
+    {
+      "model": {
+        "name": "qwen3:4b",
+        "family": "Qwen3",
+        "variant": "Qwen3-4B-Thinking-2507, default template",
+        "package_size_gib": 2.5,
+        "license_name": "Apache-2.0"
+      },
+      "total_cases": 6,
+      "passed_cases": 0,
+      "accuracy": 0.0,
+      "first_response_wall_time_seconds": 36.10516616099994,
+      "total_wall_time_seconds": 186.38902164200226,
+      "mean_output_tokens_per_second": 4.984139972544026,
+      "peak_ollama_container_memory_mib": 3314.688,
+      "results": [
+        {
+          "case_id": "turkish_technical",
+          "category": "turkish_technical",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 36.10516616099994,
+          "load_time_seconds": 5.006843502,
+          "output_tokens": 128,
+          "output_tokens_per_second": 4.78252245104724,
+          "ollama_container_memory_mib": 3112.96
+        },
+        {
+          "case_id": "code_generation",
+          "category": "code_generation",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 30.773664366000958,
+          "load_time_seconds": 0.363316827,
+          "output_tokens": 128,
+          "output_tokens_per_second": 4.899321807551194,
+          "ollama_container_memory_mib": 3153.92
+        },
+        {
+          "case_id": "code_explanation",
+          "category": "code_explanation",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 27.302125427000647,
+          "load_time_seconds": 0.201871481,
+          "output_tokens": 128,
+          "output_tokens_per_second": 4.921730261958324,
+          "ollama_container_memory_mib": 3193.856
+        },
+        {
+          "case_id": "summarization",
+          "category": "summarization",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 32.49082245499994,
+          "load_time_seconds": 0.549226319,
+          "output_tokens": 128,
+          "output_tokens_per_second": 5.072659908668344,
+          "ollama_container_memory_mib": 3230.72
+        },
+        {
+          "case_id": "logic",
+          "category": "logic",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 35.13880614700065,
+          "load_time_seconds": 0.185128187,
+          "output_tokens": 128,
+          "output_tokens_per_second": 3.9345247135642953,
+          "ollama_container_memory_mib": 3273.728
+        },
+        {
+          "case_id": "misleading_instruction",
+          "category": "misleading_instruction",
+          "response": "",
+          "passed": false,
+          "wall_time_seconds": 24.578437086000122,
+          "load_time_seconds": 0.46735878,
+          "output_tokens": 128,
+          "output_tokens_per_second": 6.294080692474758,
+          "ollama_container_memory_mib": 3314.688
+        }
+      ]
+    }
+  ]
+}
