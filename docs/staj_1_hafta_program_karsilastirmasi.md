@@ -74,19 +74,19 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 
 ### 1. Modelin nasıl çalıştığını anla
 
-- [ ] Token, tokenization ve context window ilişkisini örnekle açıkla
-- [ ] Embedding, positional information, self-attention, MLP ve residual katman akışını anlat
-- [ ] Aynı soruyu farklı system prompt ve user message düzenleriyle test et
-- [ ] Beş açık model ailesini ortak ölçütlerle karşılaştır
-- [ ] Teknik notta kullanılan resmi dokümanları ve model kartlarını belirt
+- [x] Token, tokenization ve context window ilişkisini örnekle açıkla
+- [x] Embedding, positional information, self-attention, MLP ve residual katman akışını anlat
+- [x] Aynı soruyu farklı system prompt ve user message düzenleriyle test et
+- [x] Beş açık model ailesini ortak ölçütlerle karşılaştır
+- [x] Teknik notta kullanılan resmi dokümanları ve model kartlarını belirt
 
 ### 2. Embedding deneyini teslimata dönüştür
 
-- [ ] Türkçe ağırlıklı, benzer ve ilgisiz en az 10 cümlelik versioned veri seti oluştur
-- [ ] Sentence Transformers ile embeddingleri tek seferde/batch üret
-- [ ] Cosine similarity sonuç tablosu oluştur
-- [ ] En az bir kolay, bir paraphrase, bir yanıltıcı ve bir beklenmeyen sonucu yorumla
-- [ ] Model adı, embedding boyutu ve çalışma ortamını raporla
+- [x] Türkçe ağırlıklı, benzer ve ilgisiz en az 10 cümlelik versioned veri seti oluştur
+- [x] Sentence Transformers ile embeddingleri tek seferde/batch üret
+- [x] Cosine similarity sonuç tablosu oluştur
+- [x] En az bir kolay, bir paraphrase, bir yanıltıcı ve bir beklenmeyen sonucu yorumla
+- [x] Model adı, embedding boyutu ve çalışma ortamını raporla
 
 ### 3. PDF üzerinde tam RAG akışını kur
 
@@ -109,20 +109,20 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 
 ### 5. Kurumsal problem ve ürün fikrini seç
 
-- [ ] Alanı, kullanıcıyı, kullanılan veriyi ve bugünkü iş akışını tanımla
-- [ ] Problemin ölçülebilir maliyetini veya zaman kaybını belirt
-- [ ] Başarı metriği, privacy, güvenlik ve yanlış cevap riskini yaz
-- [ ] Model, embedding, vector DB ve mimari kararlarını ihtiyaca göre savun
-- [ ] Ürünün ilk dar kapsamını ve kapsam dışını belirle
+- [x] Alanı, kullanıcıyı, kullanılan veriyi ve bugünkü iş akışını tanımla (özel diş klinikleri için kurumsal yazılım)
+- [x] Problemin ölçülebilir maliyetini/zaman kaybını baseline toplama planı ve formülle belirt
+- [x] Başarı metriği, privacy, güvenlik ve yanlış cevap riskini yaz
+- [x] Model, embedding, vector DB ve mimari kararlarını ihtiyaca göre savun
+- [x] Ürünün ilk dar kapsamını ve kapsam dışını belirle
 
 ### 6. Haftayı tek teslim paketinde kapat
 
-- [ ] Model araştırma notu
-- [ ] Embedding kodu, sonuç tablosu ve yorum raporu
-- [ ] PDF chunk deneyi, RAG diyagramı ve vector DB karar notu
-- [ ] Yerel model kurulum notu, test seti ve benchmark tablosu
-- [ ] 4–5 sayfalık kurumsal senaryo ve ilk ürün fikri
-- [ ] 15 dakikalık sunum ve kısa demo akışı
+- [x] Model araştırma notu
+- [x] Embedding kodu, sonuç tablosu ve yorum raporu
+- [x] PDF chunk deneyi, RAG diyagramı ve vector DB karar notu
+- [x] Yerel model kurulum notu, test seti ve benchmark tablosu
+- [x] 4–5 sayfalık kurumsal senaryo ve ilk ürün fikri
+- [x] 15 dakikalık sunum ve kısa demo akışı
 
 ## Güncel genel konum
 
