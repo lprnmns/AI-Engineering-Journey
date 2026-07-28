@@ -90,9 +90,9 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 
 ### 3. PDF üzerinde tam RAG akışını kur
 
-- [ ] Gizlilik açısından uygun gerçek bir PDF seç ve parse et
-- [ ] İki farklı chunk boyutu/overlap ayarıyla parça sayısı ve bağlam bütünlüğünü karşılaştır
-- [ ] Mevcut dense/hybrid retrieval katmanını PDF chunkları üzerinde çalıştır
+- [x] Gizlilik açısından uygun gerçek bir PDF seç ve parse et (mentor programı PDF'i, section-aware ingestion)
+- [x] İki farklı chunk boyutu/overlap ayarıyla parça sayısı ve bağlam bütünlüğünü karşılaştır (53 küçük chunk / 14 büyük chunk deneyi)
+- [x] Mevcut dense/hybrid retrieval katmanını PDF chunkları üzerinde çalıştır; dense, reranker ve parent-section sonuçlarını ölç
 - [x] Retrieval adaylarını cross-encoder reranker'a bağla; Qdrant → reranker → parent-section context akışını test et ve kanıt zincirini raporla
 - [x] ChromaDB, Qdrant, Milvus ve Pinecone için teknoloji seçim notu yaz
 - [x] Seçilen yerel vector DB ile kalıcı index oluştur (Qdrant, 48 point, restart sonrası kalıcılık ve payload filter doğrulandı)
