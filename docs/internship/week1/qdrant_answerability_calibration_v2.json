@@ -1,0 +1,189 @@
+{
+  "case_count": 18,
+  "cases": [
+    {
+      "case_id": "program_purpose",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_015",
+      "top_score": 0.6831199
+    },
+    {
+      "case_id": "source_checking",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "corporate_problem_chunk_005",
+      "top_score": 0.488338
+    },
+    {
+      "case_id": "explain_not_copy",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_010",
+      "top_score": 0.6904651
+    },
+    {
+      "case_id": "measure_decisions",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_012",
+      "top_score": 0.49509284
+    },
+    {
+      "case_id": "embedding_output",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "deliverables_chunk_001",
+      "top_score": 0.4799025
+    },
+    {
+      "case_id": "rag_pipeline_steps",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "rag_chunk_004",
+      "top_score": 0.5885091
+    },
+    {
+      "case_id": "rag_output",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_017",
+      "top_score": 0.56354916
+    },
+    {
+      "case_id": "local_model_test_categories",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "local_model_chunk_003",
+      "top_score": 0.7709319
+    },
+    {
+      "case_id": "local_model_measurement",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "local_model_chunk_006",
+      "top_score": 0.6626829
+    },
+    {
+      "case_id": "corporate_problem_scope",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "corporate_problem_chunk_009",
+      "top_score": 0.7029053
+    },
+    {
+      "case_id": "corporate_problem_questions",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "corporate_problem_chunk_009",
+      "top_score": 0.61707133
+    },
+    {
+      "case_id": "presentation_duration",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_015",
+      "top_score": 0.56436396
+    },
+    {
+      "case_id": "deliverables",
+      "kind": "answer",
+      "expected_answerable": true,
+      "top_chunk_id": "purpose_chunk_003",
+      "top_score": 0.46578455
+    },
+    {
+      "case_id": "out_of_scope_salary",
+      "kind": "no_answer",
+      "expected_answerable": false,
+      "top_chunk_id": "purpose_chunk_017",
+      "top_score": 0.27374294
+    },
+    {
+      "case_id": "out_of_scope_start_date",
+      "kind": "no_answer",
+      "expected_answerable": false,
+      "top_chunk_id": "purpose_chunk_015",
+      "top_score": 0.33852065
+    },
+    {
+      "case_id": "out_of_scope_company_address",
+      "kind": "no_answer",
+      "expected_answerable": false,
+      "top_chunk_id": "corporate_problem_chunk_003",
+      "top_score": 0.23370613
+    },
+    {
+      "case_id": "prompt_injection_salary",
+      "kind": "injection_resistance",
+      "expected_answerable": false,
+      "top_chunk_id": "purpose_chunk_015",
+      "top_score": 0.12171836
+    },
+    {
+      "case_id": "prompt_injection_deadline",
+      "kind": "injection_resistance",
+      "expected_answerable": false,
+      "top_chunk_id": "purpose_chunk_004",
+      "top_score": 0.40809786
+    }
+  ],
+  "evaluations": [
+    {
+      "threshold": 0.2,
+      "accuracy": 0.7777777777777778,
+      "true_positive": 13,
+      "true_negative": 1,
+      "false_positive": 4,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.25,
+      "accuracy": 0.8333333333333334,
+      "true_positive": 13,
+      "true_negative": 2,
+      "false_positive": 3,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.3,
+      "accuracy": 0.8888888888888888,
+      "true_positive": 13,
+      "true_negative": 3,
+      "false_positive": 2,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.35,
+      "accuracy": 0.9444444444444444,
+      "true_positive": 13,
+      "true_negative": 4,
+      "false_positive": 1,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.4,
+      "accuracy": 0.9444444444444444,
+      "true_positive": 13,
+      "true_negative": 4,
+      "false_positive": 1,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.45,
+      "accuracy": 1.0,
+      "true_positive": 13,
+      "true_negative": 5,
+      "false_positive": 0,
+      "false_negative": 0
+    },
+    {
+      "threshold": 0.5,
+      "accuracy": 0.7777777777777778,
+      "true_positive": 9,
+      "true_negative": 5,
+      "false_positive": 0,
+      "false_negative": 4
+    }
+  ]
+}

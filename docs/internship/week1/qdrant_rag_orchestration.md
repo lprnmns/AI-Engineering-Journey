@@ -43,7 +43,7 @@ Eski genel benchmarktaki `0.40` veya `0.50` eşiğini bu PDF'e doğrudan taşım
 
 `0.30`, `0.35`, `0.40` ve `0.45` eşiklerinin her biri bu küçük sette 5/5 doğru karar verdi. `0.50`, “teslim paketi” sorusunu yanlışlıkla reddetti ve 4/5'e düştü. Bu yüzden bu deney, `0.50` eşiğinin bu PDF için fazla katı olduğuna dair kanıttır; tek başına üretim eşiği belirlemek için yeterli kanıt değildir.
 
-Bu nedenle pipeline eşiği ancak `--min-dense-score` ile açıkça istenirse uygular. Bir sonraki kalibrasyonda vaka seti büyütülerek Qdrant skor dağılımı üzerinde false-positive / false-negative maliyeti ölçülecek ve savunulabilir bir policy seçilecektir. Ham sonuç: [`qdrant_answerability_calibration.json`](qdrant_answerability_calibration.json).
+Bu nedenle pipeline eşiği ancak `--min-dense-score` ile açıkça istenirse uygular. İlk 5 vakalık kalibrasyon yalnız ön bulguydu; genişletilmiş 18 vakalık set, bu PDF için geçici eşiğin `0.45` olduğunu gösterdi. `0.40` bir injection false positive üretirken `0.50` dört gerçek soruyu reddetti. Bu değer başka dokümanlara doğrudan taşınmaz. Ayrıntı: [genişletilmiş kalibrasyon raporu](qdrant_answerability_calibration_v2.md).
 
 ## İnceleme komutu
 
