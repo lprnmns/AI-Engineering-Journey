@@ -20,7 +20,7 @@ Bu iki oran çelişmez. Bir konuyu öğrenmiş veya onun bileşenini yazmış ol
 | 1. Transformer, attention, token, context window, prompt ve model aileleri | Büyük ölçüde yeni | Dense embedding modelinin giriş/çıkış mantığı ve 384 boyutlu vektörler konuşuldu; ancak transformer katmanları için tamamlanmış teknik çalışma yok | 2–3 sayfalık teknik not, system/user prompt deneyi, Llama–Qwen–Gemma–Mistral–DeepSeek karşılaştırması |
 | 2. En az 10 cümleyle embedding ve cosine similarity deneyi | Güçlü biçimde kısmi | `DenseVectorizer`, Sentence Transformers bağımlılığı, cosine similarity, dense semantic search ve paraphrase benchmarkı var | En az 10 cümlelik sabit deney seti, tüm eşleşmelerin sonuç tablosu, beklenen/beklenmeyen sonuç yorumu |
 | 3. PDF'den cevaba tam RAG akışı | Güçlü biçimde kısmi | Chunking, metadata, TF-IDF, dense store, hybrid retrieval, ağırlık deneyi, no-answer, answerability eval ve bağımsız cross-encoder reranker var | Gerçek PDF parser, iki chunk boyutu karşılaştırması, kalıcı vector DB, dense → rerank birleşik pipeline, gerçek LLM ile kaynaklı cevap |
-| 4. İki yerel açık modeli karşılaştırma | Yeni | Repoda Ollama/LM Studio kurulumu ve model benchmarkı yok | Donanıma uygun iki model, ortak test seti, ilk cevap/toplam süre, bellek ve kalite değerlendirmesi |
+| 4. İki yerel açık modeli karşılaştırma | Tamamlandı | Gemma 3 4B ile Qwen3'ün iki yerel template konfigürasyonu aynı altı Türkçe vakada ölçüldü | Daha geniş model ailesi/tekrar benchmarkı ileri serving çalışmasında yapılacak |
 | 5. Gerçek kurumsal problem ve ürün fikri | Yeni; altyapı fikri var | Yol haritasında gerçek kullanıcı, ölçülebilir değer, privacy ve risk şartları tanımlı | Tek alan seçimi, kullanıcı/veri/mevcut süreç/problem tanımı, mimari ve teknoloji gerekçesi, riskler |
 | 6. Teknik rapor ve 15 dakikalık sunum | Kısmi hazırlık var | Git geçmişi, testler, benchmark kodları ve yol haritası anlatının kanıtlarını sağlıyor | Teslimatların tek hikâyede birleştirilmesi, mimari diyagram, ölçüm tabloları, kısa demo ve sunum |
 
@@ -101,11 +101,11 @@ Mentorun verdiği sıra korunacak. Her aşama kod, ölçüm ve yorumla kapatılm
 
 ### 4. Yerel model karşılaştırmasını yap
 
-- [ ] Donanıma uygun iki model ve quantization seç
-- [ ] Türkçe teknik soru, kod üretme, kod açıklama, özet, mantık ve yanıltıcı soru test setini sabitle
-- [ ] İlk cevap süresi, toplam süre ve bellek kullanımını ölç
-- [ ] Doğruluk, tutarlılık, gereksiz bilgi ve hallucination açısından insan değerlendirmesi yap
-- [ ] Hangi modelin hangi kullanım için seçildiğini gerekçelendir
+- [x] Donanıma uygun iki model ailesi ve Q4_K_M quantization seç (Gemma 3 4B, Qwen3 4B)
+- [x] Türkçe teknik soru, kod üretme, kod açıklama, özet, mantık ve yanıltıcı soru test setini sabitle
+- [x] İlk cevap süresi, toplam süre ve Ollama container bellek kullanımını ölç
+- [x] Doğruluk, tutarlılık, gereksiz bilgi ve hallucination açısından insan değerlendirmesi yap
+- [x] Gemma 3 4B'yi bu CPU/RAM ortamı için gerekçeli olarak seç
 
 ### 5. Kurumsal problem ve ürün fikrini seç
 
