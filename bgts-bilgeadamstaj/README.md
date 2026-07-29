@@ -8,6 +8,7 @@ Bu klasör, ilk hafta boyunca yapılan AI Engineering çalışmalarının mentor
 2. `01_Raporlar/01`–`10`: Model mantığı, embedding, RAG, yerel model deneyi ve kurumsal senaryo raporları.
 3. `02_Not_Defteri`: Öğrenilen kavramların kısa tanımı, kullanım yeri ve örneklerini içeren kişisel not defteri. HTML dosyası düzenlenebilir kaynak; PDF yazdırılabilir sürümdür.
 4. `03_Kanitlar`: Benchmark, test seti ve kalibrasyon sonuçlarının ham JSON kanıtları.
+5. `04_Canli_Demo`: Sunum sırasında çalıştırılabilecek, adım adım Qdrant → retrieval → reranker → no-answer akışını gösteren tekrar üretilebilir demo.
 
 ## Dürüstlük sınırı
 
