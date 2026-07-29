@@ -159,8 +159,8 @@ def ingest() -> int:
     return count
 
 
-def ask(question: str, generate: bool = True) -> bool:
-    heading(f"3/5 — Soru: {question}")
+def ask(question: str, generate: bool = True, step: int = 3) -> bool:
+    heading(f"{step}/5 — Soru: {question}")
     embedder = SentenceTransformer(EMBEDDING_MODEL)
     hits = qdrant().query_points(COLLECTION, query=embedder.encode(question, normalize_embeddings=True).tolist(), limit=5, with_payload=True).points
     if not hits:
@@ -201,7 +201,7 @@ def guided_demo() -> None:
     wait("Cevaplanabilir örneği göstermek için devam et")
     ask("Yerel model karşılaştırmasında hangi değerler ölçülmelidir?")
     wait("No-answer davranışını göstermek için devam et")
-    ask("Stajyer maaşı ne kadar?", generate=False)
+    ask("Stajyer maaşı ne kadar?", generate=False, step=4)
     heading("5/5 — Kapanış cümlesi")
     print("Dense retrieval aday bulur; reranker kanıtı seçer; eşik zayıf kanıtta LLM çağrısını keser.")
     print("Bu yüzden RAG, yalnız top-k chunk getirip modelden cevap istemek değildir.")
