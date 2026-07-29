@@ -98,11 +98,20 @@ def qdrant() -> QdrantClient:
 
 def start_qdrant() -> None:
     heading("1/5 — Qdrant başlatılıyor")
+    # Aynı makinede repo geliştirme ortamının Qdrant'ı zaten açık olabilir.
+    # Bu durumda ikinci container port 6333'e bağlanamaz; mevcut sağlıklı
+    # servisi kullanmak hem doğru hem de demo için yeterlidir.
+    try:
+        info = qdrant().get_collections()
+        print(f"OK: Qdrant zaten erişilebilir ({len(info.collections)} collection). Mevcut servis kullanılacak.")
+        return
+    except Exception:
+        pass
     subprocess.run(["docker", "compose", "up", "-d", "qdrant"], cwd=ROOT, check=True)
     try:
         qdrant().get_collections()
     except Exception as exc:  # pragma: no cover - environment specific
-        raise RuntimeError("Qdrant başladı ancak health check başarısız") from exc
+        raise RuntimeError("Qdrant başlatılamadı veya health check başarısız") from exc
     print("OK: Qdrant yerelde 127.0.0.1:6333 üzerinde erişilebilir.")
 
 
