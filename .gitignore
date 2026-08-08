@@ -23,7 +23,10 @@ env/
 # Python tooling caches
 .pytest_cache/
 .mypy_cache/
+
+# Local service state
+data/*.sqlite3
+
 # Kaggle raw data
 competitions/*/data/raw/*.csv
 competitions/*/data/raw/*.zip
-

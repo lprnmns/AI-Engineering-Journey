@@ -1,7 +1,7 @@
 """Qdrant dense and sparse retrieval adapter."""
 
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from qdrant_client import QdrantClient, models
 
@@ -38,7 +38,7 @@ class QdrantRetriever:
             with_vectors=False,
         )
         return tuple(
-            self._map_point(point, rank=index)
+            self._map_point(point, rank=index, score_kind="dense")
             for index, point in enumerate(response.points, start=1)
         )
 
@@ -66,7 +66,7 @@ class QdrantRetriever:
             with_vectors=False,
         )
         return tuple(
-            self._map_point(point, rank=index)
+            self._map_point(point, rank=index, score_kind="sparse")
             for index, point in enumerate(response.points, start=1)
         )
 
@@ -95,8 +95,15 @@ class QdrantRetriever:
         return models.Filter(must=active_condition)
 
     @classmethod
-    def _map_point(cls, point: models.ScoredPoint, *, rank: int) -> RetrievedChunk:
+    def _map_point(
+        cls,
+        point: models.ScoredPoint,
+        *,
+        rank: int,
+        score_kind: Literal["dense", "sparse"],
+    ) -> RetrievedChunk:
         payload = cast(dict[str, Any], point.payload or {})
+        score = float(point.score)
         return RetrievedChunk(
             source_id=cls._required_string(payload, "chunk_id"),
             document_id=cls._required_string(payload, "document_id"),
@@ -106,8 +113,10 @@ class QdrantRetriever:
             text=cls._required_string(payload, "text"),
             page_start=cls._required_int(payload, "page_start"),
             page_end=cls._required_int(payload, "page_end"),
-            score=float(point.score),
+            score=score,
             rank=rank,
+            dense_score=score if score_kind == "dense" else None,
+            sparse_score=score if score_kind == "sparse" else None,
         )
 
     @staticmethod

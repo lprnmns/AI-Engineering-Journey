@@ -95,6 +95,47 @@ def test_valid_query_does_not_fabricate_an_answer_before_wiring() -> None:
     }
 
 
+def test_wired_query_returns_structured_no_answer_and_skips_llm() -> None:
+    from projects.document_intelligence_service.app.application.query_service import (
+        QueryService,
+    )
+    from projects.document_intelligence_service.app.domain.answerability import (
+        AnswerabilityPolicy,
+    )
+    from projects.document_intelligence_service.tests.unit.test_query_service import (
+        FakeAnswerGenerator,
+    )
+    from projects.document_intelligence_service.tests.unit.test_retrieval_service import (
+        make_service,
+    )
+
+    generator = FakeAnswerGenerator()
+    app = create_app(
+        health_service=HealthService(()),
+        query_service=QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.99),
+            answer_generator=generator,
+        ),
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/query",
+            {"question": "Stajyer maaşı ne kadar?"},
+        )
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision"] == "no_answer"
+    assert body["no_answer_reason"] == "LOW_RELEVANCE"
+    assert body["model"] == {"provider": None, "model": None}
+    assert body["latency"]["llm_ms"] == 0
+    assert generator.call_count == 0
+
+
 def test_invalid_query_uses_common_validation_envelope() -> None:
     app = create_app(health_service=HealthService(()))
 

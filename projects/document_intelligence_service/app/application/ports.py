@@ -12,6 +12,7 @@ from ..domain.ingestion import (
     PreparedIngestion,
     VersionVerification,
 )
+from ..domain.generation import GeneratedAnswer
 from ..domain.chunks import ChildChunk, PageText
 from ..domain.retrieval import RetrievedChunk
 from ..domain.vectors import SparseVector
@@ -148,6 +149,20 @@ class Reranker(Protocol):
         limit: int,
     ) -> tuple[RetrievedChunk, ...]:
         """Return the highest-scoring bounded evidence candidates."""
+
+        ...
+
+
+class AnswerGenerator(Protocol):
+    """Port for grounded answer generation after the answerability gate."""
+
+    async def generate(
+        self,
+        *,
+        question: str,
+        evidence: Sequence[RetrievedChunk],
+    ) -> GeneratedAnswer:
+        """Generate an answer using only the supplied evidence."""
 
         ...
 

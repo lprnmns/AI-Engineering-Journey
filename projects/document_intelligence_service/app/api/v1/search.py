@@ -57,9 +57,9 @@ async def search(request: Request, payload: SearchRequest) -> SearchResponse:
         latency=LatencyBreakdown(
             embedding_ms=result.embedding_ms,
             search_ms=result.search_ms,
-            rerank_ms=0,
+            rerank_ms=result.rerank_ms,
             llm_ms=0,
-            total_ms=result.embedding_ms + result.search_ms,
+            total_ms=result.embedding_ms + result.search_ms + result.rerank_ms,
         ),
         request_id=get_request_id(),
     )

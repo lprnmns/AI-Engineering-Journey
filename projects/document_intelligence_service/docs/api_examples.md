@@ -19,6 +19,8 @@ export DIS_INGESTION_REGISTRY_BACKEND=sqlite
 export DIS_INGESTION_DATABASE_PATH=data/ingestions.sqlite3
 # Baseline için false; ölçümlü reranker deneyi için true.
 export DIS_RERANKER_ENABLED=false
+export DIS_LLM_MODEL=gemma3:4b
+export DIS_LLM_MAX_OUTPUT_TOKENS=256
 ```
 
 ## Document upload
@@ -85,13 +87,15 @@ Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/s
 
 `DIS_RERANKER_ENABLED=true` seçilirse RRF sonrası bounded cross-encoder devreye girer; en fazla 20 adayı skorlayıp en fazla 5 final kaynak döndürür. CPU cold-start ve inference latency'si baseline ile ayrı ölçülmelidir.
 
+Query önce answerability gate'ten geçer. `NO_EVIDENCE` veya `LOW_RELEVANCE` kararında Ollama çağrılmaz ve `llm_ms=0` kalır. Kanıt yeterliyse `gemma3:4b` yalnız bounded evidence prompt'u ile çağrılır. Qdrant/embedding çalıştığı halde Ollama üretimi başarısızsa bu no-answer değildir; güvenli `503 DEPENDENCY_UNAVAILABLE` döner.
+
 ## No-answer response
 
 ```json
 {
   "decision": "no_answer",
   "answer": null,
-  "no_answer_reason": "NO_EVIDENCE",
+  "no_answer_reason": "LOW_RELEVANCE",
   "sources": [],
   "retrieval": {
     "mode": "hybrid",

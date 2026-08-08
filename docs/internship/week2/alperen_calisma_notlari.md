@@ -702,7 +702,7 @@ sources: 5
 llm_ms: 0
 ```
 
-İlk source sayfa `1`, belge adı ve chunk snippet'i ile döndü. Bu sonuç retrieval zincirinin gerçek model/cache, gerçek Qdrant ve canonical payload üzerinden çalıştığını gösteriyor; henüz reranker yok, bu yüzden `reranked_candidates=0` beklenen durum.
+İlk source sayfa `1`, belge adı ve chunk snippet'i ile döndü. Bu sonuç retrieval zincirinin gerçek model/cache, gerçek Qdrant ve canonical payload üzerinden çalıştığını gösteriyor. Baseline smoke'ta reranker varsayılan kapalı olduğu için `reranked_candidates=0` beklenen durum; reranker açık smoke'u sonraki bölümde ayrıca kaydedildi.
 
 ### Mentora kısa anlatım
 
@@ -746,3 +746,69 @@ first source score: -3.6436679363250732
 ### Mentora kısa anlatım
 
 > Qdrant'tan gelen adayları doğrudan LLM'e vermek yerine RRF sonrası en fazla 20 chunk'ı cross-encoder ile yeniden sıralıyorum ve finalde en fazla 5 kaynak bırakıyorum. Model lazy yükleniyor. Reranker skorunun negatif olabileceğini, mutlak cosine gibi yorumlanmaması gerektiğini biliyorum. CPU maliyeti nedeniyle baseline kapalı; aynı golden set üzerinde kalite ve p95 latency ölçülmeden varsayılan seçmeyeceğim.
+
+## 19. Query akışı: answerability gate ve LLM-skip
+
+### Search ile query farkı
+
+`/v1/search` yalnızca retrieval kanıtını ölçer; `/v1/query` ise bunun üstüne karar ve üretim katmanı ekler:
+
+```text
+POST /v1/query
+  → request validation
+  → dense + sparse retrieval
+  → RRF top-20 / opsiyonel rerank top-5
+  → answerability gate
+      ├─ zayıf/boş evidence → no_answer, Ollama çağrısı yok
+      └─ yeterli evidence → bounded prompt → Ollama/Gemma → answered
+```
+
+No-answer kararını LLM'e sormuyorum. Çünkü modelden “bu soruya cevap verebilir misin?” diye istemek hem gereksiz latency üretir hem de modelin zayıf kanıtı güvenilir sanmasına izin verebilir. Gate, önce Qdrant'tan gelen kanıt sayısını ve ham skor türünü inceliyor; hybrid akışında RRF skorunu cosine gibi yorumlamamak için dense ham skorunu ayrı taşıyor.
+
+### Çoklu sinyalin mevcut sınırı
+
+Domain policy şu sinyalleri üretiyor:
+
+- evidence sayısı ve boşluk durumu,
+- dense/sparse/rerank skor türü ve top score,
+- top-1/top-2 margin,
+- soru terimleri ile evidence arasındaki lexical coverage,
+- filter'ların gerçekten uygulanıp uygulanmadığı.
+
+İlk provisional gate'te local corpus üzerinde dense alt sınırı `0.45`, sparse alt sınırı `0.1`, reranker alt sınırı `-5.0`. Margin ve coverage trace'e yazılıyor fakat yeterli golden validation set oluşmadan agresif rejection eşiği yapılmıyor. Bu ayrım “kodda threshold var” ile “threshold kalibre edildi” arasındaki farkı koruyor.
+
+### Gerçek no-answer smoke
+
+```text
+Soru: Stajyer maaşı ne kadar?
+HTTP: 200
+Karar: no_answer
+Neden: LOW_RELEVANCE
+dense_candidates: 27
+sparse_candidates: 9
+rrf_candidates: 27
+sources: []
+model: null
+llm_ms: 0
+```
+
+Bu sonuçta Qdrant ve embedding çalıştı; soru corpus tarafından desteklenmediği için Gemma'ya hiç gidilmedi. Bu nedenle `no_answer`, dependency failure değildir.
+
+### Gerçek answered smoke
+
+```text
+Soru: Yerel model karşılaştırmasında hangi değerler ölçülmelidir?
+HTTP: 200
+Karar: answered
+Model: ollama / gemma3:4b
+Kaynak: 2 canonical source
+embedding_ms: 23345.7
+llm_ms: 62921.0
+total_ms: 86324.8
+```
+
+Model yalnız gate'i geçen evidence ile bounded prompt üzerinden çağrıldı ve kaynak listesi retrieval payload'ından üretildi; model metninden source parse edilmedi. CPU local çalışmada yaklaşık 63 saniyelik generation latency gözlendi. `DIS_LLM_MAX_OUTPUT_TOKENS=256` ve 8.000 karakter evidence bütçesi RAM/context kontrolü için ayarlanabilir; cold embedding ile warm embedding ayrı benchmarklanmalıdır.
+
+### Mentora kısa anlatım
+
+> `/v1/search` retrieval debug endpointi, `/v1/query` ise karar + üretim endpointi. Query'de önce dense/sparse/RRF evidence'i alıp domain answerability gate'ten geçiriyorum. “Stajyer maaşı” gibi corpus dışı soruda karar `LOW_RELEVANCE`, kaynak listesi boş ve `llm_ms=0`; yani model gereksiz yere çağrılmıyor. Desteklenen soruda gate geçiyor, bounded evidence prompt'u ile host'taki `gemma3:4b` çağrılıyor ve canonical source'lar retrieval'dan dönüyor. İlk local ölçümde LLM yaklaşık 63 saniye sürdü; bu yüzden token/context bütçesi ve cold/warm benchmarkı sonraki acceptance gate.

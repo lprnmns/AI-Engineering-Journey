@@ -22,6 +22,8 @@ flowchart LR
 - Domain: answerability, evidence ve version kararlarını framework'ten bağımsız tutar.
 - Infrastructure: Qdrant, embedding, reranker, PDF parser ve Ollama adapter'larını uygular.
 
+Query orkestrasyonu `RetrievalService` sonucunu doğrudan Ollama'a aktarmıyor. `QueryService` önce domain `AnswerabilityPolicy` ile evidence boşluğu, ham relevance sinyali, margin ve coverage bilgisini değerlendiriyor; rejection kararında LLM atlanıyor. Bu ayrım sayesinde “kanıt yok” ile “model servisi bozuk” farklı response/metric olarak izleniyor.
+
 Domain katmanı FastAPI, Pydantic, Qdrant veya Ollama import etmez.
 
 ## Hedef çalışma topolojisi
@@ -82,4 +84,3 @@ active ingestion during delete → 409 DOCUMENT_BUSY
 ```
 
 Bir altyapı arızası, kanıt bulunamaması gibi raporlanmaz.
-

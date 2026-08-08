@@ -18,6 +18,8 @@ class _FusionEntry:
     dense_rank: int | None = None
     sparse_rank: int | None = None
     fused_score: float = 0.0
+    dense_score: float | None = None
+    sparse_score: float | None = None
 
 
 class RetrievalService:
@@ -102,28 +104,47 @@ class RetrievalService:
         elif mode is RetrievalMode.DENSE:
             window = self._candidate_window(top_k)
             candidates = tuple(
-                replace(candidate, rank=index)
+                replace(
+                    candidate,
+                    rank=index,
+                    dense_score=(
+                        candidate.dense_score
+                        if candidate.dense_score is not None
+                        else candidate.score
+                    ),
+                )
                 for index, candidate in enumerate(dense_candidates[:window], start=1)
             )
             rrf_count = 0
         else:
             window = self._candidate_window(top_k)
             candidates = tuple(
-                replace(candidate, rank=index)
+                replace(
+                    candidate,
+                    rank=index,
+                    sparse_score=(
+                        candidate.sparse_score
+                        if candidate.sparse_score is not None
+                        else candidate.score
+                    ),
+                )
                 for index, candidate in enumerate(sparse_candidates[:window], start=1)
             )
             rrf_count = 0
+        search_ms = (perf_counter() - search_started) * 1000
         reranked_count = 0
+        rerank_ms = 0.0
         if self._reranker is not None and candidates:
+            rerank_started = perf_counter()
             candidates = self._reranker.rerank(
                 question=normalized_question,
                 candidates=candidates,
                 limit=min(top_k, self._rerank_limit),
             )
+            rerank_ms = (perf_counter() - rerank_started) * 1000
             reranked_count = len(candidates)
         else:
             candidates = candidates[:top_k]
-        search_ms = (perf_counter() - search_started) * 1000
 
         return RetrievalResult(
             mode=mode.value,
@@ -134,6 +155,7 @@ class RetrievalService:
             embedding_ms=embedding_ms,
             search_ms=search_ms,
             reranked_candidates=reranked_count,
+            rerank_ms=rerank_ms,
         )
 
     def _candidate_window(self, top_k: int) -> int:
@@ -168,6 +190,11 @@ class RetrievalService:
                 _FusionEntry(candidate=candidate),
             )
             entry.dense_rank = rank
+            entry.dense_score = (
+                candidate.dense_score
+                if candidate.dense_score is not None
+                else candidate.score
+            )
             entry.fused_score += 1.0 / (self._rrf_k + rank)
         for rank, candidate in enumerate(sparse_candidates, start=1):
             entry = entries.setdefault(
@@ -175,6 +202,11 @@ class RetrievalService:
                 _FusionEntry(candidate=candidate),
             )
             entry.sparse_rank = rank
+            entry.sparse_score = (
+                candidate.sparse_score
+                if candidate.sparse_score is not None
+                else candidate.score
+            )
             entry.fused_score += 1.0 / (self._rrf_k + rank)
 
         limit = self._candidate_window(top_k)
@@ -190,6 +222,8 @@ class RetrievalService:
                 rank=index,
                 dense_rank=entry.dense_rank,
                 sparse_rank=entry.sparse_rank,
+                dense_score=entry.dense_score,
+                sparse_score=entry.sparse_score,
             )
             for index, entry in enumerate(ordered, start=1)
         )

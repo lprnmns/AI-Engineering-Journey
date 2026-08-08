@@ -21,6 +21,8 @@ class RetrievedChunk:
     sparse_rank: int | None = None
     fused_score: float | None = None
     rerank_score: float | None = None
+    dense_score: float | None = None
+    sparse_score: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,3 +37,4 @@ class RetrievalResult:
     embedding_ms: float
     search_ms: float
     reranked_candidates: int = 0
+    rerank_ms: float = 0.0
