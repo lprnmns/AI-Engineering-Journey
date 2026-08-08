@@ -4,10 +4,14 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 
+from .api.errors import service_error_handler, validation_error_handler
 from .api.v1.health import router as health_router
 from .application.health_service import HealthService
+from .domain.errors import ServiceError
 from .infrastructure.health_checks import HttpHealthProbe
+from .observability.request_id import RequestIdMiddleware
 from .settings import Settings
 
 
@@ -55,6 +59,9 @@ def create_app(
         version="0.1.0",
         lifespan=lifespan,
     )
+    application.add_middleware(RequestIdMiddleware)
+    application.add_exception_handler(ServiceError, service_error_handler)
+    application.add_exception_handler(RequestValidationError, validation_error_handler)
     application.state.health_service = resolved_health_service
     application.include_router(health_router, prefix="/v1")
     return application

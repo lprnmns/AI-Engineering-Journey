@@ -219,3 +219,46 @@ Domain katmanı FastAPI veya HTTPX bilmez. `HealthService` yalnız probe sözle�
 ### Mentora kısa anlatım
 
 > Liveness sürecin hayatta olduğunu, readiness bağımlılıklarla birlikte trafik kabul edebildiğini, startup ise uygulama başlangıcının tamamlandığını gösterir. Qdrant erişilemiyorsa bunu no-answer olarak gizlemem; çünkü o durumda retrieval hiç çalışmamıştır. Bu nedenle bağımlılık hatasını `503 DEPENDENCY_UNAVAILABLE` olarak ayrı raporlarım.
+
+## 6. Request ID ve ortak hata sözleşmesi
+
+### Request ID neyi çözer?
+
+Her HTTP isteğine `X-Request-ID` atanır. İstemci güvenli biçimde bir ID gönderirse korunur; geçersiz veya aşırı uzun bir değer gelirse sistem yeni bir `req_...` ID üretir. ID response header'da ve hata gövdesinde aynı kalır.
+
+```text
+İstek → RequestIdMiddleware → API → Application → Infrastructure
+          │
+          └── X-Request-ID: req_... → log/trace/audit korelasyonu
+```
+
+Bu, “Qdrant yavaş” gibi genel bir iddia yerine aynı isteğin API, retrieval ve model aşamalarını birlikte incelemeyi sağlar.
+
+### Hata envelope'u neden standarttır?
+
+Her endpoint farklı hata biçimi döndürürse istemci ve UI her endpoint için ayrı parser yazmak zorunda kalır. Ortak format şöyledir:
+
+```json
+{
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Required service is temporarily unavailable",
+    "request_id": "error-7"
+  }
+}
+```
+
+`code` makine tarafından işlenebilir, `message` kullanıcıya güvenli açıklamadır, `request_id` ise operasyonel iz sürme içindir. Stack trace, host yolu, bağlantı URL'si ve system prompt response'a sızdırılmaz.
+
+### Hata kodu ile HTTP status aynı şey değildir
+
+- `INVALID_REQUEST` → `400`: İstemci sözleşmeye uymayan veri gönderdi.
+- `DOCUMENT_NOT_FOUND` → `404`: İstenen kaynak yok.
+- `DOCUMENT_BUSY` / `INGESTION_CONFLICT` → `409`: Kaynak mevcut işlemle çakışıyor.
+- `DEPENDENCY_UNAVAILABLE` → `503`: Sistem isteği işlemek için gerekli altyapıya erişemiyor.
+
+HTTP status genel ağ protokolü anlamını, error code ise ürünün daha ayrıntılı iş kararını anlatır.
+
+### Mentora kısa anlatım
+
+> Request ID'yi middleware katmanında üretip response header'a koyuyorum; böylece aynı isteği tüm katmanlarda izleyebiliyorum. Hataları ortak envelope ve kararlı error code'larla döndürüyorum. Validation, conflict ve dependency arızasını birbirine karıştırmıyor; stack trace ve altyapı ayrıntılarını kullanıcıya sızdırmıyorum.
