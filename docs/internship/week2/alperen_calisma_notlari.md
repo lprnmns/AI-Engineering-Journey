@@ -624,3 +624,36 @@ Upload request'i bekletilmeden `202` döner ve worker işi aynı process içinde
 ### Mentora kısa anlatım
 
 > Registry seçimini composition root'a taşıdım. Testte memory, local dayanıklı çalışmada SQLite kullanılabiliyor; SQLite seçilince API ve bounded worker aynı durable job kaydını paylaşıyor. Upload yine `202` dönüyor, worker arka planda parse, embedding, stage, verify ve activate yapıyor. Bu process içi fallback; process restart recovery ve gerçek queue sonraki üretim adımı.
+
+## 16. Gerçek local ingestion smoke sonucu
+
+Kod testine ek olarak mevcut makinedeki servislerle gerçek bir uçtan uca smoke çalıştırıldı:
+
+```text
+PDF: Alperen_Manas_Staj_Programi_1_Hafta 1.pdf
+Qdrant: Docker v1.18.3, 127.0.0.1:6333, ready
+Embedding: paraphrase-multilingual-MiniLM-L12-v2, cache'ten yüklendi
+Registry: temporary SQLite
+LLM: çağrılmadı
+```
+
+Sonuç:
+
+```text
+POST /v1/documents → 202
+job status          → succeeded
+job progress        → 100
+job error           → None
+Qdrant total points → 27
+Qdrant active       → 27
+```
+
+Bu smoke, yalnız unit test fake'lerini değil; gerçek PDF extraction, gerçek 384 boyutlu dense embedding, gerçek sparse encoding, Qdrant named dense/sparse upsert, verify ve activate zincirini doğruluyor. `gemma3:4b` hazır olsa da bu aşamada LLM'e gitmemek bilinçli; ingestion'ın retrieval indexini doğru kurduğunu üretim adımından bağımsız ölçmek istiyoruz.
+
+### Smoke sırasında yakalanan ve düzeltilen hata
+
+İlk gerçek denemede SQLite satırına `document_status=indexing` değeri yanlışlıkla `job_status` alanına da yazılmıştı. Worker `JobStatus('indexing')` okuyamayınca hata verdi. `document_status` ve `job_status` insert değerleri ayrıştırıldı; regression testi ilk kabulden sonra job'ın `queued`, worker sonrasında `succeeded` olduğunu kontrol ediyor. Bu, gerçek ortam testinin unit testlerin yakalayamadığı bir wiring hatasını bulduğunu gösteriyor.
+
+### Mentora kısa anlatım
+
+> Fake testlerin üstüne gerçek PDF ile smoke yaptım. API `202` döndü, SQLite job yüzde yüz tamamlandı ve Qdrant named dense/sparse collection'ına 27 point yazılıp 27'si active oldu. LLM'i bu ölçümde çağırmadım; önce ingestion/indexing zincirini izole doğruladım. İlk smoke'ta job/document status alanlarının karıştığını bulup düzelttim ve regression testi ekledim.

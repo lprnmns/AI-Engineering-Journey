@@ -173,6 +173,7 @@ def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> Non
 
     first_registry = SqliteIngestionRegistry(database_path)
     first_receipt = asyncio.run(first_registry.accept(prepared, "durable-1"))
+    queued = asyncio.run(first_registry.get_job(first_receipt.job_id))
     asyncio.run(
         first_registry.update_job(
             JobSnapshot(
@@ -192,6 +193,8 @@ def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> Non
     )
     retried = asyncio.run(restarted_registry.accept(prepared, "durable-1"))
 
+    assert queued is not None
+    assert queued.status is JobStatus.QUEUED
     assert restored is not None
     assert restored.status is JobStatus.RUNNING
     assert restored.progress_percent == 35

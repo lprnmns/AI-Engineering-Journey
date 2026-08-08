@@ -198,7 +198,7 @@ class SqliteIngestionRegistry:
                     prepared.pdf.page_count,
                     prepared.content,
                     receipt.status.value,
-                    receipt.status.value,
+                    JobStatus.QUEUED.value,
                     0,
                     None,
                 ),
