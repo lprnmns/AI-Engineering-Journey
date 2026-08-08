@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import hashlib
 import json
+from uuid import uuid4
 
 from .errors import ErrorCode, ServiceError
 from .entities import DocumentStatus, JobStatus
@@ -127,6 +128,37 @@ class JobSnapshot:
     status: JobStatus
     progress_percent: int
     error_code: str | None
+
+
+def normalize_idempotency_key(value: str | None) -> str | None:
+    """Normalize the optional retry key with one shared contract rule."""
+
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if len(normalized) > 128:
+        raise ServiceError(
+            code=ErrorCode.INVALID_REQUEST,
+            message="Idempotency-Key is too long",
+        )
+    return normalized
+
+
+def create_ingestion_receipt(identity: tuple[str, str]) -> IngestionReceipt:
+    """Create deterministic document/version IDs and one retryable job ID."""
+
+    content_hash, pipeline_fingerprint = identity
+    version_digest = hashlib.sha256(
+        f"{content_hash}:{pipeline_fingerprint}".encode("ascii")
+    ).hexdigest()
+    return IngestionReceipt(
+        document_id=f"doc_{content_hash}",
+        version_id=f"ver_{version_digest}",
+        job_id=f"job_{uuid4().hex}",
+        status=DocumentStatus.INDEXING,
+    )
 
 
 def compute_content_hash(content: bytes) -> str:

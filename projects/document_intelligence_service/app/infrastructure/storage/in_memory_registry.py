@@ -6,12 +6,16 @@ replaced by durable document/job persistence before production deployment.
 
 import asyncio
 from dataclasses import dataclass
-import hashlib
-from uuid import uuid4
 
-from ...domain.entities import DocumentStatus, JobStatus
+from ...domain.entities import JobStatus
 from ...domain.errors import ErrorCode, ServiceError
-from ...domain.ingestion import IngestionReceipt, JobSnapshot, PreparedIngestion
+from ...domain.ingestion import (
+    IngestionReceipt,
+    JobSnapshot,
+    PreparedIngestion,
+    create_ingestion_receipt,
+    normalize_idempotency_key,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +47,7 @@ class InMemoryIngestionRegistry:
             prepared.upload.content_hash,
             prepared.pipeline_fingerprint,
         )
-        normalized_key = _normalize_idempotency_key(idempotency_key)
+        normalized_key = normalize_idempotency_key(idempotency_key)
         async with self._lock:
             if normalized_key is not None:
                 previous_identity = self._idempotency_identity.get(normalized_key)
@@ -63,7 +67,7 @@ class InMemoryIngestionRegistry:
                     self._idempotency_identity[normalized_key] = identity
                 return existing.receipt
 
-            receipt = _create_receipt(identity)
+            receipt = create_ingestion_receipt(identity)
             stored = _StoredIngestion(
                 receipt=receipt,
                 identity=identity,
@@ -111,30 +115,3 @@ class InMemoryIngestionRegistry:
             if snapshot.job_id not in self._jobs:
                 raise KeyError(f"unknown job: {snapshot.job_id}")
             self._jobs[snapshot.job_id] = snapshot
-
-
-def _normalize_idempotency_key(value: str | None) -> str | None:
-    if value is None:
-        return None
-    normalized = value.strip()
-    if not normalized:
-        return None
-    if len(normalized) > 128:
-        raise ServiceError(
-            code=ErrorCode.INVALID_REQUEST,
-            message="Idempotency-Key is too long",
-        )
-    return normalized
-
-
-def _create_receipt(identity: tuple[str, str]) -> IngestionReceipt:
-    content_hash, pipeline_fingerprint = identity
-    version_digest = hashlib.sha256(
-        f"{content_hash}:{pipeline_fingerprint}".encode("ascii")
-    ).hexdigest()
-    return IngestionReceipt(
-        document_id=f"doc_{content_hash}",
-        version_id=f"ver_{version_digest}",
-        job_id=f"job_{uuid4().hex}",
-        status=DocumentStatus.INDEXING,
-    )

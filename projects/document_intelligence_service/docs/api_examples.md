@@ -33,7 +33,7 @@ Beklenen çalışan akış:
 }
 ```
 
-Status: `202 Accepted`. Upload kabulü hâlâ in-memory registry'de tutulur. Qdrant için stage → verify → activate worker orchestration'ı ve gerçek adapter testleri hazırdır; API ile ayrı worker arasındaki durable queue/persistence ve job trigger bir sonraki dilimdedir.
+Status: `202 Accepted`. Upload kabulü mevcut demo composition'ında in-memory registry'de tutulur. Qdrant için stage → verify → activate worker orchestration'ı ve gerçek adapter testleri hazırdır; restart-safe SQLite registry de eklendi, fakat API ile ayrı worker arasındaki production composition ve job trigger bir sonraki dilimdedir.
 
 ## Job status
 

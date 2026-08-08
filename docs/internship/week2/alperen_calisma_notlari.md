@@ -570,3 +570,31 @@ Worker orchestration'ı gerçek Qdrant adapter'ıyla in-memory registry üzerind
 ### Mentora kısa anlatım
 
 > Upload'ı ağır embedding işinden ayırdım. Worker chunk'ları dense ve sparse vektörlerle önce inactive stage ediyor; point count, schema ve kaynak metadata'sını doğrulamadan active etmiyor. Böylece yarım indeks sorguya görünmüyor, retry aynı deterministic point ID'leri güncelliyor ve eski active version başarısız işte korunuyor. Şu an worker gerçek Qdrant adapter'ıyla testli, API-worker arasındaki RAM sınırı için durable persistence bir sonraki adım.
+
+## 14. Restart-safe staging ve job persistence
+
+### RAM registry neden yeterli değildi?
+
+API process'i PDF'yi RAM'de kabul edip ayrı worker process'i başlatırsa worker aynı Python dictionary'lerini göremez. Process restart olduğunda job, idempotency key ve staged PDF de kaybolur. Bu durumda `202` verilmiş bir işin durumunu veya tekrar çalıştırılacak içeriği bulamayız.
+
+Bu nedenle aynı `IngestionRegistry` portuna SQLite adapter'ı ekledim:
+
+```text
+API process ─┐
+             ├── SQLite file: identity + idempotency + job + PDF bytes
+worker ──────┘
+```
+
+İki ayrı registry instance'ı aynı database dosyasını açtığında job status, progress, content hash, pipeline fingerprint ve staged PDF tekrar okunabiliyor. `BEGIN IMMEDIATE` ile identity ve idempotency kontrolü tek transaction içinde yapılıyor.
+
+### İki status neden ayrı?
+
+Job'ın `running/succeeded/failed` durumu ile document version'ın `indexing/active/failed` durumu aynı kavram değildir. Worker progress güncellerken upload receipt'in document status'ını yanlışlıkla `running` yapmamak için SQLite tablosunda ikisini ayrı tutuyorum.
+
+### Bilinen sınır
+
+SQLite adapter local single-node dayanıklılık ve worker/API paylaşımı için MVP çözümüdür. PDF byte'larını BLOB olarak tutmak küçük/orta dosyalarda pratiktir; yüksek hacimde object storage, metadata için PostgreSQL ve queue için Redis/başka broker ayrıca ölçülmelidir. Demo composition'ı hâlâ in-memory registry kullanıyor; durable adapter'ın uygulama factory'sine seçilebilir biçimde bağlanması sıradaki adımdır.
+
+### Mentora kısa anlatım
+
+> RAM registry'nin process sınırında çalışmadığını gösterdim ve aynı port için SQLite adapter yazdım. Content/pipeline identity, idempotency key, job progress ve staged PDF aynı transaction-backed dosyada tutuluyor; yeni registry instance'ı restart sonrası aynı job'ı ve içeriği okuyabiliyor. Bu local MVP dayanıklılığıdır; yüksek hacimli production storage/queue kararı ayrıca ölçülecek.

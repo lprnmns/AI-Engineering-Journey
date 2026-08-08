@@ -1,10 +1,13 @@
 """Unit tests for Day 2 ingestion identity and validation."""
 
+import asyncio
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 
+from projects.document_intelligence_service.app.domain.entities import JobStatus
 from projects.document_intelligence_service.app.application.ingestion_service import (
     IngestionPreparationService,
 )
@@ -14,6 +17,7 @@ from projects.document_intelligence_service.app.domain.errors import (
 )
 from projects.document_intelligence_service.app.domain.ingestion import (
     IngestionLimits,
+    JobSnapshot,
     PipelineConfig,
     compute_content_hash,
     compute_pipeline_fingerprint,
@@ -24,6 +28,9 @@ from projects.document_intelligence_service.app.infrastructure.parsing.pdf_inspe
 )
 from projects.document_intelligence_service.app.infrastructure.storage.in_memory_registry import (
     InMemoryIngestionRegistry,
+)
+from projects.document_intelligence_service.app.infrastructure.storage.sqlite_registry import (
+    SqliteIngestionRegistry,
 )
 
 
@@ -144,9 +151,49 @@ def test_development_registry_keeps_staged_bytes_for_future_worker() -> None:
     )
     registry = InMemoryIngestionRegistry()
 
-    import asyncio
-
     receipt = asyncio.run(registry.accept(prepared, "stage-1"))
     staged = asyncio.run(registry.get_staged_content(receipt.job_id))
 
     assert staged == content
+
+
+def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> None:
+    content = make_pdf()
+    preparation = IngestionPreparationService(
+        limits=IngestionLimits(),
+        pipeline_config=PipelineConfig(),
+        pdf_inspector=PypdfInspector(),
+    )
+    prepared = preparation.prepare(
+        content=content,
+        filename="guide.pdf",
+        content_type="application/pdf",
+    )
+    database_path = tmp_path / "state" / "ingestions.sqlite3"
+
+    first_registry = SqliteIngestionRegistry(database_path)
+    first_receipt = asyncio.run(first_registry.accept(prepared, "durable-1"))
+    asyncio.run(
+        first_registry.update_job(
+            JobSnapshot(
+                job_id=first_receipt.job_id,
+                document_id=first_receipt.document_id,
+                status=JobStatus.RUNNING,
+                progress_percent=35,
+                error_code=None,
+            )
+        )
+    )
+
+    restarted_registry = SqliteIngestionRegistry(database_path)
+    restored = asyncio.run(restarted_registry.get_job(first_receipt.job_id))
+    restored_content = asyncio.run(
+        restarted_registry.get_staged_content(first_receipt.job_id)
+    )
+    retried = asyncio.run(restarted_registry.accept(prepared, "durable-1"))
+
+    assert restored is not None
+    assert restored.status is JobStatus.RUNNING
+    assert restored.progress_percent == 35
+    assert restored_content == content
+    assert retried == first_receipt
