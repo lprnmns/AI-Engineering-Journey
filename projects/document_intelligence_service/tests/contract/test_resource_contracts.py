@@ -1,9 +1,11 @@
 """Contract tests for resource, job and query routes."""
 
 import asyncio
+from io import BytesIO
 
 import httpx
 from fastapi import FastAPI
+from pypdf import PdfWriter
 
 from projects.document_intelligence_service.app.application.health_service import (
     HealthService,
@@ -22,6 +24,54 @@ async def post_json(app: FastAPI, path: str, payload: object) -> httpx.Response:
             headers={"X-Request-ID": "contract-1"},
         ) as client:
             return await client.post(path, json=payload)
+
+
+def pdf_bytes(page_count: int = 1) -> bytes:
+    """Create a small valid PDF upload fixture."""
+
+    writer = PdfWriter()
+    for _ in range(page_count):
+        writer.add_blank_page(width=300, height=300)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+async def post_multipart(
+    app: FastAPI,
+    path: str,
+    content: bytes,
+    idempotency_key: str | None = None,
+) -> httpx.Response:
+    """POST one PDF through the real upload adapter."""
+
+    transport = httpx.ASGITransport(app=app)
+    headers = {"X-Request-ID": "upload-contract-1"}
+    if idempotency_key is not None:
+        headers["Idempotency-Key"] = idempotency_key
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+            headers=headers,
+        ) as client:
+            return await client.post(
+                path,
+                files={"file": ("guide.pdf", content, "application/pdf")},
+            )
+
+
+async def get(app: FastAPI, path: str) -> httpx.Response:
+    """GET one resource through the real ASGI lifespan."""
+
+    transport = httpx.ASGITransport(app=app)
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+            headers={"X-Request-ID": "job-contract-1"},
+        ) as client:
+            return await client.get(path)
 
 
 def test_valid_query_does_not_fabricate_an_answer_before_wiring() -> None:
@@ -53,3 +103,60 @@ def test_invalid_query_uses_common_validation_envelope() -> None:
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
     assert response.json()["error"]["request_id"] == "contract-1"
+
+
+def test_upload_returns_202_and_job_can_be_read() -> None:
+    app = create_app(health_service=HealthService(()))
+
+    response = asyncio.run(post_multipart(app, "/v1/documents", pdf_bytes()))
+
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["status"] == "indexing"
+    assert payload["request_id"] == "upload-contract-1"
+
+    job_response = asyncio.run(get(app, f"/v1/jobs/{payload['job_id']}"))
+    assert job_response.status_code == 200
+    assert job_response.json() == {
+        "job_id": payload["job_id"],
+        "document_id": payload["document_id"],
+        "status": "queued",
+        "progress_percent": 0,
+        "error_code": None,
+        "request_id": "job-contract-1",
+    }
+
+
+def test_same_pdf_and_pipeline_do_not_create_duplicate_job() -> None:
+    app = create_app(health_service=HealthService(()))
+    content = pdf_bytes()
+
+    first = asyncio.run(post_multipart(app, "/v1/documents", content))
+    second = asyncio.run(post_multipart(app, "/v1/documents", content))
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["document_id"] == second.json()["document_id"]
+    assert first.json()["version_id"] == second.json()["version_id"]
+    assert first.json()["job_id"] == second.json()["job_id"]
+
+
+def test_reusing_idempotency_key_for_different_content_returns_409() -> None:
+    app = create_app(health_service=HealthService(()))
+
+    first = asyncio.run(
+        post_multipart(app, "/v1/documents", pdf_bytes(1), "same-key")
+    )
+    conflict = asyncio.run(
+        post_multipart(app, "/v1/documents", pdf_bytes(2), "same-key")
+    )
+
+    assert first.status_code == 202
+    assert conflict.status_code == 409
+    assert conflict.json() == {
+        "error": {
+            "code": "INGESTION_CONFLICT",
+            "message": "Idempotency-Key was already used for another upload",
+            "request_id": "upload-contract-1",
+        }
+    }

@@ -22,6 +22,9 @@ from projects.document_intelligence_service.app.domain.ingestion import (
 from projects.document_intelligence_service.app.infrastructure.parsing.pdf_inspector import (
     PypdfInspector,
 )
+from projects.document_intelligence_service.app.infrastructure.storage.in_memory_registry import (
+    InMemoryIngestionRegistry,
+)
 
 
 def make_pdf(page_count: int = 1) -> bytes:
@@ -125,3 +128,25 @@ def test_preparation_service_combines_upload_pdf_and_pipeline_identity() -> None
     assert prepared.pdf.page_count == 2
     assert len(prepared.upload.content_hash) == 64
     assert len(prepared.pipeline_fingerprint) == 64
+
+
+def test_development_registry_keeps_staged_bytes_for_future_worker() -> None:
+    content = make_pdf()
+    preparation = IngestionPreparationService(
+        limits=IngestionLimits(),
+        pipeline_config=PipelineConfig(),
+        pdf_inspector=PypdfInspector(),
+    )
+    prepared = preparation.prepare(
+        content=content,
+        filename="guide.pdf",
+        content_type="application/pdf",
+    )
+    registry = InMemoryIngestionRegistry()
+
+    import asyncio
+
+    receipt = asyncio.run(registry.accept(prepared, "stage-1"))
+    staged = asyncio.run(registry.get_staged_content(receipt.job_id))
+
+    assert staged == content

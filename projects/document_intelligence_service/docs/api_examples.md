@@ -33,7 +33,7 @@ Beklenen çalışan akış:
 }
 ```
 
-Status: `202 Accepted`. Gün 1'de sözleşme yayımlanır; ingestion worker Gün 2'de bağlanır.
+Status: `202 Accepted`. Gün 2'nin ilk diliminde kimlik doğrulama ve in-memory job registry çalışır; Qdrant staging ve gerçek worker bir sonraki dilimde bağlanacaktır.
 
 ## Job status
 
@@ -82,4 +82,3 @@ curl -sS \
   "request_id": "mentor-query-001"
 }
 ```
-

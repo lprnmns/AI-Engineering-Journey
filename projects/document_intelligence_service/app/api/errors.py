@@ -31,6 +31,7 @@ _STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.UNSUPPORTED_MEDIA_TYPE: status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
     ErrorCode.DOCUMENT_PARSE_FAILED: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ErrorCode.DOCUMENT_NOT_FOUND: status.HTTP_404_NOT_FOUND,
+    ErrorCode.JOB_NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.INGESTION_CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCode.DOCUMENT_BUSY: status.HTTP_409_CONFLICT,
     ErrorCode.DEPENDENCY_UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -80,6 +81,7 @@ def openapi_error_responses() -> dict[int | str, dict[str, Any]]:
 
     return {
         status.HTTP_400_BAD_REQUEST: {"model": ErrorEnvelope},
+        status.HTTP_404_NOT_FOUND: {"model": ErrorEnvelope},
         status.HTTP_409_CONFLICT: {"model": ErrorEnvelope},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorEnvelope},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorEnvelope},

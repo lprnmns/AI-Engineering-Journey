@@ -375,3 +375,40 @@ Geçersiz dosya `DOCUMENT_PARSE_FAILED`, yanlış MIME `UNSUPPORTED_MEDIA_TYPE`,
 ### Mentora kısa anlatım
 
 > Content hash dosyanın byte kimliğini, pipeline fingerprint ise o dosyadan vektör üretme reçetesini temsil ediyor. Aynı PDF aynı pipeline ile tekrar gelirse idempotent davranabilirim; pipeline değişirse yeni version üretirim. Önce boyut, MIME ve magic bytes kontrolü yapıp sonra page-aware parse'a geçiyorum.
+
+## 10. `202 Accepted`, job ve idempotency akışı
+
+### Upload neden hemen `200` dönmüyor?
+
+PDF'nin parse edilmesi, chunk'lanması, embedding üretilmesi ve Qdrant'a yazılması request süresinden uzun sürebilir. Bu nedenle upload kabulü ile indeksleme tamamlanmasını ayırıyorum:
+
+```text
+POST /v1/documents
+  → validate + identity + registry
+  → 202 Accepted + document_id + version_id + job_id
+
+GET /v1/jobs/{job_id}
+  → queued / running / succeeded / failed
+```
+
+`202`, isteğin kabul edildiğini; işlemin tamamlandığını değil, anlatır. `200` dönmek burada yanlış bir tamamlandı izlenimi oluştururdu.
+
+### Idempotency nasıl çalışıyor?
+
+Registry iki anahtarı birlikte değerlendiriyor:
+
+- `(content_hash, pipeline_fingerprint)`: Aynı dosya ve aynı üretim reçetesi tekrar gelirse aynı document/version/job receipt döner.
+- `Idempotency-Key`: Aynı client request tekrar gönderilirse aynı sonucu döndürür. Aynı key farklı içerikle kullanılırsa `409 INGESTION_CONFLICT` döner.
+
+```text
+aynı PDF + aynı pipeline → duplicate job yok
+aynı Idempotency-Key + farklı PDF → 409 conflict
+```
+
+### Geliştirme adapter'ının sınırı
+
+Şu an registry ve staged PDF byte'ları RAM'de tutuluyor. Bu, akışı test etmek için yeterlidir fakat process restart sonrası job ve içerik kaybolur. Production'a geçmeden önce durable staging/persistence ve ayrı worker eklenmelidir; bu sınırlılık gizlenmemiştir.
+
+### Mentora kısa anlatım
+
+> Upload ile indexing completion'ı ayırdım: `202 + job_id` yalnız kabul anlamına geliyor. Content hash ve pipeline fingerprint duplicate version'ları engelliyor; Idempotency-Key retry güvenliği sağlıyor. Şu an in-memory adapter geliştirme sınırı olarak kullanılıyor, restart-safe durable staging ve worker sonraki adım.

@@ -5,6 +5,7 @@ import hashlib
 import json
 
 from .errors import ErrorCode, ServiceError
+from .entities import DocumentStatus, JobStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,9 +69,31 @@ class PdfInspection:
 class PreparedIngestion:
     """Identity and structural metadata before persistence/indexing."""
 
+    content: bytes
     upload: UploadMetadata
     pdf: PdfInspection
     pipeline_fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class IngestionReceipt:
+    """Stable identifiers returned when an ingestion is accepted."""
+
+    document_id: str
+    version_id: str
+    job_id: str
+    status: DocumentStatus
+
+
+@dataclass(frozen=True, slots=True)
+class JobSnapshot:
+    """Publicly mappable state of an accepted ingestion job."""
+
+    job_id: str
+    document_id: str
+    status: JobStatus
+    progress_percent: int
+    error_code: str | None
 
 
 def compute_content_hash(content: bytes) -> str:

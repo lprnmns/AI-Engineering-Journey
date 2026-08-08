@@ -2,9 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, Header, Path, Query, UploadFile, status
+from fastapi import APIRouter, File, Header, Path, Query, Request, UploadFile, status
 
 from ..errors import openapi_error_responses
+from ...application.ingestion_service import IngestionService
+from ...observability.request_id import get_request_id
 from ._not_ready import feature_not_ready
 from .contracts import (
     DeleteDocumentResponse,
@@ -27,13 +29,27 @@ router = APIRouter(prefix="/documents", tags=["documents"])
     },
 )
 async def create_document(
+    request: Request,
     file: Annotated[UploadFile, File(description="PDF document")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> DocumentUploadResponse:
-    """Accept a PDF for asynchronous ingestion (implementation follows on Day 2)."""
+    """Validate and accept a PDF for asynchronous ingestion."""
 
-    del file, idempotency_key
-    feature_not_ready("Document ingestion")
+    ingestion_service: IngestionService = request.app.state.ingestion_service
+    content = await file.read(ingestion_service.max_upload_bytes + 1)
+    receipt = await ingestion_service.accept_receipt(
+        content=content,
+        filename=file.filename or "upload.pdf",
+        content_type=file.content_type,
+        idempotency_key=idempotency_key,
+    )
+    return DocumentUploadResponse(
+        document_id=receipt.document_id,
+        version_id=receipt.version_id,
+        job_id=receipt.job_id,
+        status=receipt.status,
+        request_id=get_request_id(),
+    )
 
 
 @router.get(

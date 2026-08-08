@@ -2,10 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Request
 
 from ..errors import openapi_error_responses
-from ._not_ready import feature_not_ready
+from ...application.ingestion_service import IngestionService
+from ...observability.request_id import get_request_id
 from .contracts import JobResponse
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -17,9 +18,18 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
     responses={**openapi_error_responses()},
 )
 async def get_job(
+    request: Request,
     job_id: Annotated[str, Path(min_length=1, max_length=128)],
 ) -> JobResponse:
     """Return asynchronous ingestion progress."""
 
-    del job_id
-    feature_not_ready("Job status")
+    ingestion_service: IngestionService = request.app.state.ingestion_service
+    snapshot = await ingestion_service.get_job(job_id)
+    return JobResponse(
+        job_id=snapshot.job_id,
+        document_id=snapshot.document_id,
+        status=snapshot.status,
+        progress_percent=snapshot.progress_percent,
+        error_code=snapshot.error_code,
+        request_id=get_request_id(),
+    )
