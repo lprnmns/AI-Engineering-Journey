@@ -297,3 +297,40 @@ Bu alanlar cevabın yalnız metnini değil, sistemin hangi kararı hangi kanıt 
 ### Mentora kısa anlatım
 
 > REST sınırını implementation'dan önce sabitledim. Upload asenkron `202 + job_id`, query senkron, search ise LLM'siz evidence endpointi. Query response'ta answer, source, retrieval, model ve stage latency alanlarını birlikte taşıyorum; böylece yalnız doğru görünen bir metin değil, savunulabilir bir karar izi üretiyorum.
+
+## 8. Gün 1 mimari kanıtları ve ADR yaklaşımı
+
+### Mimari diyagramı nasıl okuyorum?
+
+```text
+demo-ui → API → application → domain policy
+              ↘ infrastructure adapters → Qdrant/Ollama
+```
+
+Ok yönü bağımlılık yönünü anlatır. API, Qdrant'a doğrudan bağlanmaz; application port üzerinden adapter kullanır. Query akışı senkron, ingestion akışı `202 + job_id` ile asenkron tasarlanmıştır.
+
+### Sequence diagramın ana kararı
+
+```text
+validate → dense top-30 + sparse top-30 → RRF top-20
+         → rerank top-5 → answerability gate
+         → LLM answer veya LLM'siz no-answer
+```
+
+Bu sıralama önemlidir: LLM kanıt seçmeden çağrılmaz; no-answer kararı üretim modelinin keyfi cevabına bırakılmaz.
+
+### ADR ne işe yarar?
+
+ADR (Architecture Decision Record), yalnız sonucu değil kararın bağlamını, alternatiflerini, ölçümünü ve sınırlarını kaydeder. Örneğin “hybrid retrieval kullandım” demek yerine native Qdrant sparse ile ayrı BM25 adapter'ını hangi Recall/MRR/p95 ölçümleriyle karşılaştıracağımı yazarım.
+
+İlk ADR konuları:
+
+- Qdrant native sparse/BM25 veya ayrı adapter
+- RRF parametresi ve tuning politikası
+- Ingestion version activation ve retention
+- Multi-signal no-answer kalibrasyonu
+- Ollama'nın host/container sınırı
+
+### Mentora kısa anlatım
+
+> Mimari diyagramda API, application, domain ve infrastructure sınırlarını ayırdım. Query sequence'te dense+sparse adayları RRF ve reranker'dan geçtikten sonra answerability gate'e giriyor; kanıt yetersizse LLM çağrılmıyor. Her kritik teknoloji kararını alternatif, ölçüm ve bilinen sınırlarıyla ADR olarak kaydediyorum.

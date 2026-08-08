@@ -27,6 +27,20 @@ class PageQuery(BaseModel):
 class DocumentUploadResponse(BaseModel):
     """Accepted asynchronous document ingestion response."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "document_id": "doc_123",
+                    "version_id": "ver_001",
+                    "job_id": "job_456",
+                    "status": "indexing",
+                    "request_id": "req_demo",
+                }
+            ]
+        }
+    )
+
     document_id: str
     version_id: str
     job_id: str
@@ -121,6 +135,19 @@ class ModelInfo(BaseModel):
 class QueryRequest(BaseModel):
     """Question and bounded retrieval controls."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+                    "retrieval_mode": "hybrid",
+                    "top_k": 5,
+                    "include_debug": False,
+                }
+            ]
+        }
+    )
+
     question: str = Field(min_length=1, max_length=4000)
     document_ids: list[str] = Field(default_factory=list, max_length=100)
     retrieval_mode: RetrievalMode = RetrievalMode.HYBRID
@@ -132,6 +159,35 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """Answer or explicit no-answer response contract."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "decision": "no_answer",
+                    "answer": None,
+                    "no_answer_reason": "NO_EVIDENCE",
+                    "sources": [],
+                    "retrieval": {
+                        "mode": "hybrid",
+                        "dense_candidates": 30,
+                        "sparse_candidates": 30,
+                        "rrf_candidates": 20,
+                        "reranked_candidates": 5,
+                    },
+                    "model": {"provider": None, "model": None},
+                    "latency": {
+                        "embedding_ms": 12.4,
+                        "search_ms": 18.1,
+                        "rerank_ms": 38.2,
+                        "llm_ms": 0,
+                        "total_ms": 70.1,
+                    },
+                    "request_id": "req_demo",
+                }
+            ]
+        }
+    )
 
     decision: Decision
     answer: str | None
@@ -156,6 +212,18 @@ class QueryResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     """Evidence-only search request for retrieval debugging."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "question": "Qdrant ne işe yarar?",
+                    "retrieval_mode": "hybrid",
+                    "top_k": 10,
+                }
+            ]
+        }
+    )
 
     question: str = Field(min_length=1, max_length=4000)
     document_ids: list[str] = Field(default_factory=list, max_length=100)
