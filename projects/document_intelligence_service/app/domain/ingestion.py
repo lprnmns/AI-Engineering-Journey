@@ -32,6 +32,8 @@ class PipelineConfig:
     chunk_size_sentences: int = 3
     chunk_overlap_sentences: int = 1
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    sparse_encoder: str = "hashing_tf_v1"
+    sparse_encoder_version: str = "1"
     reranker_model: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
     vector_schema_version: str = "1"
 
@@ -47,6 +49,8 @@ class PipelineConfig:
             "chunk_size_sentences": str(self.chunk_size_sentences),
             "chunk_overlap_sentences": str(self.chunk_overlap_sentences),
             "embedding_model": self.embedding_model,
+            "sparse_encoder": self.sparse_encoder,
+            "sparse_encoder_version": self.sparse_encoder_version,
             "reranker_model": self.reranker_model,
             "vector_schema_version": self.vector_schema_version,
         }
@@ -77,6 +81,31 @@ class PreparedIngestion:
     upload: UploadMetadata
     pdf: PdfInspection
     pipeline_fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class VersionVerification:
+    """Evidence that a staged vector version is complete and safe to activate."""
+
+    document_id: str
+    version_id: str
+    expected_chunk_count: int
+    actual_chunk_count: int
+    inactive_chunk_count: int
+    schema_valid: bool
+    metadata_complete: bool
+
+    @property
+    def is_valid(self) -> bool:
+        """Return whether all staged points passed the activation gate."""
+
+        return (
+            self.schema_valid
+            and self.metadata_complete
+            and self.expected_chunk_count > 0
+            and self.actual_chunk_count == self.expected_chunk_count
+            and self.inactive_chunk_count == self.expected_chunk_count
+        )
 
 
 @dataclass(frozen=True, slots=True)

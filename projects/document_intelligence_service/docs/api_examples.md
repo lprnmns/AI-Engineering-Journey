@@ -33,7 +33,7 @@ Beklenen çalışan akış:
 }
 ```
 
-Status: `202 Accepted`. Gün 2'nin ilk diliminde kimlik doğrulama ve in-memory job registry çalışır; Qdrant staging ve gerçek worker bir sonraki dilimde bağlanacaktır.
+Status: `202 Accepted`. Upload kabulü hâlâ in-memory registry'de tutulur. Qdrant için stage → verify → activate worker orchestration'ı ve gerçek adapter testleri hazırdır; API ile ayrı worker arasındaki durable queue/persistence ve job trigger bir sonraki dilimdedir.
 
 ## Job status
 

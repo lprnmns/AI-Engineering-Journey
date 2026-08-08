@@ -1,6 +1,7 @@
 """Ports implemented by infrastructure adapters."""
 
 from typing import Protocol
+from collections.abc import Sequence
 
 from ..domain.health import DependencyHealth
 from ..domain.ingestion import (
@@ -8,8 +9,10 @@ from ..domain.ingestion import (
     JobSnapshot,
     PdfInspection,
     PreparedIngestion,
+    VersionVerification,
 )
-from ..domain.chunks import PageText
+from ..domain.chunks import ChildChunk, PageText
+from ..domain.vectors import SparseVector
 
 
 class HealthProbe(Protocol):
@@ -39,6 +42,72 @@ class PageTextExtractor(Protocol):
         ...
 
 
+class DenseEmbedder(Protocol):
+    """Port for a dense embedding model loaded outside request handling."""
+
+    @property
+    def dimension(self) -> int:
+        """Return the fixed output dimension of the embedding model."""
+
+        ...
+
+    def embed_documents(
+        self,
+        texts: Sequence[str],
+    ) -> tuple[tuple[float, ...], ...]:
+        """Encode a bounded batch of texts into dense vectors."""
+
+        ...
+
+
+class SparseEmbedder(Protocol):
+    """Port for a deterministic lexical/sparse encoder."""
+
+    def embed_documents(self, texts: Sequence[str]) -> tuple[SparseVector, ...]:
+        """Encode a bounded batch of texts into sparse vectors."""
+
+        ...
+
+
+class ChunkVectorStore(Protocol):
+    """Port for staging and activating versioned retrieval chunks."""
+
+    def stage_version(
+        self,
+        *,
+        chunks: Sequence[ChildChunk],
+        dense_vectors: Sequence[Sequence[float]],
+        sparse_vectors: Sequence[SparseVector],
+        pipeline_fingerprint: str,
+        language: str,
+    ) -> None:
+        """Write a version as inactive points."""
+
+        ...
+
+    def verify_version(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        expected_chunk_count: int,
+    ) -> VersionVerification:
+        """Validate schema, point count and staged metadata."""
+
+        ...
+
+    def activate_version(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        verification: VersionVerification,
+    ) -> None:
+        """Make the verified version visible to retrieval."""
+
+        ...
+
+
 class IngestionRegistry(Protocol):
     """Port for idempotent document and job state."""
 
@@ -58,5 +127,15 @@ class IngestionRegistry(Protocol):
 
     async def get_staged_content(self, job_id: str) -> bytes | None:
         """Return staged bytes for a future ingestion worker."""
+
+        ...
+
+    async def get_staged_ingestion(self, job_id: str) -> PreparedIngestion | None:
+        """Return the complete staged ingestion identity for a worker."""
+
+        ...
+
+    async def update_job(self, snapshot: JobSnapshot) -> None:
+        """Persist a worker progress transition."""
 
         ...

@@ -525,3 +525,48 @@ Qdrant'ın `:memory:` local client'ında payload indexleri işlevsiz olduğuna d
 ### Mentora kısa anlatım
 
 > Qdrant'a bağlanmayı endpoint içine gömmek yerine named dense/sparse schema ve chunk store adapter'ı oluşturdum. Dense vektör anlamsal arama, sparse vektör lexical/hybrid arama için ayrılıyor. Point ID'yi version ve chunk'tan deterministik üreterek retry'larda duplicate oluşmasını engelliyorum; payload indexleriyle sayfa, kaynak ve aktif version filtrelenebilir hale geliyor. Schema veya vektör boyutu uyuşmazlığını veri yazmadan önce yakalıyorum.
+
+## 13. Stage → verify → activate worker akışı
+
+### Neden upload endpoint'inden ayırıyoruz?
+
+PDF parse, chunking ve özellikle embedding CPU/RAM tüketir. Bunları HTTP request'in içinde çalıştırmak response süresini ve API'nin kararlılığını bozar. Upload yalnız işi kabul eder; worker aynı `job_id` üzerinden ağır işlemi yürütür.
+
+```text
+POST /documents
+  → validate + identity + staged bytes
+  → 202 + job_id
+
+worker(job_id)
+  → page-aware parse/chunk
+  → dense + sparse embedding
+  → Qdrant inactive points (stage)
+  → point count + schema + metadata (verify)
+  → önceki version pasif, yeni version active (activate)
+  → job succeeded
+```
+
+### Stage neden inactive?
+
+Yeni version'ın tüm chunk'ları yazılmadan sorgu trafiğine açılırsa kullanıcı yarım belge üzerinden cevap alabilir. `is_active=false` ile yazılan point'ler doğrulama tamamlanana kadar retrieval kapsamına girmez.
+
+### Verify hangi kanıtları kontrol ediyor?
+
+- Beklenen child chunk sayısı ile Qdrant point sayısı aynı mı?
+- Version'a ait bütün point'ler hâlâ inactive mi?
+- Dense/sparse collection schema beklenen boyut ve isimlere sahip mi?
+- Kaynak, sayfa, text hash, pipeline fingerprint ve active metadata'sı mevcut mu?
+
+Bu kontrolden sonra `VersionVerification.is_valid` true ise activation yapılır. Başarısız parse, embedding veya doğrulama eski active version'ı değiştirmez.
+
+### Worker ile model sınırı
+
+Dense adapter `SentenceTransformerEmbedder` modelini import sırasında değil ilk batch'te lazy yükler. Böylece API process'i açılırken ağır model yüklenmez. Sparse adapter ilk spike için Türkçe Unicode tokenlarını deterministik feature ID'lerine ve term-frequency değerlerine çevirir; Qdrant'ın IDF modifier'ı collection düzeyindeki lexical ağırlığı sağlar.
+
+### Şu anki bilinçli sınır
+
+Worker orchestration'ı gerçek Qdrant adapter'ıyla in-memory registry üzerinde test edildi; API upload'ı henüz ayrı durable worker process'ine otomatik bağlanmadı. Çünkü mevcut registry RAM'de ve process restart sonrası API ile worker aynı job bilgisini paylaşamaz. Bir sonraki adım SQLite/durable staging veya ölçülmüş queue adapter'ı eklemek, sonra worker trigger'ını bağlamaktır.
+
+### Mentora kısa anlatım
+
+> Upload'ı ağır embedding işinden ayırdım. Worker chunk'ları dense ve sparse vektörlerle önce inactive stage ediyor; point count, schema ve kaynak metadata'sını doğrulamadan active etmiyor. Böylece yarım indeks sorguya görünmüyor, retry aynı deterministic point ID'leri güncelliyor ve eski active version başarısız işte korunuyor. Şu an worker gerçek Qdrant adapter'ıyla testli, API-worker arasındaki RAM sınırı için durable persistence bir sonraki adım.

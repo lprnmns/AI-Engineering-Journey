@@ -15,14 +15,19 @@ from projects.document_intelligence_service.app.infrastructure.qdrant.schema imp
 )
 
 
-def make_chunk(chunk_id: str = "chunk-1") -> ChildChunk:
+def make_chunk(
+    chunk_id: str = "chunk-1",
+    *,
+    document_id: str = "doc-1",
+    version_id: str = "ver-1",
+) -> ChildChunk:
     """Create a deterministic child chunk fixture."""
 
     return ChildChunk(
         chunk_id=chunk_id,
-        parent_id="doc-1:ver-1:parent:000",
-        document_id="doc-1",
-        version_id="ver-1",
+        parent_id=f"{document_id}:{version_id}:parent:000",
+        document_id=document_id,
+        version_id=version_id,
         source="guide.pdf",
         title="RAG",
         text="Qdrant kanıt adaylarını saklar.",
@@ -146,3 +151,61 @@ def test_existing_dense_dimension_mismatch_fails_startup_validation() -> None:
 
     with pytest.raises(QdrantSchemaError, match="dimension"):
         manager.ensure_collection()
+
+
+def test_stage_verify_activate_hides_previous_version() -> None:
+    store = make_store()
+    sparse = SparseEmbedding(indices=(1, 4), values=(0.8, 0.2))
+
+    first = make_chunk(version_id="ver-1")
+    store.stage_version(
+        chunks=[first],
+        dense_vectors=[(1.0, 0.0)],
+        sparse_vectors=[sparse],
+        pipeline_fingerprint="pipe-1",
+        language="tr",
+    )
+    first_verification = store.verify_version(
+        document_id="doc-1",
+        version_id="ver-1",
+        expected_chunk_count=1,
+    )
+    assert first_verification.is_valid
+    store.activate_version(
+        document_id="doc-1",
+        version_id="ver-1",
+        verification=first_verification,
+    )
+
+    second = make_chunk(version_id="ver-2")
+    store.stage_version(
+        chunks=[second],
+        dense_vectors=[(0.0, 1.0)],
+        sparse_vectors=[sparse],
+        pipeline_fingerprint="pipe-2",
+        language="tr",
+    )
+    second_verification = store.verify_version(
+        document_id="doc-1",
+        version_id="ver-2",
+        expected_chunk_count=1,
+    )
+    assert second_verification.is_valid
+    store.activate_version(
+        document_id="doc-1",
+        version_id="ver-2",
+        verification=second_verification,
+    )
+
+    first_point = store.client.retrieve(
+        collection_name=store.collection_name,
+        ids=[store.point_id("ver-1", "chunk-1")],
+    )[0]
+    second_point = store.client.retrieve(
+        collection_name=store.collection_name,
+        ids=[store.point_id("ver-2", "chunk-1")],
+    )[0]
+    assert first_point.payload is not None
+    assert second_point.payload is not None
+    assert first_point.payload["is_active"] is False
+    assert second_point.payload["is_active"] is True

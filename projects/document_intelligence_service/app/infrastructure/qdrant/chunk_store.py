@@ -1,21 +1,18 @@
 """Qdrant persistence adapter for page-aware child chunks."""
 
-from dataclasses import dataclass
 from collections.abc import Sequence
 import uuid
 
 from qdrant_client import QdrantClient, models
 
 from ...domain.chunks import ChildChunk
+from ...domain.ingestion import VersionVerification
+from ...domain.vectors import SparseVector
 from .schema import QdrantSchema, QdrantSchemaManager
 
 
-@dataclass(frozen=True, slots=True)
-class SparseEmbedding:
-    """Framework-independent sparse vector values before Qdrant mapping."""
-
-    indices: tuple[int, ...]
-    values: tuple[float, ...]
+# Backwards-compatible name used by the first Qdrant schema tests.
+SparseEmbedding = SparseVector
 
 
 class QdrantChunkStore:
@@ -42,12 +39,126 @@ class QdrantChunkStore:
 
         self._schema_manager.ensure_collection()
 
+    def stage_version(
+        self,
+        *,
+        chunks: Sequence[ChildChunk],
+        dense_vectors: Sequence[Sequence[float]],
+        sparse_vectors: Sequence[SparseVector],
+        pipeline_fingerprint: str,
+        language: str = "unknown",
+    ) -> None:
+        """Write all version points as inactive/staged data."""
+
+        self.upsert(
+            chunks=chunks,
+            dense_vectors=dense_vectors,
+            sparse_vectors=sparse_vectors,
+            pipeline_fingerprint=pipeline_fingerprint,
+            language=language,
+            is_active=False,
+        )
+
+    def verify_version(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        expected_chunk_count: int,
+    ) -> VersionVerification:
+        """Validate the staged point count and required source metadata."""
+
+        if expected_chunk_count <= 0:
+            raise ValueError("expected_chunk_count must be greater than zero")
+        self.ensure_schema()
+        version_filter = self._version_filter(document_id, version_id)
+        inactive_filter = models.Filter(
+            must=[
+                *(version_filter.must or []),
+                models.FieldCondition(
+                    key="is_active",
+                    match=models.MatchValue(value=False),
+                ),
+            ]
+        )
+        actual_count = self._client.count(
+            collection_name=self.collection_name,
+            count_filter=version_filter,
+            exact=True,
+        ).count
+        inactive_count = self._client.count(
+            collection_name=self.collection_name,
+            count_filter=inactive_filter,
+            exact=True,
+        ).count
+        records, _ = self._client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=version_filter,
+            limit=max(expected_chunk_count, 1),
+            with_payload=True,
+            with_vectors=False,
+        )
+        required_payload = {
+            "chunk_id",
+            "parent_id",
+            "document_id",
+            "version_id",
+            "source",
+            "text",
+            "page_start",
+            "page_end",
+            "text_hash",
+            "pipeline_fingerprint",
+            "is_active",
+        }
+        metadata_complete = len(records) == actual_count and all(
+            record.payload is not None
+            and required_payload.issubset(record.payload.keys())
+            for record in records
+        )
+        return VersionVerification(
+            document_id=document_id,
+            version_id=version_id,
+            expected_chunk_count=expected_chunk_count,
+            actual_chunk_count=actual_count,
+            inactive_chunk_count=inactive_count,
+            schema_valid=True,
+            metadata_complete=metadata_complete,
+        )
+
+    def activate_version(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        verification: VersionVerification,
+    ) -> None:
+        """Expose a verified version and hide previous versions for the document."""
+
+        if not verification.is_valid:
+            raise ValueError("cannot activate an unverified Qdrant version")
+        self.ensure_schema()
+        document_filter = self._document_filter(document_id)
+        version_filter = self._version_filter(document_id, version_id)
+        self._client.set_payload(
+            collection_name=self.collection_name,
+            payload={"is_active": False},
+            points=document_filter,
+            wait=True,
+        )
+        self._client.set_payload(
+            collection_name=self.collection_name,
+            payload={"is_active": True},
+            points=version_filter,
+            wait=True,
+        )
+
     def upsert(
         self,
         *,
         chunks: Sequence[ChildChunk],
         dense_vectors: Sequence[Sequence[float]],
-        sparse_vectors: Sequence[SparseEmbedding],
+        sparse_vectors: Sequence[SparseVector],
         pipeline_fingerprint: str,
         language: str = "unknown",
         is_active: bool = False,
@@ -133,3 +244,29 @@ class QdrantChunkStore:
             "language": language,
             "is_active": is_active,
         }
+
+    @staticmethod
+    def _document_filter(document_id: str) -> models.Filter:
+        return models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="document_id",
+                    match=models.MatchValue(value=document_id),
+                )
+            ]
+        )
+
+    @staticmethod
+    def _version_filter(document_id: str, version_id: str) -> models.Filter:
+        return models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="document_id",
+                    match=models.MatchValue(value=document_id),
+                ),
+                models.FieldCondition(
+                    key="version_id",
+                    match=models.MatchValue(value=version_id),
+                ),
+            ]
+        )

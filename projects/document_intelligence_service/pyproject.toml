@@ -7,8 +7,10 @@ dependencies = [
     "fastapi",
     "httpx",
     "pydantic-settings",
+    "pypdf",
     "python-multipart",
     "qdrant-client",
+    "sentence-transformers",
     "uvicorn",
 ]
 

@@ -18,7 +18,7 @@ from ...domain.ingestion import IngestionReceipt, JobSnapshot, PreparedIngestion
 class _StoredIngestion:
     receipt: IngestionReceipt
     identity: tuple[str, str]
-    content: bytes
+    prepared: PreparedIngestion
 
 
 class InMemoryIngestionRegistry:
@@ -67,7 +67,7 @@ class InMemoryIngestionRegistry:
             stored = _StoredIngestion(
                 receipt=receipt,
                 identity=identity,
-                content=prepared.content,
+                prepared=prepared,
             )
             self._by_identity[identity] = stored
             if normalized_key is not None:
@@ -94,6 +94,23 @@ class InMemoryIngestionRegistry:
 
         async with self._lock:
             return self._content_by_job.get(job_id)
+
+    async def get_staged_ingestion(self, job_id: str) -> PreparedIngestion | None:
+        """Return the complete staged identity for the ingestion worker."""
+
+        async with self._lock:
+            for stored in self._by_identity.values():
+                if stored.receipt.job_id == job_id:
+                    return stored.prepared
+        return None
+
+    async def update_job(self, snapshot: JobSnapshot) -> None:
+        """Replace one job snapshot under the same registry lock."""
+
+        async with self._lock:
+            if snapshot.job_id not in self._jobs:
+                raise KeyError(f"unknown job: {snapshot.job_id}")
+            self._jobs[snapshot.job_id] = snapshot
 
 
 def _normalize_idempotency_key(value: str | None) -> str | None:
