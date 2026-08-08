@@ -136,6 +136,22 @@ class ChunkRetriever(Protocol):
 
         ...
 
+
+class Reranker(Protocol):
+    """Port for bounded question/evidence cross-encoder reranking."""
+
+    def rerank(
+        self,
+        *,
+        question: str,
+        candidates: Sequence[RetrievedChunk],
+        limit: int,
+    ) -> tuple[RetrievedChunk, ...]:
+        """Return the highest-scoring bounded evidence candidates."""
+
+        ...
+
+
 class IngestionRegistry(Protocol):
     """Port for idempotent document and job state."""
 

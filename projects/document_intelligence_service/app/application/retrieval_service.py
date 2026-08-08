@@ -7,7 +7,7 @@ from time import perf_counter
 from ..domain.entities import RetrievalMode
 from ..domain.retrieval import RetrievedChunk, RetrievalResult
 from ..domain.vectors import SparseVector
-from .ports import ChunkRetriever, DenseEmbedder, SparseEmbedder
+from .ports import ChunkRetriever, DenseEmbedder, Reranker, SparseEmbedder
 
 
 @dataclass(slots=True)
@@ -32,8 +32,15 @@ class RetrievalService:
         candidate_limit: int = 30,
         rrf_k: int = 60,
         fusion_limit: int = 20,
+        reranker: Reranker | None = None,
+        rerank_limit: int = 5,
     ) -> None:
-        if candidate_limit <= 0 or rrf_k <= 0 or fusion_limit <= 0:
+        if (
+            candidate_limit <= 0
+            or rrf_k <= 0
+            or fusion_limit <= 0
+            or rerank_limit <= 0
+        ):
             raise ValueError("retrieval limits must be greater than zero")
         self._dense_embedder = dense_embedder
         self._sparse_embedder = sparse_embedder
@@ -41,6 +48,8 @@ class RetrievalService:
         self._candidate_limit = min(candidate_limit, 50)
         self._rrf_k = rrf_k
         self._fusion_limit = min(fusion_limit, 50)
+        self._reranker = reranker
+        self._rerank_limit = min(rerank_limit, self._fusion_limit)
 
     def search(
         self,
@@ -91,17 +100,29 @@ class RetrievalService:
                 top_k=top_k,
             )
         elif mode is RetrievalMode.DENSE:
+            window = self._candidate_window(top_k)
             candidates = tuple(
                 replace(candidate, rank=index)
-                for index, candidate in enumerate(dense_candidates[:top_k], start=1)
+                for index, candidate in enumerate(dense_candidates[:window], start=1)
             )
             rrf_count = 0
         else:
+            window = self._candidate_window(top_k)
             candidates = tuple(
                 replace(candidate, rank=index)
-                for index, candidate in enumerate(sparse_candidates[:top_k], start=1)
+                for index, candidate in enumerate(sparse_candidates[:window], start=1)
             )
             rrf_count = 0
+        reranked_count = 0
+        if self._reranker is not None and candidates:
+            candidates = self._reranker.rerank(
+                question=normalized_question,
+                candidates=candidates,
+                limit=min(top_k, self._rerank_limit),
+            )
+            reranked_count = len(candidates)
+        else:
+            candidates = candidates[:top_k]
         search_ms = (perf_counter() - search_started) * 1000
 
         return RetrievalResult(
@@ -112,7 +133,14 @@ class RetrievalService:
             rrf_candidates=rrf_count,
             embedding_ms=embedding_ms,
             search_ms=search_ms,
+            reranked_candidates=reranked_count,
         )
+
+    def _candidate_window(self, top_k: int) -> int:
+        """Keep a larger bounded window when reranking is enabled."""
+
+        rerank_window = self._fusion_limit if self._reranker is not None else top_k
+        return min(max(top_k, rerank_window), 50)
 
     def _one_dense_vector(self, question: str) -> tuple[float, ...]:
         vectors = self._dense_embedder.embed_documents((question,))
@@ -149,7 +177,7 @@ class RetrievalService:
             entry.sparse_rank = rank
             entry.fused_score += 1.0 / (self._rrf_k + rank)
 
-        limit = min(max(top_k, self._fusion_limit), 50)
+        limit = self._candidate_window(top_k)
         ordered = sorted(
             entries.values(),
             key=lambda entry: (-entry.fused_score, entry.candidate.source_id),
@@ -163,6 +191,6 @@ class RetrievalService:
                 dense_rank=entry.dense_rank,
                 sparse_rank=entry.sparse_rank,
             )
-            for index, entry in enumerate(ordered[:top_k], start=1)
+            for index, entry in enumerate(ordered, start=1)
         )
         return fused, len(entries)

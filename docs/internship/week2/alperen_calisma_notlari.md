@@ -707,3 +707,42 @@ llm_ms: 0
 ### Mentora kısa anlatım
 
 > `/v1/search` ile LLM'siz evidence araması ekledim. Soru aynı anda 384 boyutlu dense embedding ve deterministic sparse representation'a gidiyor; Qdrant yalnız active version point'lerini getiriyor. Dense ve sparse ham skorlarını toplamak yerine rank tabanlı RRF ile birleştiriyorum. Gerçek smoke'ta 27 dense, 15 sparse adaydan 27 birleşik aday üretip 5 kaynak döndürdüm; LLM süresi sıfır.
+
+## 18. Bounded cross-encoder reranker
+
+### Reranker neden Qdrant'ın yerine geçmiyor?
+
+Qdrant hızlı aday üretir; dense/sparse arama top-30 civarında recall'ı korumaya çalışır. Cross-encoder ise soru ve chunk metnini birlikte okuyarak daha pahalı ama daha hassas bir relevance skoru üretir. Qdrant'a hiç girmemiş bir chunk'ı bulamaz; bu nedenle yalnız bounded candidate window üzerinde çalışır.
+
+```text
+dense top-30 + sparse top-30
+  → RRF top-20 window
+  → cross-encoder rerank
+  → final top-5 evidence
+```
+
+`CrossEncoderReranker` modeli import/startup sırasında yüklenmiyor. İlk rerank batch'inde lazy yükleniyor; böylece API'nin health açılışı ağır model yüzünden beklemiyor. `rerank_score` ham dense/sparse/fusion skorundan ayrı tutuluyor.
+
+### Neden varsayılan kapalı?
+
+Reranker kaliteyi artırabilir fakat CPU latency ve model belleği maliyeti getirir. Bu yüzden `DIS_RERANKER_ENABLED=false` baseline'ı koruyor; `true` ile aynı corpus/query üzerinde ablation yapılabiliyor. “Reranker daha iyi” kararı ancak Recall/MRR/nDCG kazanımı ile p50/p95 latency birlikte ölçülürse verilecek.
+
+### Gerçek local reranker smoke sonucu
+
+Mevcut 27 active Qdrant point üzerinde aynı hybrid soru reranker açıkken çalıştırıldı:
+
+```text
+dense_candidates: 27
+sparse_candidates: 15
+rrf_candidates: 27
+reranked_candidates: 5
+sources: 5
+llm_ms: 0
+first source score: -3.6436679363250732
+```
+
+İlk score'un negatif olması hata değildir; cross-encoder çıktısı cosine similarity gibi [0,1] aralığında olmak zorunda değildir. Bu skor yalnız aynı reranker modeli ve aynı çalışma koşulları içindeki sıralama için anlamlıdır. Cold CPU çalışması baseline search'ten belirgin biçimde pahalı olduğu için reranker'ı varsayılan yapmadan benchmarklamak gerekiyor.
+
+### Mentora kısa anlatım
+
+> Qdrant'tan gelen adayları doğrudan LLM'e vermek yerine RRF sonrası en fazla 20 chunk'ı cross-encoder ile yeniden sıralıyorum ve finalde en fazla 5 kaynak bırakıyorum. Model lazy yükleniyor. Reranker skorunun negatif olabileceğini, mutlak cosine gibi yorumlanmaması gerektiğini biliyorum. CPU maliyeti nedeniyle baseline kapalı; aynı golden set üzerinde kalite ve p95 latency ölçülmeden varsayılan seçmeyeceğim.

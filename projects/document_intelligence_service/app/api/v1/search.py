@@ -52,7 +52,7 @@ async def search(request: Request, payload: SearchRequest) -> SearchResponse:
             dense_candidates=result.dense_candidates,
             sparse_candidates=result.sparse_candidates,
             rrf_candidates=result.rrf_candidates,
-            reranked_candidates=0,
+            reranked_candidates=result.reranked_candidates,
         ),
         latency=LatencyBreakdown(
             embedding_ms=result.embedding_ms,

@@ -23,3 +23,4 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(default=200, gt=0)
     ingestion_registry_backend: Literal["memory", "sqlite"] = "memory"
     ingestion_database_path: str = "data/ingestions.sqlite3"
+    reranker_enabled: bool = False

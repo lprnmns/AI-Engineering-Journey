@@ -17,6 +17,8 @@ Local durable worker composition'ını açmak için:
 ```bash
 export DIS_INGESTION_REGISTRY_BACKEND=sqlite
 export DIS_INGESTION_DATABASE_PATH=data/ingestions.sqlite3
+# Baseline için false; ölçümlü reranker deneyi için true.
+export DIS_RERANKER_ENABLED=false
 ```
 
 ## Document upload
@@ -80,6 +82,8 @@ curl -sS \
 ```
 
 Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/sparse/RRF trace'inden gelir. `llm_ms` bu endpointte her zaman `0` olmalıdır.
+
+`DIS_RERANKER_ENABLED=true` seçilirse RRF sonrası bounded cross-encoder devreye girer; en fazla 20 adayı skorlayıp en fazla 5 final kaynak döndürür. CPU cold-start ve inference latency'si baseline ile ayrı ölçülmelidir.
 
 ## No-answer response
 

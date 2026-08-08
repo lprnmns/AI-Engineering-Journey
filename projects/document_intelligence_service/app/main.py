@@ -30,6 +30,7 @@ from .infrastructure.parsing.pdf_inspector import PypdfInspector
 from .infrastructure.parsing.pdf_text import PypdfTextExtractor
 from .infrastructure.qdrant.chunk_store import QdrantChunkStore
 from .infrastructure.qdrant.retriever import QdrantRetriever
+from .infrastructure.reranking.cross_encoder import CrossEncoderReranker
 from .infrastructure.qdrant.schema import QdrantSchema
 from .infrastructure.storage.in_memory_registry import InMemoryIngestionRegistry
 from .infrastructure.storage.sqlite_registry import SqliteIngestionRegistry
@@ -132,6 +133,11 @@ def build_retrieval_service(settings: Settings) -> RetrievalService:
         retriever=QdrantRetriever(
             QdrantClient(url=str(settings.qdrant_url)),
             schema,
+        ),
+        reranker=(
+            CrossEncoderReranker(model_name=pipeline_config.reranker_model)
+            if settings.reranker_enabled
+            else None
         ),
     )
 
