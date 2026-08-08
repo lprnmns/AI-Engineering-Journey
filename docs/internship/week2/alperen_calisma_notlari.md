@@ -412,3 +412,46 @@ aynı Idempotency-Key + farklı PDF → 409 conflict
 ### Mentora kısa anlatım
 
 > Upload ile indexing completion'ı ayırdım: `202 + job_id` yalnız kabul anlamına geliyor. Content hash ve pipeline fingerprint duplicate version'ları engelliyor; Idempotency-Key retry güvenliği sağlıyor. Şu an in-memory adapter geliştirme sınırı olarak kullanılıyor, restart-safe durable staging ve worker sonraki adım.
+
+## 11. Page-aware parent/child chunking
+
+### Eski ve yeni chunk yaklaşımı
+
+Hafta 1'de chunk temel olarak `doc_id + title + text + chunk_index` taşıyordu. Bu, benzerlik araması için yeterliydi fakat production kaynak gösterimi için eksikti.
+
+Hafta 2'de iki seviyeli yapı kullanıyorum:
+
+```text
+ParentSection
+  ├── section title
+  ├── full parent context
+  ├── page_start / page_end
+  └── ChildChunk 1..n
+        ├── retrieval text
+        ├── deterministic chunk_id
+        ├── parent_id
+        ├── page metadata
+        └── text_hash
+```
+
+Retriever child chunk üzerinde hızlı arama yapar. Cevap üretirken child'ın `parent_id`, title ve sayfa bilgisiyle daha geniş bağlam ve gerçek kaynak döndürülebilir.
+
+### Overlap neden var?
+
+İki cümlelik pencere ve bir cümle overlap örneği:
+
+```text
+1–2
+  2–3
+    3–4
+```
+
+Bir bilginin cümle sınırında bölünüp iki chunk'a da anlam kaybettirmesini azaltır. Overlap büyüdükçe recall artabilir fakat duplicate text, embedding maliyeti ve index boyutu da artar; bu yüzden pipeline fingerprint'e chunk size/overlap değerlerini dahil ettim.
+
+### Neden heading tahmin etmiyoruz?
+
+Her PDF aynı tipografik yapıya sahip değildir. İlk sürümde bilinen doküman ailesi için explicit `SectionMarker` kullanıyor, marker yoksa tek document-level parent oluşturuyorum. Her başlığı körlemesine tahmin etmek yerine bu kuralı evaluation ile genişletmek daha savunulabilir.
+
+### Mentora kısa anlatım
+
+> PDF sayfa sınırlarını koruyarak parent section ve child retrieval chunk üretiyorum. Child üzerinde arama yapıp parent context ve page metadata ile kaynak göstereceğim. Sentence overlap bağlam kopmasını azaltıyor; chunk ayarları pipeline fingerprint'e girdiği için ayar değişikliği yeni version oluşturuyor.

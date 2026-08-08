@@ -29,6 +29,8 @@ class PipelineConfig:
     normalizer: str = "unicode_whitespace_v1"
     chunker: str = "section_aware_v1"
     chunker_version: str = "1"
+    chunk_size_sentences: int = 3
+    chunk_overlap_sentences: int = 1
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     reranker_model: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
     vector_schema_version: str = "1"
@@ -42,6 +44,8 @@ class PipelineConfig:
             "normalizer": self.normalizer,
             "chunker": self.chunker,
             "chunker_version": self.chunker_version,
+            "chunk_size_sentences": str(self.chunk_size_sentences),
+            "chunk_overlap_sentences": str(self.chunk_overlap_sentences),
             "embedding_model": self.embedding_model,
             "reranker_model": self.reranker_model,
             "vector_schema_version": self.vector_schema_version,

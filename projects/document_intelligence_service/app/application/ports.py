@@ -9,6 +9,7 @@ from ..domain.ingestion import (
     PdfInspection,
     PreparedIngestion,
 )
+from ..domain.chunks import PageText
 
 
 class HealthProbe(Protocol):
@@ -25,6 +26,15 @@ class PdfInspector(Protocol):
 
     def inspect(self, content: bytes, max_pages: int) -> PdfInspection:
         """Validate PDF structure and return bounded page metadata."""
+
+        ...
+
+
+class PageTextExtractor(Protocol):
+    """Port for page-preserving selectable text extraction."""
+
+    def extract(self, content: bytes) -> tuple[PageText, ...]:
+        """Return normalized text while retaining page boundaries."""
 
         ...
 
