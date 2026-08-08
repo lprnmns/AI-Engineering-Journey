@@ -12,6 +12,13 @@ curl -i http://127.0.0.1:8000/v1/health/ready
 
 `live` yalnızca API sürecini kontrol eder. `ready` Qdrant ve Ollama gibi zorunlu bağımlılıkları da kontrol eder.
 
+Local durable worker composition'ını açmak için:
+
+```bash
+export DIS_INGESTION_REGISTRY_BACKEND=sqlite
+export DIS_INGESTION_DATABASE_PATH=data/ingestions.sqlite3
+```
+
 ## Document upload
 
 ```bash
@@ -33,7 +40,7 @@ Beklenen çalışan akış:
 }
 ```
 
-Status: `202 Accepted`. Upload kabulü mevcut demo composition'ında in-memory registry'de tutulur. Qdrant için stage → verify → activate worker orchestration'ı ve gerçek adapter testleri hazırdır; restart-safe SQLite registry de eklendi, fakat API ile ayrı worker arasındaki production composition ve job trigger bir sonraki dilimdedir.
+Status: `202 Accepted`. Varsayılan demo/test composition'ı in-memory registry kullanır. SQLite backend seçilirse upload sonrası aynı process'teki bounded background worker stage → verify → activate akışını başlatır; ayrı process queue/recovery politikası sonraki production dilimidir.
 
 ## Job status
 

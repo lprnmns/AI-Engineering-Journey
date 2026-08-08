@@ -2,7 +2,17 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, Header, Path, Query, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    Header,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 
 from ..errors import openapi_error_responses
 from ...application.ingestion_service import IngestionService
@@ -30,6 +40,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 )
 async def create_document(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File(description="PDF document")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> DocumentUploadResponse:
@@ -43,6 +54,9 @@ async def create_document(
         content_type=file.content_type,
         idempotency_key=idempotency_key,
     )
+    worker = getattr(request.app.state, "ingestion_worker", None)
+    if worker is not None:
+        background_tasks.add_task(worker.run_job, receipt.job_id)
     return DocumentUploadResponse(
         document_id=receipt.document_id,
         version_id=receipt.version_id,

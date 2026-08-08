@@ -598,3 +598,29 @@ SQLite adapter local single-node dayanıklılık ve worker/API paylaşımı içi
 ### Mentora kısa anlatım
 
 > RAM registry'nin process sınırında çalışmadığını gösterdim ve aynı port için SQLite adapter yazdım. Content/pipeline identity, idempotency key, job progress ve staged PDF aynı transaction-backed dosyada tutuluyor; yeni registry instance'ı restart sonrası aynı job'ı ve içeriği okuyabiliyor. Bu local MVP dayanıklılığıdır; yüksek hacimli production storage/queue kararı ayrıca ölçülecek.
+
+## 15. Registry ve worker composition'ı
+
+### Adapter seçimi nasıl yapılıyor?
+
+API/Application kodu registry'nin hangi teknoloji olduğunu bilmiyor. Composition root ayarı seçiyor:
+
+```text
+DIS_INGESTION_REGISTRY_BACKEND=memory
+  → InMemoryIngestionRegistry (test/demo)
+
+DIS_INGESTION_REGISTRY_BACKEND=sqlite
+  → SqliteIngestionRegistry (local durable)
+  → aynı registry ile IngestionWorker
+  → upload sonrası bounded background task
+```
+
+Bu seçim sayesinde domain ve application akışı değişmeden local demo ile restart-safe çalışma arasında geçiş yapılabiliyor. Qdrant client ve SentenceTransformer modeli yalnız SQLite worker composition'ı oluşturulduğunda bağlanıyor; dense model ise ilk gerçek embedding batch'inde lazy yükleniyor.
+
+### Background task neyi çözüyor, neyi çözmüyor?
+
+Upload request'i bekletilmeden `202` döner ve worker işi aynı process içinde arka planda başlatır. Bu, local geliştirmede gerçek uçtan uca akışı göstermek için yeterlidir. Fakat process kapanırsa çalışan Python task'ı yeniden kuyruğa alınmaz; SQLite job `running` durumda kalabilir. Production için worker polling/recovery, lease/timeout ve retry/backoff politikası eklenmelidir.
+
+### Mentora kısa anlatım
+
+> Registry seçimini composition root'a taşıdım. Testte memory, local dayanıklı çalışmada SQLite kullanılabiliyor; SQLite seçilince API ve bounded worker aynı durable job kaydını paylaşıyor. Upload yine `202` dönüyor, worker arka planda parse, embedding, stage, verify ve activate yapıyor. Bu process içi fallback; process restart recovery ve gerçek queue sonraki üretim adımı.

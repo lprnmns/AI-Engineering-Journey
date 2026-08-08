@@ -13,15 +13,25 @@ from .api.v1.jobs import router as jobs_router
 from .api.v1.queries import router as queries_router
 from .api.v1.search import router as search_router
 from .application.health_service import HealthService
+from .application.chunking_service import DocumentChunkingService
 from .application.ingestion_service import (
     IngestionPreparationService,
     IngestionService,
 )
+from .application.ingestion_worker import IngestionWorker
+from .application.ports import IngestionRegistry
 from .domain.errors import ServiceError
 from .domain.ingestion import IngestionLimits, PipelineConfig
 from .infrastructure.health_checks import HttpHealthProbe
+from .infrastructure.embeddings.dense import SentenceTransformerEmbedder
+from .infrastructure.embeddings.sparse import HashingSparseEncoder
 from .infrastructure.parsing.pdf_inspector import PypdfInspector
+from .infrastructure.parsing.pdf_text import PypdfTextExtractor
+from .infrastructure.qdrant.chunk_store import QdrantChunkStore
+from .infrastructure.qdrant.schema import QdrantSchema
 from .infrastructure.storage.in_memory_registry import InMemoryIngestionRegistry
+from .infrastructure.storage.sqlite_registry import SqliteIngestionRegistry
+from qdrant_client import QdrantClient
 from .observability.request_id import RequestIdMiddleware
 from .settings import Settings
 
@@ -46,21 +56,63 @@ def build_health_service(settings: Settings) -> HealthService:
     )
 
 
-def build_ingestion_service(settings: Settings) -> IngestionService:
-    """Wire the Day 2 preparation use case and development registry."""
+def build_ingestion_registry(settings: Settings) -> IngestionRegistry:
+    """Choose the registry implementation without changing application code."""
 
+    if settings.ingestion_registry_backend == "sqlite":
+        return SqliteIngestionRegistry(settings.ingestion_database_path)
+    return InMemoryIngestionRegistry()
+
+
+def build_ingestion_service(
+    settings: Settings,
+    *,
+    registry: IngestionRegistry | None = None,
+) -> IngestionService:
+    """Wire the preparation use case to a selectable persistence adapter."""
+
+    pipeline_config = PipelineConfig()
     preparation = IngestionPreparationService(
         limits=IngestionLimits(
             max_upload_bytes=settings.max_upload_bytes,
             max_pdf_pages=settings.max_pdf_pages,
         ),
-        pipeline_config=PipelineConfig(),
+        pipeline_config=pipeline_config,
         pdf_inspector=PypdfInspector(),
     )
     return IngestionService(
         preparation=preparation,
-        registry=InMemoryIngestionRegistry(),
+        registry=registry
+        if registry is not None
+        else build_ingestion_registry(settings),
         max_upload_bytes=settings.max_upload_bytes,
+    )
+
+
+def build_ingestion_worker(
+    settings: Settings,
+    *,
+    registry: IngestionRegistry,
+) -> IngestionWorker:
+    """Wire the lazy embedding, parser and Qdrant worker adapters."""
+
+    pipeline_config = PipelineConfig()
+    schema = QdrantSchema()
+    return IngestionWorker(
+        registry=registry,
+        chunker=DocumentChunkingService(
+            extractor=PypdfTextExtractor(),
+            pipeline_config=pipeline_config,
+        ),
+        dense_embedder=SentenceTransformerEmbedder(
+            model_name=pipeline_config.embedding_model,
+            expected_dimension=schema.dense_size,
+        ),
+        sparse_embedder=HashingSparseEncoder(),
+        vector_store=QdrantChunkStore(
+            QdrantClient(url=str(settings.qdrant_url)),
+            schema,
+        ),
     )
 
 
@@ -69,19 +121,35 @@ def create_app(
     settings: Settings | None = None,
     health_service: HealthService | None = None,
     ingestion_service: IngestionService | None = None,
+    ingestion_worker: IngestionWorker | None = None,
 ) -> FastAPI:
     """Create an application with replaceable dependencies for testing."""
 
     resolved_settings = settings or Settings()
     resolved_health_service = health_service or build_health_service(resolved_settings)
-    resolved_ingestion_service = ingestion_service or build_ingestion_service(
-        resolved_settings
-    )
+    resolved_ingestion_worker = ingestion_worker
+    if ingestion_service is None:
+        registry = build_ingestion_registry(resolved_settings)
+        resolved_ingestion_service = build_ingestion_service(
+            resolved_settings,
+            registry=registry,
+        )
+        if (
+            resolved_ingestion_worker is None
+            and resolved_settings.ingestion_registry_backend == "sqlite"
+        ):
+            resolved_ingestion_worker = build_ingestion_worker(
+                resolved_settings,
+                registry=registry,
+            )
+    else:
+        resolved_ingestion_service = ingestion_service
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         application.state.health_service = resolved_health_service
         application.state.ingestion_service = resolved_ingestion_service
+        application.state.ingestion_worker = resolved_ingestion_worker
         resolved_health_service.mark_started()
         try:
             yield
@@ -98,6 +166,7 @@ def create_app(
     application.add_exception_handler(RequestValidationError, validation_error_handler)
     application.state.health_service = resolved_health_service
     application.state.ingestion_service = resolved_ingestion_service
+    application.state.ingestion_worker = resolved_ingestion_worker
     application.include_router(health_router, prefix="/v1")
     application.include_router(documents_router, prefix="/v1")
     application.include_router(jobs_router, prefix="/v1")
