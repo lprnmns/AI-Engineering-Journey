@@ -35,6 +35,7 @@ Current planning documents:
 
 - [Revised 9-month AI Engineering roadmap](docs/ai_engineering_9_aylik_revize_plan_2026.md)
 - [Internship Week 1 program comparison and integration](docs/staj_1_hafta_program_karsilastirmasi.md)
+- [Internship Week 2 product engineering implementation plan](docs/internship/week2/hafta2_uygulama_plani.md)
 
 ## Repository Philosophy
 
