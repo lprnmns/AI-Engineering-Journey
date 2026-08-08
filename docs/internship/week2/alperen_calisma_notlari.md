@@ -262,3 +262,38 @@ HTTP status genel ağ protokolü anlamını, error code ise ürünün daha ayrı
 ### Mentora kısa anlatım
 
 > Request ID'yi middleware katmanında üretip response header'a koyuyorum; böylece aynı isteği tüm katmanlarda izleyebiliyorum. Hataları ortak envelope ve kararlı error code'larla döndürüyorum. Validation, conflict ve dependency arızasını birbirine karıştırmıyor; stack trace ve altyapı ayrıntılarını kullanıcıya sızdırmıyorum.
+
+## 7. REST sözleşmesini implementation'dan önce sabitlemek
+
+### İlk endpoint sınırı
+
+```text
+POST   /v1/documents              PDF upload → 202 + job_id
+GET    /v1/documents              bounded cursor pagination
+GET    /v1/documents/{id}         document/version detail
+DELETE /v1/documents/{id}         delete veya indexing sırasında 409
+GET    /v1/jobs/{job_id}          asynchronous ingestion status
+POST   /v1/query                  answer veya structured no-answer
+POST   /v1/search                 LLM'siz evidence/debug retrieval
+```
+
+### Neden önce sözleşme?
+
+Frontend, test ve ilerideki worker; Qdrant veya embedding adapter'ının iç sınıflarını değil bu HTTP alanlarını kullanır. Bu yüzden önce request alanlarını, status kodlarını, pagination sınırlarını ve response modellerini sabitliyorum. Gün 1'de workflow implementation'ı henüz bağlı olmadığı için geçerli çağrıya sahte başarı dönmüyor; endpoint `FEATURE_NOT_READY` ve `501` ile açıkça scaffold durumunu bildiriyor.
+
+### Query response'ta neden bu kadar alan var?
+
+- `decision`: `answered` veya `no_answer`
+- `answer`: Cevap üretildiyse metin; no-answer'da `null`
+- `no_answer_reason`: Reddedilme nedeni; answer'da `null`
+- `sources`: Cevabın dayandığı gerçek kanıtlar
+- `retrieval`: dense/BM25/hybrid ve aday sayıları
+- `model`: Çağrılan model; LLM atlandıysa `null`
+- `latency`: embedding, search, rerank, LLM ve toplam süre
+- `request_id`: Uçtan uca izleme kimliği
+
+Bu alanlar cevabın yalnız metnini değil, sistemin hangi kararı hangi kanıt ve maliyetle verdiğini de açıklamayı sağlar.
+
+### Mentora kısa anlatım
+
+> REST sınırını implementation'dan önce sabitledim. Upload asenkron `202 + job_id`, query senkron, search ise LLM'siz evidence endpointi. Query response'ta answer, source, retrieval, model ve stage latency alanlarını birlikte taşıyorum; böylece yalnız doğru görünen bir metin değil, savunulabilir bir karar izi üretiyorum.

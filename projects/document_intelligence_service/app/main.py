@@ -8,6 +8,10 @@ from fastapi.exceptions import RequestValidationError
 
 from .api.errors import service_error_handler, validation_error_handler
 from .api.v1.health import router as health_router
+from .api.v1.documents import router as documents_router
+from .api.v1.jobs import router as jobs_router
+from .api.v1.queries import router as queries_router
+from .api.v1.search import router as search_router
 from .application.health_service import HealthService
 from .domain.errors import ServiceError
 from .infrastructure.health_checks import HttpHealthProbe
@@ -64,6 +68,10 @@ def create_app(
     application.add_exception_handler(RequestValidationError, validation_error_handler)
     application.state.health_service = resolved_health_service
     application.include_router(health_router, prefix="/v1")
+    application.include_router(documents_router, prefix="/v1")
+    application.include_router(jobs_router, prefix="/v1")
+    application.include_router(queries_router, prefix="/v1")
+    application.include_router(search_router, prefix="/v1")
     return application
 
 

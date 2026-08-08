@@ -34,6 +34,7 @@ _STATUS_BY_CODE: dict[ErrorCode, int] = {
     ErrorCode.INGESTION_CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCode.DOCUMENT_BUSY: status.HTTP_409_CONFLICT,
     ErrorCode.DEPENDENCY_UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
+    ErrorCode.FEATURE_NOT_READY: status.HTTP_501_NOT_IMPLEMENTED,
 }
 
 
@@ -74,7 +75,7 @@ async def validation_error_handler(request: Request, exc: Exception) -> JSONResp
     )
 
 
-def openapi_error_responses() -> dict[int, dict[str, Any]]:
+def openapi_error_responses() -> dict[int | str, dict[str, Any]]:
     """Return reusable OpenAPI response metadata for future routes."""
 
     return {
@@ -82,4 +83,5 @@ def openapi_error_responses() -> dict[int, dict[str, Any]]:
         status.HTTP_409_CONFLICT: {"model": ErrorEnvelope},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorEnvelope},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorEnvelope},
+        status.HTTP_501_NOT_IMPLEMENTED: {"model": ErrorEnvelope},
     }

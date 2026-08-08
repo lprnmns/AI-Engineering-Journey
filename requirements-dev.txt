@@ -9,6 +9,7 @@ pypdf
 qdrant-client
 fastapi
 httpx
+python-multipart
 pydantic-settings
 uvicorn
 kaggle
