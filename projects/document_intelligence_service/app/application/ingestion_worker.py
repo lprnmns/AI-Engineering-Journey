@@ -1,9 +1,10 @@
 """Asynchronous ingestion worker orchestration."""
 
 from ..domain.entities import JobStatus
+from ..domain.entities import DocumentStatus
 from ..domain.errors import ErrorCode, ServiceError
 from ..domain.chunks import ChildChunk
-from ..domain.ingestion import JobSnapshot, PreparedIngestion
+from ..domain.ingestion import JobSnapshot, PreparedIngestion, compute_version_id
 from .chunking_service import DocumentChunkingService
 from .ports import (
     ChunkVectorStore,
@@ -85,13 +86,19 @@ class IngestionWorker:
                 version_id=verification.version_id,
                 verification=verification,
             )
+            await self._registry.set_document_status(
+                document_id=verification.document_id,
+                version_id=verification.version_id,
+                status=DocumentStatus.ACTIVE,
+            )
         except ServiceError as error:
-            return await self._fail(current, error.code, error.message)
+            return await self._fail(current, error.code, error.message, prepared)
         except Exception:
             return await self._fail(
                 current,
                 ErrorCode.INGESTION_FAILED,
                 "Ingestion worker failed",
+                prepared,
             )
 
         return await self._set_progress(current, JobStatus.SUCCEEDED, 100)
@@ -118,14 +125,10 @@ class IngestionWorker:
     def _version_id(prepared: PreparedIngestion) -> str:
         """Reconstruct the deterministic version ID used by the registry."""
 
-        import hashlib
-
-        digest = hashlib.sha256(
-            f"{prepared.upload.content_hash}:{prepared.pipeline_fingerprint}".encode(
-                "ascii"
-            )
-        ).hexdigest()
-        return f"ver_{digest}"
+        return compute_version_id(
+            prepared.upload.content_hash,
+            prepared.pipeline_fingerprint,
+        )
 
     async def _set_progress(
         self,
@@ -149,8 +152,15 @@ class IngestionWorker:
         previous: JobSnapshot,
         code: ErrorCode,
         message: str,
+        prepared: PreparedIngestion | None = None,
     ) -> JobSnapshot:
         del message
+        if prepared is not None:
+            await self._registry.set_document_status(
+                document_id=self._document_id(prepared),
+                version_id=self._version_id(prepared),
+                status=DocumentStatus.FAILED,
+            )
         return await self._set_progress(
             previous,
             JobStatus.FAILED,

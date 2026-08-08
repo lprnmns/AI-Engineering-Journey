@@ -65,6 +65,22 @@ class SqliteIngestionRegistry:
 
         await asyncio.to_thread(self._update_job_sync, snapshot)
 
+    async def set_document_status(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        status: DocumentStatus,
+    ) -> None:
+        """Persist a version lifecycle transition independently from the job."""
+
+        await asyncio.to_thread(
+            self._set_document_status_sync,
+            document_id,
+            version_id,
+            status,
+        )
+
     def _initialize(self) -> None:
         with self._connect() as connection:
             connection.executescript(
@@ -243,6 +259,24 @@ class SqliteIngestionRegistry:
             )
             if cursor.rowcount != 1:
                 raise KeyError(f"unknown job: {snapshot.job_id}")
+
+    def _set_document_status_sync(
+        self,
+        document_id: str,
+        version_id: str,
+        status: DocumentStatus,
+    ) -> None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE ingestions
+                SET document_status = ?
+                WHERE document_id = ? AND version_id = ?
+                """,
+                (status.value, document_id, version_id),
+            )
+            if cursor.rowcount != 1:
+                raise KeyError(f"unknown document version: {document_id}/{version_id}")
 
     def _receipt_for_identity(
         self,

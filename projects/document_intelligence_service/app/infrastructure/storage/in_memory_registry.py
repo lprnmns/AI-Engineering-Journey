@@ -7,7 +7,7 @@ replaced by durable document/job persistence before production deployment.
 import asyncio
 from dataclasses import dataclass
 
-from ...domain.entities import JobStatus
+from ...domain.entities import DocumentStatus, JobStatus
 from ...domain.errors import ErrorCode, ServiceError
 from ...domain.ingestion import (
     IngestionReceipt,
@@ -18,7 +18,7 @@ from ...domain.ingestion import (
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class _StoredIngestion:
     receipt: IngestionReceipt
     identity: tuple[str, str]
@@ -115,3 +115,27 @@ class InMemoryIngestionRegistry:
             if snapshot.job_id not in self._jobs:
                 raise KeyError(f"unknown job: {snapshot.job_id}")
             self._jobs[snapshot.job_id] = snapshot
+
+    async def set_document_status(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        status: DocumentStatus,
+    ) -> None:
+        """Update the receipt status without changing job progress."""
+
+        async with self._lock:
+            for stored in self._by_identity.values():
+                if (
+                    stored.receipt.document_id == document_id
+                    and stored.receipt.version_id == version_id
+                ):
+                    stored.receipt = IngestionReceipt(
+                        document_id=document_id,
+                        version_id=version_id,
+                        job_id=stored.receipt.job_id,
+                        status=status,
+                    )
+                    return
+        raise KeyError(f"unknown document version: {document_id}/{version_id}")

@@ -3,6 +3,7 @@
 from typing import Protocol
 from collections.abc import Sequence
 
+from ..domain.entities import DocumentStatus
 from ..domain.health import DependencyHealth
 from ..domain.ingestion import (
     IngestionReceipt,
@@ -137,5 +138,16 @@ class IngestionRegistry(Protocol):
 
     async def update_job(self, snapshot: JobSnapshot) -> None:
         """Persist a worker progress transition."""
+
+        ...
+
+    async def set_document_status(
+        self,
+        *,
+        document_id: str,
+        version_id: str,
+        status: DocumentStatus,
+    ) -> None:
+        """Persist the lifecycle of one version independently from its job."""
 
         ...

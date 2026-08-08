@@ -126,6 +126,8 @@ def test_worker_stages_verifies_and_activates_a_version() -> None:
     assert snapshot.status.value == "succeeded"
     assert snapshot.progress_percent == 100
     assert snapshot.error_code is None
+    completed_receipt = asyncio.run(registry.accept(prepared, "worker-1"))
+    assert completed_receipt.status.value == "active"
     assert store.client.count(store.collection_name, exact=True).count == 2
 
 
@@ -161,4 +163,6 @@ def test_worker_marks_empty_pdf_text_as_failed_without_indexing() -> None:
 
     assert snapshot.status.value == "failed"
     assert snapshot.error_code == "DOCUMENT_PARSE_FAILED"
+    failed_receipt = asyncio.run(registry.accept(prepared, "worker-empty"))
+    assert failed_receipt.status.value == "failed"
     assert not store.client.collection_exists("worker_empty_test")

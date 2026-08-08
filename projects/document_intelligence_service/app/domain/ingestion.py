@@ -150,15 +150,21 @@ def create_ingestion_receipt(identity: tuple[str, str]) -> IngestionReceipt:
     """Create deterministic document/version IDs and one retryable job ID."""
 
     content_hash, pipeline_fingerprint = identity
-    version_digest = hashlib.sha256(
-        f"{content_hash}:{pipeline_fingerprint}".encode("ascii")
-    ).hexdigest()
     return IngestionReceipt(
         document_id=f"doc_{content_hash}",
-        version_id=f"ver_{version_digest}",
+        version_id=compute_version_id(content_hash, pipeline_fingerprint),
         job_id=f"job_{uuid4().hex}",
         status=DocumentStatus.INDEXING,
     )
+
+
+def compute_version_id(content_hash: str, pipeline_fingerprint: str) -> str:
+    """Return the deterministic version identity used by every adapter."""
+
+    version_digest = hashlib.sha256(
+        f"{content_hash}:{pipeline_fingerprint}".encode("ascii")
+    ).hexdigest()
+    return f"ver_{version_digest}"
 
 
 def compute_content_hash(content: bytes) -> str:
