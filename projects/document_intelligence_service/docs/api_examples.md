@@ -63,6 +63,24 @@ curl -sS \
   http://127.0.0.1:8000/v1/query
 ```
 
+## Evidence search
+
+`/v1/search` yalnız retrieval kanıtlarını döndürür; LLM çağırmaz. Local SQLite composition açıkken:
+
+```bash
+curl -sS \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: search-demo-001' \
+  -d '{
+    "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+    "retrieval_mode": "hybrid",
+    "top_k": 5
+  }' \
+  http://127.0.0.1:8000/v1/search
+```
+
+Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/sparse/RRF trace'inden gelir. `llm_ms` bu endpointte her zaman `0` olmalıdır.
+
 ## No-answer response
 
 ```json

@@ -13,6 +13,7 @@ from ..domain.ingestion import (
     VersionVerification,
 )
 from ..domain.chunks import ChildChunk, PageText
+from ..domain.retrieval import RetrievedChunk
 from ..domain.vectors import SparseVector
 
 
@@ -86,6 +87,7 @@ class ChunkVectorStore(Protocol):
 
         ...
 
+
     def verify_version(
         self,
         *,
@@ -108,6 +110,31 @@ class ChunkVectorStore(Protocol):
 
         ...
 
+
+class ChunkRetriever(Protocol):
+    """Port for active-version dense and sparse evidence search."""
+
+    def search_dense(
+        self,
+        *,
+        query_vector: Sequence[float],
+        limit: int,
+        document_ids: Sequence[str],
+    ) -> tuple[RetrievedChunk, ...]:
+        """Return dense candidates from active points only."""
+
+        ...
+
+    def search_sparse(
+        self,
+        *,
+        query_vector: SparseVector,
+        limit: int,
+        document_ids: Sequence[str],
+    ) -> tuple[RetrievedChunk, ...]:
+        """Return sparse candidates from active points only."""
+
+        ...
 
 class IngestionRegistry(Protocol):
     """Port for idempotent document and job state."""

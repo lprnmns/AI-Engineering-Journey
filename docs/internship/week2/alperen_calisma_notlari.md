@@ -657,3 +657,53 @@ Bu smoke, yalnız unit test fake'lerini değil; gerçek PDF extraction, gerçek 
 ### Mentora kısa anlatım
 
 > Fake testlerin üstüne gerçek PDF ile smoke yaptım. API `202` döndü, SQLite job yüzde yüz tamamlandı ve Qdrant named dense/sparse collection'ına 27 point yazılıp 27'si active oldu. LLM'i bu ölçümde çağırmadım; önce ingestion/indexing zincirini izole doğruladım. İlk smoke'ta job/document status alanlarının karıştığını bulup düzelttim ve regression testi ekledim.
+
+## 17. Dense, sparse ve hybrid RRF retrieval
+
+### Search katmanında ne değişti?
+
+Ingestion ile Qdrant'a yazılan active child chunk'lar artık soru üzerinden aranabiliyor:
+
+```text
+soru
+ ├── dense embedding → Qdrant named dense → semantic adaylar
+ ├── sparse encoding → Qdrant named sparse/IDF → lexical adaylar
+ └── iki rank listesi → RRF fusion → top-k evidence
+```
+
+Dense ve sparse skorlarını doğrudan toplamadım. Çünkü cosine skoru ile sparse lexical skor aynı ölçekte değildir. Her listenin rank'ına göre:
+
+```text
+RRF katkısı = 1 / (k + rank)
+```
+
+şeklinde puan veriliyor. Aynı chunk iki listede de üst sıralardaysa fusion avantajı kazanıyor. `source_id`, dense rank, sparse rank ve fused score trace içinde korunuyor.
+
+### Güvenlik ve filtre davranışı
+
+Qdrant retriever yalnız `is_active=true` point'leri arıyor. `document_ids` verilirse arama öncesinde Qdrant payload filtresine ekleniyor. `tenant_id` ve `acl_tags` henüz payload/authorization katmanına bağlanmadığı için sessizce yok sayılmıyor; endpoint açıkça `FEATURE_NOT_READY` döndürüyor.
+
+### `/v1/search` neden ayrı?
+
+Search, LLM'e gitmeden retrieval kalitesini ölçmek için evidence-only endpoint. Böylece “cevap kötü” demeden önce dense, sparse ve RRF'nin hangi chunk'ı seçtiği görülebiliyor. `llm_ms=0`; latency embedding ve Qdrant search aşamalarına ayrılıyor.
+
+### Gerçek local search smoke sonucu
+
+Mevcut Qdrant collection'ındaki 27 active point üzerinde şu soru çalıştırıldı:
+
+```text
+Soru: Yerel model karşılaştırmasında hangi değerler ölçülmelidir?
+Mode: hybrid, top_k: 5
+HTTP: 200
+dense_candidates: 27
+sparse_candidates: 15
+rrf_candidates: 27
+sources: 5
+llm_ms: 0
+```
+
+İlk source sayfa `1`, belge adı ve chunk snippet'i ile döndü. Bu sonuç retrieval zincirinin gerçek model/cache, gerçek Qdrant ve canonical payload üzerinden çalıştığını gösteriyor; henüz reranker yok, bu yüzden `reranked_candidates=0` beklenen durum.
+
+### Mentora kısa anlatım
+
+> `/v1/search` ile LLM'siz evidence araması ekledim. Soru aynı anda 384 boyutlu dense embedding ve deterministic sparse representation'a gidiyor; Qdrant yalnız active version point'lerini getiriyor. Dense ve sparse ham skorlarını toplamak yerine rank tabanlı RRF ile birleştiriyorum. Gerçek smoke'ta 27 dense, 15 sparse adaydan 27 birleşik aday üretip 5 kaynak döndürdüm; LLM süresi sıfır.

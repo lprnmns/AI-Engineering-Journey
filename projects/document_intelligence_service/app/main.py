@@ -19,6 +19,7 @@ from .application.ingestion_service import (
     IngestionService,
 )
 from .application.ingestion_worker import IngestionWorker
+from .application.retrieval_service import RetrievalService
 from .application.ports import IngestionRegistry
 from .domain.errors import ServiceError
 from .domain.ingestion import IngestionLimits, PipelineConfig
@@ -28,6 +29,7 @@ from .infrastructure.embeddings.sparse import HashingSparseEncoder
 from .infrastructure.parsing.pdf_inspector import PypdfInspector
 from .infrastructure.parsing.pdf_text import PypdfTextExtractor
 from .infrastructure.qdrant.chunk_store import QdrantChunkStore
+from .infrastructure.qdrant.retriever import QdrantRetriever
 from .infrastructure.qdrant.schema import QdrantSchema
 from .infrastructure.storage.in_memory_registry import InMemoryIngestionRegistry
 from .infrastructure.storage.sqlite_registry import SqliteIngestionRegistry
@@ -116,18 +118,38 @@ def build_ingestion_worker(
     )
 
 
+def build_retrieval_service(settings: Settings) -> RetrievalService:
+    """Wire lazy query embedders to the active-version Qdrant retriever."""
+
+    pipeline_config = PipelineConfig()
+    schema = QdrantSchema()
+    return RetrievalService(
+        dense_embedder=SentenceTransformerEmbedder(
+            model_name=pipeline_config.embedding_model,
+            expected_dimension=schema.dense_size,
+        ),
+        sparse_embedder=HashingSparseEncoder(),
+        retriever=QdrantRetriever(
+            QdrantClient(url=str(settings.qdrant_url)),
+            schema,
+        ),
+    )
+
+
 def create_app(
     *,
     settings: Settings | None = None,
     health_service: HealthService | None = None,
     ingestion_service: IngestionService | None = None,
     ingestion_worker: IngestionWorker | None = None,
+    retrieval_service: RetrievalService | None = None,
 ) -> FastAPI:
     """Create an application with replaceable dependencies for testing."""
 
     resolved_settings = settings or Settings()
     resolved_health_service = health_service or build_health_service(resolved_settings)
     resolved_ingestion_worker = ingestion_worker
+    resolved_retrieval_service = retrieval_service
     if ingestion_service is None:
         registry = build_ingestion_registry(resolved_settings)
         resolved_ingestion_service = build_ingestion_service(
@@ -142,6 +164,11 @@ def create_app(
                 resolved_settings,
                 registry=registry,
             )
+        if (
+            resolved_retrieval_service is None
+            and resolved_settings.ingestion_registry_backend == "sqlite"
+        ):
+            resolved_retrieval_service = build_retrieval_service(resolved_settings)
     else:
         resolved_ingestion_service = ingestion_service
 
@@ -150,6 +177,7 @@ def create_app(
         application.state.health_service = resolved_health_service
         application.state.ingestion_service = resolved_ingestion_service
         application.state.ingestion_worker = resolved_ingestion_worker
+        application.state.retrieval_service = resolved_retrieval_service
         resolved_health_service.mark_started()
         try:
             yield
@@ -167,6 +195,7 @@ def create_app(
     application.state.health_service = resolved_health_service
     application.state.ingestion_service = resolved_ingestion_service
     application.state.ingestion_worker = resolved_ingestion_worker
+    application.state.retrieval_service = resolved_retrieval_service
     application.include_router(health_router, prefix="/v1")
     application.include_router(documents_router, prefix="/v1")
     application.include_router(jobs_router, prefix="/v1")

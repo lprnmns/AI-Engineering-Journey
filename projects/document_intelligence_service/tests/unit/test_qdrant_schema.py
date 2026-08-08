@@ -8,6 +8,9 @@ from projects.document_intelligence_service.app.infrastructure.qdrant.chunk_stor
     QdrantChunkStore,
     SparseEmbedding,
 )
+from projects.document_intelligence_service.app.infrastructure.qdrant.retriever import (
+    QdrantRetriever,
+)
 from projects.document_intelligence_service.app.infrastructure.qdrant.schema import (
     QdrantSchema,
     QdrantSchemaError,
@@ -209,3 +212,44 @@ def test_stage_verify_activate_hides_previous_version() -> None:
     assert second_point.payload is not None
     assert first_point.payload["is_active"] is False
     assert second_point.payload["is_active"] is True
+
+
+def test_retriever_searches_active_named_dense_and_sparse_vectors() -> None:
+    schema = QdrantSchema(collection_name="retrieval_test", dense_size=2)
+    store = QdrantChunkStore(QdrantClient(":memory:"), schema)
+    chunk = make_chunk()
+    sparse = SparseEmbedding(indices=(1, 4), values=(0.8, 0.2))
+    store.stage_version(
+        chunks=[chunk],
+        dense_vectors=[(1.0, 0.0)],
+        sparse_vectors=[sparse],
+        pipeline_fingerprint="pipe-1",
+        language="tr",
+    )
+    verification = store.verify_version(
+        document_id="doc-1",
+        version_id="ver-1",
+        expected_chunk_count=1,
+    )
+    store.activate_version(
+        document_id="doc-1",
+        version_id="ver-1",
+        verification=verification,
+    )
+    retriever = QdrantRetriever(store.client, schema)
+
+    dense_hits = retriever.search_dense(
+        query_vector=(1.0, 0.0),
+        limit=5,
+        document_ids=("doc-1",),
+    )
+    sparse_hits = retriever.search_sparse(
+        query_vector=sparse,
+        limit=5,
+        document_ids=("doc-1",),
+    )
+
+    assert len(dense_hits) == 1
+    assert len(sparse_hits) == 1
+    assert dense_hits[0].source_id == "chunk-1"
+    assert sparse_hits[0].page_start == 2
