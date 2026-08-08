@@ -807,7 +807,7 @@ llm_ms: 62921.0
 total_ms: 86324.8
 ```
 
-Model yalnız gate'i geçen evidence ile bounded prompt üzerinden çağrıldı ve kaynak listesi retrieval payload'ından üretildi; model metninden source parse edilmedi. CPU local çalışmada yaklaşık 63 saniyelik generation latency gözlendi. `DIS_LLM_MAX_OUTPUT_TOKENS=256` ve 8.000 karakter evidence bütçesi RAM/context kontrolü için ayarlanabilir; cold embedding ile warm embedding ayrı benchmarklanmalıdır.
+Model yalnız gate'i geçen evidence ile bounded prompt üzerinden çağrıldı ve kaynak listesi retrieval payload'ından üretildi; model metninden source parse edilmedi. Bu smoke HTTP/orkestrasyon kanıtıdır, cevap doğruluğu kabulü değildir: Gemma'nın döndürdüğü cümle beklenen “ilk cevap süresi/toplam süre/bellek/doğruluk...” listesini tam karşılamadı. Bu, `answered` kararının yalnızca evidence eşiğinin geçildiğini gösterdiğini; answer quality için ayrıca golden expected-phrase/evidence değerlendirmesi gerektiğini gösteriyor. CPU local çalışmada yaklaşık 63 saniyelik generation latency gözlendi. `DIS_LLM_MAX_OUTPUT_TOKENS=256` ve 8.000 karakter evidence bütçesi RAM/context kontrolü için ayarlanabilir; cold embedding ile warm embedding ayrı benchmarklanmalıdır.
 
 ### Mentora kısa anlatım
 
