@@ -455,3 +455,73 @@ Her PDF aynı tipografik yapıya sahip değildir. İlk sürümde bilinen doküma
 ### Mentora kısa anlatım
 
 > PDF sayfa sınırlarını koruyarak parent section ve child retrieval chunk üretiyorum. Child üzerinde arama yapıp parent context ve page metadata ile kaynak göstereceğim. Sentence overlap bağlam kopmasını azaltıyor; chunk ayarları pipeline fingerprint'e girdiği için ayar değişikliği yeni version oluşturuyor.
+
+## 12. Qdrant named-vector schema ve persistence adapter'ı
+
+### Bu aşamada ne yaptım?
+
+Child chunk'ları yalnız düz bir dense vektör olarak saklamak yerine Qdrant collection sözleşmesini açıkça tanımladım:
+
+```text
+ChildChunk
+  → dense embedding (384 boyut, cosine)
+  → sparse embedding (IDF destekli)
+  → named vectors ile Qdrant point
+  → kaynak ve version metadata'sı
+```
+
+Collection içinde iki ayrı vektör adı bulunuyor:
+
+- `dense`: Embedding modelinin anlamsal yakınlık vektörü.
+- `sparse`: Kelime/term tabanlı arama için sparse temsil; BM25/hybrid retrieval'a geçiş noktası.
+
+Qdrant client API'sinde sparse vector, `vectors_config` içine konulmuyor. Dense named vector `vectors_config`, sparse named vector ise `sparse_vectors_config` altında tanımlanıyor. Bu ayrımı küçük bir local probe ve unit test ile doğruladım.
+
+### Payload neden önemli?
+
+Vektör yalnızca benzerlik hesabında kullanılır. Cevabı kaynaklandırmak, aktif belge sürümünü seçmek ve ileride tenant/ACL filtresi uygulamak için point payload'ında şu bilgiler tutuluyor:
+
+```json
+{
+  "document_id": "doc-1",
+  "version_id": "ver-1",
+  "parent_id": "doc-1:ver-1:parent:000",
+  "source": "guide.pdf",
+  "page_start": 2,
+  "page_end": 2,
+  "is_active": false,
+  "pipeline_fingerprint": "..."
+}
+```
+
+`document_id`, `version_id`, `parent_id`, `source`, sayfa alanları ve `is_active` için payload indexleri planlandı. Böylece retrieval yalnız cosine skoruna bırakılmıyor; belge, sürüm ve erişim kapsamı filtreleriyle sınırlandırılabiliyor.
+
+### Deterministic point ID ve duplicate davranışı
+
+Point ID'yi rastgele üretmek yerine `version_id + chunk_id` üzerinden UUID5 ile deterministik üretiyorum:
+
+```text
+aynı version + aynı chunk → aynı Qdrant point ID
+retry/upsert → yeni duplicate point yok
+farklı version → farklı point ID
+```
+
+Bu, ingestion retry'larında aynı chunk'ın çoğalmasını engeller. `pipeline_fingerprint` ise chunk boyutu, overlap ve embedding reçetesi değiştiğinde yeni bir version üretmek için kullanılır.
+
+### Adapter neyi doğruluyor?
+
+- Chunk, dense vector ve sparse vector batch uzunlukları eşleşiyor mu?
+- Dense vektör 384 boyutlu mu?
+- Sparse index ve value listeleri aynı uzunlukta mı?
+- Sparse index değerleri negatif mi?
+- Mevcut collection beklenen named-vector schema ile uyumlu mu?
+
+Şema uyuşmazlığında sessizce yanlış veri yazmak yerine startup/ingestion öncesi `QdrantSchemaError` üretiliyor. Bu, “sistem çalışıyor” görünürken yanlış boyutlu veya eksik sparse veriyle retrieval kalitesinin bozulmasını önler.
+
+### Bilinen sınır ve gözlem
+
+Qdrant'ın `:memory:` local client'ında payload indexleri işlevsiz olduğuna dair uyarı görülebilir; bu test ortamının sınırlılığıdır. Gerçek Docker Qdrant üzerinde named dense/sparse collection oluşturma probe'u başarılı oldu. Bu yüzden local unit testte uyarıyı filtreliyor, gerçek servis davranışını ayrıca Docker probe ile kontrol ediyorum.
+
+### Mentora kısa anlatım
+
+> Qdrant'a bağlanmayı endpoint içine gömmek yerine named dense/sparse schema ve chunk store adapter'ı oluşturdum. Dense vektör anlamsal arama, sparse vektör lexical/hybrid arama için ayrılıyor. Point ID'yi version ve chunk'tan deterministik üreterek retry'larda duplicate oluşmasını engelliyorum; payload indexleriyle sayfa, kaynak ve aktif version filtrelenebilir hale geliyor. Schema veya vektör boyutu uyuşmazlığını veri yazmadan önce yakalıyorum.
