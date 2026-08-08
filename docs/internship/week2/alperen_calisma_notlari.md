@@ -181,3 +181,41 @@ Bu ayrımı golden evaluation setindeki `answerable` etiketi ve kabul edilebilir
 ### Mentora kısa cevap
 
 > `model: null` ve LLM süresinin sıfır olması, answerability kapısının model çağrısından önce çalıştığını ve no-answer durumunda maliyetli üretim adımının atlandığını kanıtlar. Kararın gerçekten doğru ret olup olmadığını ise etiketli evaluation setiyle ayrıca doğrularım.
+
+## 5. Liveness, readiness ve startup health endpointleri
+
+### Üç endpointin görevi
+
+- `GET /v1/health/live`: FastAPI sürecinin cevap verebildiğini gösterir. Dış bağımlılık çağırmaz ve bu yüzden Qdrant kapalı olsa bile süreç hayattaysa `200` döner.
+- `GET /v1/health/ready`: Sorgu trafiği için gerekli bağımlılıkları kontrol eder. Qdrant veya Ollama gibi zorunlu bir bileşen kullanılamıyorsa `503` döner.
+- `GET /v1/health/startup`: Uygulamanın composition root/lifespan başlangıç işlemlerini tamamlayıp tamamlamadığını gösterir. Başlangıç tamamlanmadıysa `503` döner.
+
+### Neden liveness bağımlılık kontrolü yapmıyor?
+
+Qdrant geçici olarak kapandığında yalnız Qdrant'ı düzeltmek gerekir; FastAPI sürecini yeniden başlatmak problemi çözmez. Liveness'ın Qdrant'ı da kontrol etmesi, geçici bir veritabanı arızasında çalışan API'nin gereksiz yere yeniden başlatılmasına yol açabilir.
+
+### `503` ile `no-answer` ayrımı
+
+Qdrant kapalıysa arama yapılamamıştır. Bu durumda `no-answer` döndürmek yanıltıcı olur; çünkü kanıt aranmış fakat bulunamamış değildir. Doğru sınıflandırma `DEPENDENCY_UNAVAILABLE` ve HTTP `503`'tür.
+
+```text
+FastAPI canlı, Qdrant kapalı:
+/v1/health/live     → 200
+/v1/health/startup  → 200 (başlangıç tamamlandıysa)
+/v1/health/ready    → 503
+query               → dependency unavailable; no-answer değil
+```
+
+### İlk çalışan dikey dilim
+
+Health akışında bağımlılık yönü korunmuştur:
+
+```text
+HTTP endpoint → HealthService → HealthProbe portu → HTTP adapter → Qdrant/Ollama
+```
+
+Domain katmanı FastAPI veya HTTPX bilmez. `HealthService` yalnız probe sözleşmesini bilir; gerçek Qdrant/Ollama adreslerini infrastructure adapter'ı kontrol eder. Testlerde fake probe verilerek liveness'ın hiç probe çağırmadığı ve readiness arızasında `503` döndüğü kanıtlanmıştır.
+
+### Mentora kısa anlatım
+
+> Liveness sürecin hayatta olduğunu, readiness bağımlılıklarla birlikte trafik kabul edebildiğini, startup ise uygulama başlangıcının tamamlandığını gösterir. Qdrant erişilemiyorsa bunu no-answer olarak gizlemem; çünkü o durumda retrieval hiç çalışmamıştır. Bu nedenle bağımlılık hatasını `503 DEPENDENCY_UNAVAILABLE` olarak ayrı raporlarım.

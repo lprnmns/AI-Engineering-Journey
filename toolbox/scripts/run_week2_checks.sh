@@ -26,7 +26,7 @@ pytest -v
 echo
 
 echo "6) Static type checking"
-mypy src examples tests labs
+mypy src examples tests labs projects
 echo
 
 echo "Week 2 checks completed."
