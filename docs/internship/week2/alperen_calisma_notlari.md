@@ -128,3 +128,56 @@ Hafta 1'de Qdrant'ta temel olarak dense vector ve basit payload vardı. Hafta 2'
 ### Tek cümlelik cevap
 
 > Qdrant, RAG sisteminde belge chunklarının vektörlerini ve metadata'sını kalıcı saklayıp kullanıcı sorusuna en yakın kanıt adaylarını getiren vektör veritabanıdır; cevabı kendisi üretmez.
+
+## 3. API sözleşmesini neden koddan önce belirliyoruz?
+
+### Mentora kısa anlatım
+
+> Önce endpoint, request, response ve hata sözleşmesini belirliyorum. Böylece retrieval veya model altyapısı değişse bile kullanıcıya sunduğum API kararlı kalıyor. Her response request ID, retrieval modu, gerçek kaynak listesi ve latency kırılımı taşıdığı için sistemin karar yolunu izleyebiliyorum.
+
+### Request ne taşır?
+
+```text
+question         → kullanıcının sorusu
+document_ids     → hangi belgelerde aranacağı
+retrieval_mode   → dense, bm25 veya hybrid
+top_k            → döndürülecek evidence sayısı
+include_debug    → kontrollü ortamda skorların gösterimi
+```
+
+API katmanı sorunun boş olup olmadığını, retrieval modunun desteklenip desteklenmediğini ve limitlerin güvenli aralıkta olup olmadığını kontrol eder. Hangi chunk'ın doğru olduğuna API karar vermez.
+
+### Response neden yalnız answer alanından oluşmuyor?
+
+Response ayrıca şunları taşır:
+
+- `request_id`: Aynı isteği log ve trace boyunca bulmak için
+- `decision`: `answered` veya `no_answer`
+- `no_answer.reason_code`: Neden cevap verilmediğini açıklamak için
+- `sources`: Gerçek evidence kayıtlarını göstermek için
+- `retrieval`: Hangi modun ve kaç adayın kullanıldığını göstermek için
+- `model`: Hangi modelin çağrıldığını göstermek için
+- `latency_ms`: Embed, search, rerank, LLM ve total sürelerini ayırmak için
+
+Bu sayede “sistem yavaş” veya “yanlış cevap verdi” demek yerine hangi katmanda problem olduğunu araştırabiliriz.
+
+## 4. `model: null` ve `llm latency: 0` neyi kanıtlar?
+
+### Alperen'in açıklaması
+
+> LLM'e hiç uğramadan no-answer döndürdüğünü gösterir. Böylece sistemin kanıt yetersiz olduğunda modeli çağırmama davranışının istediğimiz gibi çalıştığını anlarız.
+
+### Mühendislik ayrımı
+
+Bu değerler **LLM-skip mekanizmasının çalıştığını** kanıtlar. Tek başına bütün kararın doğru olduğunu kanıtlamaz.
+
+İki olasılık vardır:
+
+1. Soru gerçekten kaynak dışıdır: doğru no-answer, yani true negative.
+2. Cevap belgede vardır fakat sistem reddetmiştir: yanlış ret, yani false negative.
+
+Bu ayrımı golden evaluation setindeki `answerable` etiketi ve kabul edilebilir evidence kayıtlarıyla ölçeriz.
+
+### Mentora kısa cevap
+
+> `model: null` ve LLM süresinin sıfır olması, answerability kapısının model çağrısından önce çalıştığını ve no-answer durumunda maliyetli üretim adımının atlandığını kanıtlar. Kararın gerçekten doğru ret olup olmadığını ise etiketli evaluation setiyle ayrıca doğrularım.
