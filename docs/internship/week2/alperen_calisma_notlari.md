@@ -334,3 +334,44 @@ ADR (Architecture Decision Record), yalnız sonucu değil kararın bağlamını,
 ### Mentora kısa anlatım
 
 > Mimari diyagramda API, application, domain ve infrastructure sınırlarını ayırdım. Query sequence'te dense+sparse adayları RRF ve reranker'dan geçtikten sonra answerability gate'e giriyor; kanıt yetersizse LLM çağrılmıyor. Her kritik teknoloji kararını alternatif, ölçüm ve bilinen sınırlarıyla ADR olarak kaydediyorum.
+
+## 9. Gün 2 — Content hash ve pipeline fingerprint
+
+### İki kimlik neden ayrı?
+
+`content_hash`, PDF byte'larının SHA-256 özetidir. Aynı byte dizisi aynı hash'i üretir; tek bir byte değişince hash değişir. Bu, “yüklenen içerik gerçekten aynı mı?” sorusunu cevaplar.
+
+`pipeline_fingerprint` ise parser, normalizer, chunker, embedding modeli, reranker ve vector schema gibi üretim ayarlarının canonical JSON üzerinden SHA-256 özetidir. PDF aynı kalsa bile chunker veya embedding modeli değişirse fingerprint değişir.
+
+```text
+document identity = content_hash
+version identity  = content_hash + pipeline_fingerprint
+```
+
+Bu ayrım olmadan model değişikliğinde eski ve yeni vektörleri aynı version sanabilir, sorgularda karışık embedding uzayları kullanabilirdik.
+
+### Upload doğrulama sırası
+
+```text
+size limit → MIME allowlist → %PDF magic bytes
+          → filename normalization → SHA-256
+          → page-aware PDF inspection
+```
+
+Ucuz ve güvenlik açısından temel kontroller parser/embedding gibi pahalı işlemlerden önce yapılır. MIME header'a tek başına güvenilmez; `%PDF` magic bytes da kontrol edilir. Dosya adı path traversal izlerini taşısa bile yalnız güvenli basename saklanır.
+
+### Gün 2 ilk teknik dilim
+
+Henüz Qdrant'a yazmadan şu metadata hazırlanıyor:
+
+- güvenli dosya adı
+- içerik türü ve byte boyutu
+- `content_hash`
+- PDF sayfa sayısı
+- `pipeline_fingerprint`
+
+Geçersiz dosya `DOCUMENT_PARSE_FAILED`, yanlış MIME `UNSUPPORTED_MEDIA_TYPE`, fazla büyük dosya `UPLOAD_TOO_LARGE` olarak ayrılır.
+
+### Mentora kısa anlatım
+
+> Content hash dosyanın byte kimliğini, pipeline fingerprint ise o dosyadan vektör üretme reçetesini temsil ediyor. Aynı PDF aynı pipeline ile tekrar gelirse idempotent davranabilirim; pipeline değişirse yeni version üretirim. Önce boyut, MIME ve magic bytes kontrolü yapıp sonra page-aware parse'a geçiyorum.

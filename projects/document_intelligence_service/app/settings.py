@@ -18,3 +18,5 @@ class Settings(BaseSettings):
     qdrant_url: AnyHttpUrl = AnyHttpUrl("http://127.0.0.1:6333")
     ollama_url: AnyHttpUrl = AnyHttpUrl("http://127.0.0.1:11434")
     dependency_timeout_seconds: float = Field(default=1.0, gt=0, le=10)
+    max_upload_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    max_pdf_pages: int = Field(default=200, gt=0)
