@@ -42,9 +42,10 @@ Kanıt: `docs/benchmark_report.md`, `eval/results/ablation_summary.json`.
 ## 5. No-answer threshold hangi split'te seçildi?
 
 Threshold validation split'inde seçilir; final test seçim sürecine dahil edilmez.
-Mevcut `0.379` runtime değeri konservatif/provisional tutuluyor. Calibration
-artifact'inde validation-only öneri `0.338` görünür; küçük validation alt kümesi
-nedeniyle bunu sessizce production default yapmadım.
+Temiz section-aware corpus snapshot'ında validation-only calibration önerisi
+`0.330817965` (`0.331`) çıktı ve runtime default buna hizalandı. Bu küçük
+validation alt kümesi güçlü genelleme kanıtı değildir; corpus, embedding veya
+chunk ayarı değişince eşik yeniden seçilmelidir.
 
 Kanıt: `app/domain/answerability.py`, `eval/results/hybrid_threshold_calibration.json`.
 
