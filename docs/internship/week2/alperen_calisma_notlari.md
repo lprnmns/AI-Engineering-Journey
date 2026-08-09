@@ -935,8 +935,54 @@ Runner, warm-up sorgularını ölçümden çıkarıyor; her vaka için final ada
 
 ### Bu aşamadaki kanıt ve sınır
 
-Şu an golden dataset sözleşmesi, metrik hesaplayıcıları, runner ve retrieval domain trace'i unit testlerle doğrulandı. `44` vaka şema ve kategori dengesi kontrolünden geçiyor; testlerde `11 passed`, ilgili mypy kontrolü temiz. Henüz gerçek Qdrant üzerinde 4 retrieval ablation koşusunun nihai sayıları üretilmedi. Bu nedenle şu anda “hybrid daha iyi” veya “reranker varsayılan olmalı” sonucu çıkarmıyorum. Sonraki adım, active section-aware Qdrant snapshot'ında aynı vaka sırasıyla dense/BM25/hybrid ve reranker açık/kapalı koşularını çalıştırıp raw sonuçları kaydetmek.
+Bu aşamada golden dataset sözleşmesi, metrik hesaplayıcıları, runner ve retrieval domain trace'i unit testlerle doğrulandı. `44` vaka şema ve kategori dengesi kontrolünden geçiyor; ilgili testler ve mypy temiz. O sırada gerçek Qdrant ablation sayıları henüz yoktu; sonraki koşuda aynı active snapshot üzerinde ölçülerek aşağıdaki karar üretildi.
 
 ### Mentora kısa anlatım
 
-> Demo sorularını 44 vakalık versionlanmış golden JSONL sözleşmesine dönüştürdüm. Direct, paraphrase, exact-term, near-miss, no-answer, multi-evidence ve injection/ACL hazırlık sınıfları var; development/validation/test split'i ayrılıyor. Retrieval için Recall@k, candidate Recall@20, MRR, nDCG; sistem davranışı için no-answer hata yönleri ve p50/p95 latency ölçülecek. Reranker öncesi aday penceresini final evidence'tan ayrı trace ediyorum. Şu an altyapı ve contract testleri tamam; gerçek Qdrant ablation sonuçları henüz karar vermek için çalıştırılmadı.
+> Demo sorularını 44 vakalık versionlanmış golden JSONL sözleşmesine dönüştürdüm. Direct, paraphrase, exact-term, near-miss, no-answer, multi-evidence ve injection/ACL hazırlık sınıfları var; development/validation/test split'i ayrılıyor. Retrieval için Recall@k, candidate Recall@20, MRR, nDCG; sistem davranışı için no-answer hata yönleri ve p50/p95 latency ölçtüm. Reranker öncesi aday penceresini final evidence'tan ayrı trace ediyorum. Altyapı contract testlerinden sonra gerçek Qdrant ablation ile hybrid'in bu snapshot'ta en iyi kalite/latency dengesini verdiğini gösterdim.
+
+## 22. Gerçek retrieval ablation ve gate sonucu
+
+### Aynı deney koşulu
+
+44 golden vaka aynı sırayla çalıştırıldı; ilk 3 warm-up soru kalite hesabına alınmadı. Active Qdrant snapshot'ında 26 active point vardı, eski 27 point inactive durumdaydı. Dört retrieval koşusu ve bir no-answer gate koşusu aynı `git_sha=928e608` ile raw JSON olarak kaydedildi. Ollama hiç çağrılmadı.
+
+### Sonuç tablosu
+
+```text
+Strategy              Recall@5  MRR@10  nDCG@10  Candidate@20  p95
+Dense                 0.901     0.875   0.930    0.993          25.2 ms
+Sparse/IDF            0.840     0.778   0.860    0.987           3.5 ms
+Hybrid RRF            0.934     0.883   0.963    0.993          28.1 ms
+Dense + reranker      0.912     0.836   0.933    0.993        1224.6 ms
+Hybrid + reranker     0.912     0.833   0.933    0.993        1128.5 ms
+```
+
+Bu tablo “büyük model veya ekstra katman mutlaka daha iyi” varsayımını kırıyor. Hybrid en iyi kalite/latency dengesini verdi. Reranker doğru section'ı aday havuzundan silmiyor; Candidate Recall@20 aynı kalıyor. Fakat final top-5 sıralamasında bazı kanıtları aşağı itiyor ve CPU maliyeti yaklaşık 40 kat büyüyor. Bu yüzden varsayılan kapalı kaldı.
+
+### Gate sonucu
+
+Hybrid + provisional answerability threshold ile, LLM'siz gate smoke'u:
+
+```text
+answerable beklenen: 30
+no-answer beklenen: 14
+gereksiz no-answer (answerable reddi): 8 / 30 = %26.7
+corpus dışına cevap eşiği (no-answer false negative): 2 / 14 = %14.3
+gate p50/p95: 70.3 / 133.0 ms
+```
+
+İki injection vakasının gate'i geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile “kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold validation split'te kalibre edilmeli; injection savunması da structured prompt ve output validation ile ayrı katman olarak kalmalı.
+
+### Güncel karar
+
+```text
+local default: hybrid RRF, reranker disabled
+thresholds: provisional; validation calibration gerekli
+next: validation/test leakage dondurma, slice bazlı hata analizi,
+      output phrase/evidence değerlendirmesi ve gerçek query smoke
+```
+
+### Mentora kısa anlatım
+
+> Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Ayrıca LLM'siz answerability gate'te answerable soruların `%26.7`si gereksiz reddedildi, corpus dışı vakaların `%14.3`ünde gate fazla iyimser kaldı. Bu eşikler provisional; validation setinde kalibre edilecek.

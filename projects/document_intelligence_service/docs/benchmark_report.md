@@ -49,5 +49,62 @@ Mypy for evaluation slice: clean
 Real Qdrant benchmark: pending
 ```
 
-Henüz bu dosyada retrieval strategy seçimi yapılmamıştır. Seçim, aynı corpus snapshot, aynı query sırası ve aynı warm-up protokolü üzerinde kalite kazanımı ile p95 maliyeti birlikte görüldükten sonra yapılacaktır.
+İlk protokol tamamlandı; retrieval strategy kararı aşağıdaki aynı corpus snapshot, aynı query sırası ve aynı warm-up protokolüyle alınmıştır. Yeni corpus veya model değişiminde bu sonuçlar otomatik olarak genellenmeyecektir.
 
+## Measured ablation — 2026-08-09
+
+Run manifest:
+
+```text
+git_sha: 928e60868ab8cb67f8859acd297c394e7ff938fd
+active Qdrant points: 26 (collection toplamı: 53; 27 eski version inactive)
+golden cases: 44 (retrieval quality denominator: 30 answerable)
+top_k: 5
+warm-up: 3 query, quality hesabı dışında
+LLM: çağrılmadı
+```
+
+| Strategy | Candidate Recall@20 | Recall@5 | MRR@10 | nDCG@10 | Total p50 | Total p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Dense | 0.993 | 0.901 | 0.875 | 0.930 | 22.8 ms | 25.2 ms |
+| Sparse/BM25 mode | 0.987 | 0.840 | 0.778 | 0.860 | 3.0 ms | 3.5 ms |
+| Hybrid RRF | 0.993 | **0.934** | **0.883** | **0.963** | 23.7 ms | **28.1 ms** |
+| Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 844.7 ms | 1224.6 ms |
+| Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 842.9 ms | 1128.5 ms |
+
+Sparse/BM25 mode bu sürümde ayrı bir klasik BM25 motoru değil; deterministic `HashingSparseEncoder` + Qdrant IDF sparse search'tür. Bu nedenle tablo “BM25 modu” olarak okunmalı, Türkçe morfoloji çözülmüş tam BM25 iddiası olarak değil.
+
+### Yorum
+
+- Hybrid, bu corpus'ta dense'e göre Recall@5'i yaklaşık `+0.033`, sparse baseline'a göre `+0.094` artırdı.
+- Üç yöntemde de Candidate Recall@20 çok yüksek (`0.987–0.993`). Sorun çoğunlukla doğru section'ın aday havuzuna girmemesi değil, final sıralamadaki yeridir.
+- Reranker, hybrid'e göre Recall@5'i `0.934`ten `0.912`ye, MRR@10'u `0.883`ten `0.833`e düşürdü; p95'i `28.1 ms`ten `1128.5 ms`e çıkardı.
+- Reranker `multi_evidence` slice'ında `0.508`ten `0.592`ye katkı verdi; fakat `near_miss` slice'ında `1.000`den `0.833`e düştü. `near_miss_02`, hybrid'in bulduğu `rag` section'ını reranker'ın final top-5'ten çıkardığı somut negatif flip'tir.
+
+Karar: reranker varsayılan kapalı kalıyor. İleride farklı cross-encoder, daha iyi section-aware evidence aggregation veya validation split üzerinde threshold/reranker tuning yapılmadan varsayılan açılmayacak.
+
+## Answerability gate smoke — 2026-08-09
+
+Hybrid retrieval ile, Ollama çağırmadan aynı 44 vaka üzerinde gate çalıştırıldı:
+
+```text
+expected answerable: 30
+expected no-answer: 14
+predicted answerable: 24
+predicted no-answer: 20
+```
+
+Bu provisional eşiklerde:
+
+```text
+no-answer false positive: 8 / 30 = 26.7%
+  → answerable vaka gereksiz reddedildi
+
+no-answer false negative: 2 / 14 = 14.3%
+  → corpus dışı injection vakası cevaplanabilir sanıldı
+
+gate total p50/p95: 70.3 ms / 133.0 ms
+LLM çağrısı: 0
+```
+
+Sonuç, `0.45` dense threshold'un evrensel veya kalibre edilmiş olmadığını gösteriyor. Threshold değiştirmek için test split'e bakılmayacak; önce validation vakalarıyla hata maliyeti belirlenecek. Özellikle iki injection false negative, yalnız similarity eşiğinin prompt güvenliğini tek başına çözmediğini gösteriyor.

@@ -1,0 +1,433 @@
+{
+  "git_sha": "928e60868ab8cb67f8859acd297c394e7ff938fd",
+  "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
+  "mode": "hybrid",
+  "reranker_enabled": false,
+  "top_k": 5,
+  "warmup_questions": [
+    "Qdrant ne işe yarar?",
+    "Embedding ne demektir?",
+    "RAG akışı hangi adımlardan oluşur?"
+  ],
+  "llm_called": false,
+  "run": {
+    "cases_run": 44,
+    "warmup_count": 3,
+    "metrics": {
+      "case_count": 44,
+      "expected_answerable": 30,
+      "expected_no_answer": 14,
+      "predicted_answerable": 24,
+      "predicted_no_answer": 20,
+      "no_answer_false_positive_count": 8,
+      "no_answer_false_negative_count": 2,
+      "no_answer_false_positive_rate": 0.26666666666666666,
+      "no_answer_false_negative_rate": 0.14285714285714285
+    },
+    "total_latency": {
+      "sample_count": 44,
+      "p50_ms": 70.30233455589041,
+      "p95_ms": 133.02911426289938,
+      "min_ms": 42.859460110776126,
+      "max_ms": 168.17381302826107
+    },
+    "observations": [
+      {
+        "case_id": "direct_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.6472224,
+        "score_margin": -0.061374660000000025,
+        "coverage_ratio": 0.8,
+        "total_ms": 66.10099202953279
+      },
+      {
+        "case_id": "direct_02",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.6155805,
+        "score_margin": 0.16232251999999997,
+        "coverage_ratio": 0.75,
+        "total_ms": 51.35563004296273
+      },
+      {
+        "case_id": "direct_03",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.5469365,
+        "score_margin": -0.006574599999999986,
+        "coverage_ratio": 0.5,
+        "total_ms": 85.6072170427069
+      },
+      {
+        "case_id": "direct_04",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.46780327,
+        "score_margin": 0.07576033999999998,
+        "coverage_ratio": 0.375,
+        "total_ms": 65.23537205066532
+      },
+      {
+        "case_id": "direct_05",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.70898294,
+        "score_margin": 0.13643538999999993,
+        "coverage_ratio": 0.625,
+        "total_ms": 80.90715494472533
+      },
+      {
+        "case_id": "direct_06",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.60193753,
+        "score_margin": 0.04291713000000008,
+        "coverage_ratio": 0.5714285714285714,
+        "total_ms": 47.262297943234444
+      },
+      {
+        "case_id": "direct_07",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.52205443,
+        "score_margin": 0.12628950999999994,
+        "coverage_ratio": 0.5555555555555556,
+        "total_ms": 59.25446399487555
+      },
+      {
+        "case_id": "direct_08",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.51991045,
+        "score_margin": -0.0016071799999999303,
+        "coverage_ratio": 0.3333333333333333,
+        "total_ms": 54.62736508343369
+      },
+      {
+        "case_id": "paraphrase_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.40706798,
+        "score_margin": -0.05573067999999998,
+        "coverage_ratio": 0.3,
+        "total_ms": 52.53979307599366
+      },
+      {
+        "case_id": "paraphrase_02",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.63715136,
+        "score_margin": 0.17281860000000004,
+        "coverage_ratio": 0.6,
+        "total_ms": 42.859460110776126
+      },
+      {
+        "case_id": "paraphrase_03",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5330811,
+        "score_margin": 0.17020724999999998,
+        "coverage_ratio": 0.5555555555555556,
+        "total_ms": 59.33948198799044
+      },
+      {
+        "case_id": "paraphrase_04",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.51377803,
+        "score_margin": 0.10988921000000001,
+        "coverage_ratio": 0.5714285714285714,
+        "total_ms": 49.0000230493024
+      },
+      {
+        "case_id": "paraphrase_05",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.600755,
+        "score_margin": -0.04416589999999998,
+        "coverage_ratio": 0.5,
+        "total_ms": 102.36849903594702
+      },
+      {
+        "case_id": "paraphrase_06",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5489013,
+        "score_margin": 0.033829129999999985,
+        "coverage_ratio": 0.3,
+        "total_ms": 83.15376006066799
+      },
+      {
+        "case_id": "exact_01",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.48227507,
+        "score_margin": 0.18869555,
+        "coverage_ratio": 0.3333333333333333,
+        "total_ms": 88.86204997543246
+      },
+      {
+        "case_id": "exact_02",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.69433796,
+        "score_margin": 0.25924916000000003,
+        "coverage_ratio": 0.75,
+        "total_ms": 74.79608792345971
+      },
+      {
+        "case_id": "exact_03",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.6113596,
+        "score_margin": 0.25416458000000003,
+        "coverage_ratio": 0.5714285714285714,
+        "total_ms": 73.98661598563194
+      },
+      {
+        "case_id": "exact_04",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.790632,
+        "score_margin": 0.17036220000000002,
+        "coverage_ratio": 0.6,
+        "total_ms": 133.13538895454258
+      },
+      {
+        "case_id": "exact_05",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.72899103,
+        "score_margin": 0.20298337999999994,
+        "coverage_ratio": 0.8,
+        "total_ms": 74.38397291116416
+      },
+      {
+        "case_id": "exact_06",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5498207,
+        "score_margin": 0.17451922000000003,
+        "coverage_ratio": 0.6666666666666666,
+        "total_ms": 73.59608390834183
+      },
+      {
+        "case_id": "near_miss_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.43550128,
+        "score_margin": 0.03633671999999999,
+        "coverage_ratio": 0.375,
+        "total_ms": 65.62893802765757
+      },
+      {
+        "case_id": "near_miss_02",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.45747396,
+        "score_margin": 0.06082201000000004,
+        "coverage_ratio": 0.4,
+        "total_ms": 57.34438507352024
+      },
+      {
+        "case_id": "near_miss_03",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5249559,
+        "score_margin": 0.019054899999999986,
+        "coverage_ratio": 0.4444444444444444,
+        "total_ms": 47.44851402938366
+      },
+      {
+        "case_id": "near_miss_04",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.35410076,
+        "score_margin": -0.0531258,
+        "coverage_ratio": 0.2222222222222222,
+        "total_ms": 101.69595805928111
+      },
+      {
+        "case_id": "near_miss_05",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.62009907,
+        "score_margin": 0.10586381,
+        "coverage_ratio": 0.7142857142857143,
+        "total_ms": 137.78323004953563
+      },
+      {
+        "case_id": "near_miss_06",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5215261,
+        "score_margin": 0.1999016,
+        "coverage_ratio": 0.6363636363636364,
+        "total_ms": 168.17381302826107
+      },
+      {
+        "case_id": "no_answer_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.16158207,
+        "score_margin": -0.018270830000000016,
+        "coverage_ratio": 0.16666666666666666,
+        "total_ms": 118.8519619172439
+      },
+      {
+        "case_id": "no_answer_02",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.23163752,
+        "score_margin": -0.07763205999999997,
+        "coverage_ratio": 0.3333333333333333,
+        "total_ms": 50.365059985779226
+      },
+      {
+        "case_id": "no_answer_03",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.26848823,
+        "score_margin": 0.05291498,
+        "coverage_ratio": 0.0,
+        "total_ms": 60.18415198195726
+      },
+      {
+        "case_id": "no_answer_04",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.15779138,
+        "score_margin": 0.005034150000000015,
+        "coverage_ratio": 0.0,
+        "total_ms": 75.81187493633479
+      },
+      {
+        "case_id": "no_answer_05",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.3455584,
+        "score_margin": -0.09882626,
+        "coverage_ratio": 0.3333333333333333,
+        "total_ms": 71.67950202710927
+      },
+      {
+        "case_id": "no_answer_06",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.36583787,
+        "score_margin": -0.15377659,
+        "coverage_ratio": 0.3,
+        "total_ms": 98.22398703545332
+      },
+      {
+        "case_id": "multi_01",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.50759584,
+        "score_margin": 0.17703212000000002,
+        "coverage_ratio": 0.6,
+        "total_ms": 80.90970292687416
+      },
+      {
+        "case_id": "multi_02",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.4964937,
+        "score_margin": -0.09943289999999999,
+        "coverage_ratio": 0.4166666666666667,
+        "total_ms": 73.99493607226759
+      },
+      {
+        "case_id": "multi_03",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5090063,
+        "score_margin": 0.08148860000000002,
+        "coverage_ratio": 0.7,
+        "total_ms": 64.80546004604548
+      },
+      {
+        "case_id": "multi_04",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.6417994,
+        "score_margin": 0.19627602,
+        "coverage_ratio": 0.46153846153846156,
+        "total_ms": 65.66709303297102
+      },
+      {
+        "case_id": "injection_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.22921377,
+        "score_margin": 0.04719606000000001,
+        "coverage_ratio": 0.0,
+        "total_ms": 132.42689101025462
+      },
+      {
+        "case_id": "injection_02",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.35045388,
+        "score_margin": 0.10217577,
+        "coverage_ratio": 0.2727272727272727,
+        "total_ms": 68.92516708467156
+      },
+      {
+        "case_id": "injection_03",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5568563,
+        "score_margin": 0.08540709999999996,
+        "coverage_ratio": 0.4,
+        "total_ms": 56.59671896137297
+      },
+      {
+        "case_id": "injection_04",
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.47259122,
+        "score_margin": 0.03617405999999995,
+        "coverage_ratio": 0.35714285714285715,
+        "total_ms": 80.0191400339827
+      },
+      {
+        "case_id": "leakage_01",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.22380546,
+        "score_margin": -0.14117139,
+        "coverage_ratio": 0.2727272727272727,
+        "total_ms": 95.48396605532616
+      },
+      {
+        "case_id": "leakage_02",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.40367818,
+        "score_margin": 0.11259806,
+        "coverage_ratio": 0.1,
+        "total_ms": 68.02999204955995
+      },
+      {
+        "case_id": "leakage_03",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.3069635,
+        "score_margin": -0.007790660000000005,
+        "coverage_ratio": 0.2857142857142857,
+        "total_ms": 68.81285295821726
+      },
+      {
+        "case_id": "leakage_04",
+        "decision": "no_answer",
+        "reason": "LOW_RELEVANCE",
+        "top_score": 0.045270972,
+        "score_margin": -0.318241228,
+        "coverage_ratio": 0.1,
+        "total_ms": 52.272625034675
+      }
+    ]
+  }
+}
