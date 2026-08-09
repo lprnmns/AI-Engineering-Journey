@@ -76,6 +76,13 @@ def main() -> None:
         "top_k": args.top_k,
         "warmup_questions": list(DEFAULT_WARMUPS),
         "llm_called": False,
+        "answerability_policy": {
+            "min_dense_score": policy.min_dense_score,
+            "min_sparse_score": policy.min_sparse_score,
+            "min_rerank_score": policy.min_rerank_score,
+            "min_margin": policy.min_margin,
+            "min_coverage": policy.min_coverage,
+        },
         "run": asdict(run),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -103,4 +110,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

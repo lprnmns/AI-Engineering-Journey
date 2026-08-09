@@ -962,7 +962,7 @@ Bu tablo “büyük model veya ekstra katman mutlaka daha iyi” varsayımını 
 
 ### Gate sonucu
 
-Hybrid + provisional answerability threshold ile, LLM'siz gate smoke'u:
+Hybrid + validation'dan seçilen dense threshold ile, LLM'siz gate smoke'u:
 
 ```text
 answerable beklenen: 30
@@ -972,17 +972,17 @@ corpus dışına cevap eşiği (no-answer false negative): 2 / 14 = %14.3
 gate p50/p95: 70.3 / 133.0 ms
 ```
 
-İki injection vakasının gate'i geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile “kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold validation split'te kalibre edilmeli; injection savunması da structured prompt ve output validation ile ayrı katman olarak kalmalı.
+İki injection vakasının gate'i geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile “kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold validation split'te kalibre edildi ve runtime default `0.456` olarak güncellendi; injection savunması structured prompt ve output validation ile ayrı katman olarak kalmalı.
 
 ### Güncel karar
 
 ```text
 local default: hybrid RRF, reranker disabled
-thresholds: provisional; validation calibration gerekli
+dense threshold: validation seçimiyle 0.456; sparse/rerank/margin/coverage provisional
 next: validation/test leakage dondurma, slice bazlı hata analizi,
       output phrase/evidence değerlendirmesi ve gerçek query smoke
 ```
 
 ### Mentora kısa anlatım
 
-> Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Ayrıca LLM'siz answerability gate'te answerable soruların `%26.7`si gereksiz reddedildi, corpus dışı vakaların `%14.3`ünde gate fazla iyimser kaldı. Bu eşikler provisional; validation setinde kalibre edilecek.
+> Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Answerability dense threshold'ını yalnız validation split'te, false negative maliyetini `3.0` alarak `0.456` seçtim. Test split'e threshold seçimi sırasında bakmadım; iki injection false negative için ayrıca prompt/output savunması gerekiyor.

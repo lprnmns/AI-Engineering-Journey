@@ -107,4 +107,20 @@ gate total p50/p95: 70.3 ms / 133.0 ms
 LLM çağrısı: 0
 ```
 
-Sonuç, `0.45` dense threshold'un evrensel veya kalibre edilmiş olmadığını gösteriyor. Threshold değiştirmek için test split'e bakılmayacak; önce validation vakalarıyla hata maliyeti belirlenecek. Özellikle iki injection false negative, yalnız similarity eşiğinin prompt güvenliğini tek başına çözmediğini gösteriyor.
+Sonuç, önceki `0.45` dense threshold'un evrensel olmadığını gösteriyor. Validation-only calibration, false negative maliyeti `3.0` ile `0.456` önerdi. Özellikle iki injection false negative, yalnız similarity eşiğinin prompt güvenliğini tek başına çözmediğini gösteriyor.
+
+## Validation-only threshold calibration
+
+```text
+dataset_sha256: 5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e
+calibration split: validation only
+validation cases: 11 (7 answerable, 4 no-answer)
+test split used: false
+false-negative cost: 3.0
+selected threshold: 0.45634224
+rounded runtime threshold: 0.456
+validation false-positive: 1 / 7 = 14.3%
+validation false-negative: 0 / 4 = 0%
+```
+
+Bu sonuç küçük validation split nedeniyle güçlü genelleme kanıtı değildir; threshold yalnız aynı embedding, corpus ve pipeline snapshot'ı için uygulanmıştır. Calibration çıktısı [hybrid_threshold_calibration.json](../eval/results/hybrid_threshold_calibration.json) dosyasındadır.
