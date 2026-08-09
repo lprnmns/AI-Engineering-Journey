@@ -1,16 +1,19 @@
 """Restart-safe SQLite adapter for ingestion identities, jobs and staged PDFs."""
 
 import asyncio
+from datetime import datetime
+import json
 from pathlib import Path
 import sqlite3
 
-from ...domain.entities import DocumentStatus, JobStatus
+from ...domain.entities import DocumentStatus, JobStatus, StageStatus
 from ...domain.errors import ErrorCode, ServiceError
 from ...domain.ingestion import (
     IngestionReceipt,
     JobSnapshot,
     PdfInspection,
     PreparedIngestion,
+    StageEvent,
     UploadMetadata,
     create_ingestion_receipt,
     normalize_idempotency_key,
@@ -65,6 +68,11 @@ class SqliteIngestionRegistry:
 
         await asyncio.to_thread(self._update_job_sync, snapshot)
 
+    async def record_stage_event(self, job_id: str, event: StageEvent) -> None:
+        """Append one stage transition and update the job summary."""
+
+        await asyncio.to_thread(self._record_stage_event_sync, job_id, event)
+
     async def set_document_status(
         self,
         *,
@@ -102,6 +110,10 @@ class SqliteIngestionRegistry:
                     status TEXT NOT NULL,
                     progress_percent INTEGER NOT NULL,
                     error_code TEXT,
+                    current_stage TEXT,
+                    point_count INTEGER,
+                    error_message TEXT,
+                    failed_stage TEXT,
                     PRIMARY KEY (content_hash, pipeline_fingerprint)
                 );
 
@@ -113,6 +125,25 @@ class SqliteIngestionRegistry:
 
                 CREATE INDEX IF NOT EXISTS idx_ingestions_job_id
                     ON ingestions(job_id);
+
+                CREATE TABLE IF NOT EXISTS ingestion_stage_events (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL,
+                    stage_name TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    finished_at TEXT,
+                    duration_ms REAL,
+                    inputs_json TEXT NOT NULL,
+                    outputs_json TEXT NOT NULL,
+                    decision TEXT,
+                    warnings_json TEXT NOT NULL,
+                    error_code TEXT,
+                    error_message TEXT
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_stage_events_job_id
+                    ON ingestion_stage_events(job_id, event_id);
                 """
             )
             columns = {
@@ -126,6 +157,16 @@ class SqliteIngestionRegistry:
                     ADD COLUMN document_status TEXT NOT NULL DEFAULT 'indexing'
                     """
                 )
+            for column, definition in (
+                ("current_stage", "TEXT"),
+                ("point_count", "INTEGER"),
+                ("error_message", "TEXT"),
+                ("failed_stage", "TEXT"),
+            ):
+                if column not in columns:
+                    connection.execute(
+                        f"ALTER TABLE ingestions ADD COLUMN {column} {definition}"
+                    )
 
     def _accept_sync(
         self,
@@ -184,8 +225,9 @@ class SqliteIngestionRegistry:
                 INSERT INTO ingestions (
                     content_hash, pipeline_fingerprint, document_id, version_id,
                     job_id, filename, content_type, size_bytes, page_count,
-                    content, document_status, status, progress_percent, error_code
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    content, document_status, status, progress_percent, error_code,
+                    current_stage, point_count, error_message, failed_stage
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     *identity,
@@ -200,6 +242,10 @@ class SqliteIngestionRegistry:
                     receipt.status.value,
                     JobStatus.QUEUED.value,
                     0,
+                    None,
+                    None,
+                    None,
+                    None,
                     None,
                 ),
             )
@@ -220,7 +266,12 @@ class SqliteIngestionRegistry:
                 "SELECT * FROM ingestions WHERE job_id = ?",
                 (job_id,),
             ).fetchone()
-        return self._job_from_row(row) if row is not None else None
+            if row is None:
+                return None
+            return self._job_from_row(
+                row,
+                self._stage_events_sync(connection, job_id),
+            )
 
     def _get_staged_sync(self, job_id: str) -> PreparedIngestion | None:
         with self._connect() as connection:
@@ -247,18 +298,112 @@ class SqliteIngestionRegistry:
             cursor = connection.execute(
                 """
                 UPDATE ingestions
-                SET status = ?, progress_percent = ?, error_code = ?
+                SET status = ?, progress_percent = ?, error_code = ?,
+                    current_stage = ?, point_count = ?, error_message = ?,
+                    failed_stage = ?
                 WHERE job_id = ?
                 """,
                 (
                     snapshot.status.value,
                     snapshot.progress_percent,
                     snapshot.error_code,
+                    snapshot.current_stage,
+                    snapshot.point_count,
+                    snapshot.error_message,
+                    snapshot.failed_stage,
                     snapshot.job_id,
                 ),
             )
             if cursor.rowcount != 1:
                 raise KeyError(f"unknown job: {snapshot.job_id}")
+
+    def _record_stage_event_sync(self, job_id: str, event: StageEvent) -> None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO ingestion_stage_events (
+                    job_id, stage_name, status, started_at, finished_at,
+                    duration_ms, inputs_json, outputs_json, decision,
+                    warnings_json, error_code, error_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    job_id,
+                    event.name,
+                    event.status.value,
+                    event.started_at.isoformat(),
+                    event.finished_at.isoformat() if event.finished_at else None,
+                    event.duration_ms,
+                    json.dumps(event.inputs or {}, sort_keys=True),
+                    json.dumps(event.outputs or {}, sort_keys=True),
+                    event.decision,
+                    json.dumps(list(event.warnings), ensure_ascii=False),
+                    event.error_code,
+                    event.error_message,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("stage event was not persisted")
+            output_points = (event.outputs or {}).get("points")
+            connection.execute(
+                """
+                UPDATE ingestions
+                SET current_stage = ?,
+                    point_count = COALESCE(?, point_count),
+                    error_code = COALESCE(?, error_code),
+                    error_message = COALESCE(?, error_message),
+                    failed_stage = CASE WHEN ? = 'failed' THEN ? ELSE failed_stage END
+                WHERE job_id = ?
+                """,
+                (
+                    event.name,
+                    int(output_points)
+                    if isinstance(output_points, (int, float))
+                    else None,
+                    event.error_code,
+                    event.error_message,
+                    event.status.value,
+                    event.name,
+                    job_id,
+                ),
+            )
+
+    @staticmethod
+    def _stage_events_sync(
+        connection: sqlite3.Connection,
+        job_id: str,
+    ) -> tuple[StageEvent, ...]:
+        rows = connection.execute(
+            """
+            SELECT stage_name, status, started_at, finished_at, duration_ms,
+                   inputs_json, outputs_json, decision, warnings_json,
+                   error_code, error_message
+            FROM ingestion_stage_events
+            WHERE job_id = ?
+            ORDER BY event_id
+            """,
+            (job_id,),
+        ).fetchall()
+        latest: dict[str, StageEvent] = {}
+        for row in rows:
+            latest[row["stage_name"]] = StageEvent(
+                name=row["stage_name"],
+                status=StageStatus(row["status"]),
+                started_at=datetime.fromisoformat(row["started_at"]),
+                finished_at=(
+                    datetime.fromisoformat(row["finished_at"])
+                    if row["finished_at"]
+                    else None
+                ),
+                duration_ms=row["duration_ms"],
+                inputs=json.loads(row["inputs_json"]),
+                outputs=json.loads(row["outputs_json"]),
+                decision=row["decision"],
+                warnings=tuple(json.loads(row["warnings_json"])),
+                error_code=row["error_code"],
+                error_message=row["error_message"],
+            )
+        return tuple(latest.values())
 
     def _set_document_status_sync(
         self,
@@ -304,13 +449,22 @@ class SqliteIngestionRegistry:
         )
 
     @staticmethod
-    def _job_from_row(row: sqlite3.Row) -> JobSnapshot:
+    def _job_from_row(
+        row: sqlite3.Row,
+        stages: tuple[StageEvent, ...] = (),
+    ) -> JobSnapshot:
         return JobSnapshot(
             job_id=row["job_id"],
             document_id=row["document_id"],
             status=JobStatus(row["status"]),
             progress_percent=row["progress_percent"],
             error_code=row["error_code"],
+            current_stage=row["current_stage"],
+            stages=stages,
+            page_count=row["page_count"],
+            point_count=row["point_count"],
+            error_message=row["error_message"],
+            failed_stage=row["failed_stage"],
         )
 
     def _connect(self) -> sqlite3.Connection:

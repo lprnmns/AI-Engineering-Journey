@@ -139,6 +139,24 @@ def test_worker_stages_verifies_and_activates_a_version() -> None:
     assert snapshot.status.value == "succeeded"
     assert snapshot.progress_percent == 100
     assert snapshot.error_code is None
+    assert snapshot.current_stage == "complete"
+    assert [stage.name for stage in snapshot.stages] == [
+        "validate",
+        "inspect",
+        "extract_and_chunk",
+        "embed_dense",
+        "embed_sparse",
+        "stage_qdrant",
+        "verify",
+        "activate",
+        "complete",
+    ]
+    validate_stage = snapshot.stages[0]
+    assert validate_stage.status.value == "succeeded"
+    assert validate_stage.inputs == {"bytes": prepared.upload.size_bytes, "pages": 1}
+    assert validate_stage.outputs == {"bytes": prepared.upload.size_bytes, "pages": 1}
+    assert validate_stage.duration_ms is not None
+    assert snapshot.point_count == 2
     completed_receipt = asyncio.run(registry.accept(prepared, "worker-1"))
     assert completed_receipt.status.value == "active"
     assert store.client.count(store.collection_name, exact=True).count == 2
@@ -176,6 +194,11 @@ def test_worker_marks_empty_pdf_text_as_failed_without_indexing() -> None:
 
     assert snapshot.status.value == "failed"
     assert snapshot.error_code == "DOCUMENT_PARSE_FAILED"
+    assert snapshot.current_stage == "extract_and_chunk"
+    assert snapshot.failed_stage == "extract_and_chunk"
+    assert snapshot.stages[-1].status.value == "failed"
+    assert snapshot.stages[-1].inputs == {"pages": 1}
+    assert snapshot.stages[-1].error_message == "PDF contains no selectable text"
     failed_receipt = asyncio.run(registry.accept(prepared, "worker-empty"))
     assert failed_receipt.status.value == "failed"
     assert not store.client.collection_exists("worker_empty_test")

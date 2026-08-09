@@ -5,14 +5,15 @@ replaced by durable document/job persistence before production deployment.
 """
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from ...domain.entities import DocumentStatus, JobStatus
+from ...domain.entities import DocumentStatus, JobStatus, StageStatus
 from ...domain.errors import ErrorCode, ServiceError
 from ...domain.ingestion import (
     IngestionReceipt,
     JobSnapshot,
     PreparedIngestion,
+    StageEvent,
     create_ingestion_receipt,
     normalize_idempotency_key,
 )
@@ -35,6 +36,7 @@ class InMemoryIngestionRegistry:
         self._idempotency_identity: dict[str, tuple[str, str]] = {}
         self._jobs: dict[str, JobSnapshot] = {}
         self._content_by_job: dict[str, bytes] = {}
+        self._stage_events: dict[str, list[StageEvent]] = {}
 
     async def accept(
         self,
@@ -83,8 +85,10 @@ class InMemoryIngestionRegistry:
                 status=JobStatus.QUEUED,
                 progress_percent=0,
                 error_code=None,
+                page_count=prepared.pdf.page_count,
             )
             self._content_by_job[receipt.job_id] = prepared.content
+            self._stage_events[receipt.job_id] = []
             return receipt
 
     async def get_job(self, job_id: str) -> JobSnapshot | None:
@@ -115,6 +119,36 @@ class InMemoryIngestionRegistry:
             if snapshot.job_id not in self._jobs:
                 raise KeyError(f"unknown job: {snapshot.job_id}")
             self._jobs[snapshot.job_id] = snapshot
+
+    async def record_stage_event(self, job_id: str, event: StageEvent) -> None:
+        """Append a transition while exposing the latest stage snapshot."""
+
+        async with self._lock:
+            if job_id not in self._jobs:
+                raise KeyError(f"unknown job: {job_id}")
+            history = self._stage_events.setdefault(job_id, [])
+            history.append(event)
+            latest: dict[str, StageEvent] = {item.name: item for item in history}
+            current = self._jobs[job_id]
+            outputs = event.outputs or {}
+            point_count = outputs.get("points")
+            self._jobs[job_id] = replace(
+                current,
+                current_stage=event.name,
+                stages=tuple(latest.values()),
+                point_count=(
+                    int(point_count)
+                    if isinstance(point_count, (int, float))
+                    else current.point_count
+                ),
+                error_code=event.error_code or current.error_code,
+                error_message=event.error_message or current.error_message,
+                failed_stage=(
+                    event.name
+                    if event.status is StageStatus.FAILED
+                    else current.failed_stage
+                ),
+            )
 
     async def set_document_status(
         self,

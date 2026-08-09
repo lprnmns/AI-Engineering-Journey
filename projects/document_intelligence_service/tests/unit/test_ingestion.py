@@ -1,13 +1,14 @@
 """Unit tests for Day 2 ingestion identity and validation."""
 
 import asyncio
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 
-from projects.document_intelligence_service.app.domain.entities import JobStatus
+from projects.document_intelligence_service.app.domain.entities import JobStatus, StageStatus
 from projects.document_intelligence_service.app.application.ingestion_service import (
     IngestionPreparationService,
 )
@@ -19,6 +20,7 @@ from projects.document_intelligence_service.app.domain.ingestion import (
     IngestionLimits,
     JobSnapshot,
     PipelineConfig,
+    StageEvent,
     compute_content_hash,
     compute_pipeline_fingerprint,
     validate_upload_metadata,
@@ -192,6 +194,22 @@ def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> Non
             )
         )
     )
+    started_at = datetime.now(timezone.utc)
+    asyncio.run(
+        first_registry.record_stage_event(
+            first_receipt.job_id,
+            StageEvent(
+                name="inspect",
+                status=StageStatus.SUCCEEDED,
+                started_at=started_at,
+                finished_at=started_at,
+                duration_ms=1.5,
+                inputs={"bytes": prepared.upload.size_bytes},
+                outputs={"pages": prepared.pdf.page_count},
+                decision="accepted",
+            ),
+        )
+    )
 
     restarted_registry = SqliteIngestionRegistry(database_path)
     restored = asyncio.run(restarted_registry.get_job(first_receipt.job_id))
@@ -205,5 +223,18 @@ def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> Non
     assert restored is not None
     assert restored.status is JobStatus.RUNNING
     assert restored.progress_percent == 35
+    assert restored.current_stage == "inspect"
+    assert restored.stages == (
+        StageEvent(
+            name="inspect",
+            status=StageStatus.SUCCEEDED,
+            started_at=started_at,
+            finished_at=started_at,
+            duration_ms=1.5,
+            inputs={"bytes": prepared.upload.size_bytes},
+            outputs={"pages": prepared.pdf.page_count},
+            decision="accepted",
+        ),
+    )
     assert restored_content == content
     assert retried == first_receipt

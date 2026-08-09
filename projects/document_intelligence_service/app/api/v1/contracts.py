@@ -14,6 +14,7 @@ from ...domain.entities import (
     JobStatus,
     NoAnswerReason,
     RetrievalMode,
+    StageStatus,
 )
 from ...domain.evidence_validation import EvidenceWarningCode
 
@@ -92,6 +93,28 @@ class JobResponse(BaseModel):
     progress_percent: int = Field(ge=0, le=100)
     error_code: str | None
     request_id: str
+    current_stage: str | None = None
+    stages: list["StageEventResponse"] = Field(default_factory=list)
+    page_count: int | None = Field(default=None, ge=1)
+    point_count: int | None = Field(default=None, ge=0)
+    error_message: str | None = None
+    failed_stage: str | None = None
+
+
+class StageEventResponse(BaseModel):
+    """Public, non-sensitive ingestion timeline entry."""
+
+    name: str
+    status: StageStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    duration_ms: float | None = Field(default=None, ge=0)
+    inputs: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
+    outputs: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
+    decision: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    error_code: str | None = None
+    error_message: str | None = None
 
 
 class SourceResponse(BaseModel):

@@ -258,6 +258,12 @@ def test_upload_returns_202_and_job_can_be_read() -> None:
         "progress_percent": 0,
         "error_code": None,
         "request_id": "job-contract-1",
+        "current_stage": None,
+        "stages": [],
+        "page_count": 1,
+        "point_count": None,
+        "error_message": None,
+        "failed_stage": None,
     }
 
 

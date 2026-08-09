@@ -10,6 +10,7 @@ from ..domain.ingestion import (
     JobSnapshot,
     PdfInspection,
     PreparedIngestion,
+    StageEvent,
     VersionVerification,
 )
 from ..domain.generation import GeneratedAnswer
@@ -196,6 +197,11 @@ class IngestionRegistry(Protocol):
 
     async def update_job(self, snapshot: JobSnapshot) -> None:
         """Persist a worker progress transition."""
+
+        ...
+
+    async def record_stage_event(self, job_id: str, event: StageEvent) -> None:
+        """Persist a stage transition and expose its latest snapshot."""
 
         ...
 

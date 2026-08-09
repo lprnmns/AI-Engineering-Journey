@@ -1,12 +1,33 @@
 """Framework-independent ingestion identities and validation rules."""
 
 from dataclasses import dataclass
+from datetime import datetime
 import hashlib
 import json
 from uuid import uuid4
 
 from .errors import ErrorCode, ServiceError
-from .entities import DocumentStatus, JobStatus
+from .entities import DocumentStatus, JobStatus, StageStatus
+
+StageValue = str | int | float | bool | None
+StageData = dict[str, StageValue]
+
+
+@dataclass(frozen=True, slots=True)
+class StageEvent:
+    """Safe, structured snapshot of one ingestion stage."""
+
+    name: str
+    status: StageStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    duration_ms: float | None = None
+    inputs: StageData | None = None
+    outputs: StageData | None = None
+    decision: str | None = None
+    warnings: tuple[str, ...] = ()
+    error_code: str | None = None
+    error_message: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +151,12 @@ class JobSnapshot:
     status: JobStatus
     progress_percent: int
     error_code: str | None
+    current_stage: str | None = None
+    stages: tuple[StageEvent, ...] = ()
+    page_count: int | None = None
+    point_count: int | None = None
+    error_message: str | None = None
+    failed_stage: str | None = None
 
 
 def normalize_idempotency_key(value: str | None) -> str | None:

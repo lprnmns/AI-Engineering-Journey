@@ -21,6 +21,15 @@ class JobStatus(StrEnum):
     FAILED = "failed"
 
 
+class StageStatus(StrEnum):
+    """Lifecycle state of one ingestion pipeline stage."""
+
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
 class Decision(StrEnum):
     """Final answerability decision for a query."""
 
