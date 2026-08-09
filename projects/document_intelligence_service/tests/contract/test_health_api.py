@@ -184,9 +184,11 @@ def test_rest_contract_paths_are_published_in_openapi() -> None:
     app = create_app(health_service=HealthService(()))
 
     assert sorted(app.openapi()["paths"]) == [
-        "/v1/documents",
-        "/v1/documents/{document_id}",
-        "/v1/health/live",
+            "/v1/documents",
+            "/v1/documents/{document_id}",
+            "/v1/evaluations/runs",
+            "/v1/evaluations/runs/{run_id}",
+            "/v1/health/live",
         "/v1/health/ready",
         "/v1/health/startup",
         "/v1/jobs/{job_id}",

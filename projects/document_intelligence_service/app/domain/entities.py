@@ -21,6 +21,15 @@ class JobStatus(StrEnum):
     FAILED = "failed"
 
 
+class EvaluationRunStatus(StrEnum):
+    """Lifecycle state of an offline evaluation run."""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
 class StageStatus(StrEnum):
     """Lifecycle state of one ingestion pipeline stage."""
 

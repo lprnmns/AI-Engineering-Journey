@@ -345,6 +345,67 @@ def test_document_catalog_returns_safe_not_found_and_cursor_errors() -> None:
     assert invalid_cursor.json()["error"]["code"] == "INVALID_REQUEST"
 
 
+def test_evaluation_run_contract_returns_run_and_list_state() -> None:
+    from projects.document_intelligence_service.app.application.evaluation_service import (
+        EvaluationExecution,
+        EvaluationService,
+    )
+    from projects.document_intelligence_service.app.domain.entities import RetrievalMode
+    from projects.document_intelligence_service.app.infrastructure.storage.in_memory_evaluation_registry import (
+        InMemoryEvaluationRegistry,
+    )
+
+    class FakeExecutor:
+        def execute(self, spec: object) -> EvaluationExecution:
+            del spec
+            return EvaluationExecution(
+                case_count=2,
+                metrics={"recall_at_5": 0.5},
+                raw={"observations": []},
+            )
+
+    service = EvaluationService(
+        registry=InMemoryEvaluationRegistry(),
+        executor=FakeExecutor(),
+        artifact_dir="/tmp/document-intelligence-api-eval",
+        repo_root="/tmp",
+    )
+    app = create_app(
+        health_service=HealthService(()),
+        evaluation_service=service,
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/evaluations/runs",
+            {
+                "evaluation_type": "retrieval",
+                "dataset": "mentor_program_pdf_rag_golden_v1",
+                "split": "test",
+                "mode": RetrievalMode.HYBRID.value,
+                "top_k": 5,
+            },
+        )
+    )
+
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["status"] == "queued"
+
+    completed = asyncio.run(service.execute_run(payload["run_id"]))
+    assert completed.status.value == "succeeded"
+    assert completed.case_count == 2
+    assert completed.metrics == {"recall_at_5": 0.5}
+
+    detail = asyncio.run(get(app, f"/v1/evaluations/runs/{payload['run_id']}"))
+    assert detail.status_code == 200
+    assert detail.json()["artifact_path"]
+    listing = asyncio.run(get(app, "/v1/evaluations/runs"))
+    assert listing.status_code == 200
+    assert listing.json()["items"][0]["run_id"] == payload["run_id"]
+
+
 async def request_with_method(
     app: FastAPI,
     method: str,

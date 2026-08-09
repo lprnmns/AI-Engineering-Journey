@@ -5,12 +5,14 @@ connected. They intentionally contain no Qdrant, embedding or Ollama types.
 """
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ...domain.entities import (
     Decision,
     DocumentStatus,
+    EvaluationRunStatus,
     JobStatus,
     NoAnswerReason,
     RetrievalMode,
@@ -115,6 +117,47 @@ class StageEventResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     error_code: str | None = None
     error_message: str | None = None
+
+
+class EvaluationRunRequest(BaseModel):
+    """Bounded configuration for one offline golden-set evaluation."""
+
+    evaluation_type: Literal["retrieval", "answerability"] = "retrieval"
+    dataset: Literal["mentor_program_pdf_rag_golden_v1"] = (
+        "mentor_program_pdf_rag_golden_v1"
+    )
+    split: Literal["all", "development", "validation", "test"] = "all"
+    mode: RetrievalMode = RetrievalMode.HYBRID
+    top_k: int = Field(default=5, ge=1, le=20)
+    reranker_enabled: bool = False
+
+
+class EvaluationRunResponse(BaseModel):
+    """Observable state and metrics of one evaluation run."""
+
+    run_id: str
+    status: EvaluationRunStatus
+    evaluation_type: str
+    dataset: str
+    split: str
+    mode: RetrievalMode
+    top_k: int
+    reranker_enabled: bool
+    requested_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    case_count: int | None = Field(default=None, ge=0)
+    metrics: dict[str, int | float | str | bool | None] | None = None
+    artifact_path: str | None = None
+    git_sha: str | None = None
+    error_code: str | None = None
+    error_message: str | None = None
+
+
+class EvaluationRunListResponse(BaseModel):
+    """Bounded evaluation run listing."""
+
+    items: list[EvaluationRunResponse]
 
 
 class SourceResponse(BaseModel):

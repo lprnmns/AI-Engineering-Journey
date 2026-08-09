@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -9,12 +10,17 @@ from fastapi.exceptions import RequestValidationError
 from .api.errors import service_error_handler, validation_error_handler
 from .api.v1.health import router as health_router
 from .api.v1.documents import router as documents_router
+from .api.v1.evaluations import router as evaluations_router
 from .api.v1.jobs import router as jobs_router
 from .api.v1.queries import router as queries_router
 from .api.v1.search import router as search_router
 from .application.health_service import HealthService
 from .application.chunking_service import DocumentChunkingService
 from .application.document_service import DocumentService
+from .application.evaluation_service import (
+    EvaluationService,
+    OfflineEvaluationExecutor,
+)
 from .application.ingestion_service import (
     IngestionPreparationService,
     IngestionService,
@@ -39,6 +45,9 @@ from .infrastructure.ollama.answer_generator import OllamaAnswerGenerator
 from .infrastructure.qdrant.schema import QdrantSchema
 from .infrastructure.storage.in_memory_registry import InMemoryIngestionRegistry
 from .infrastructure.storage.sqlite_registry import SqliteIngestionRegistry
+from .infrastructure.storage.in_memory_evaluation_registry import (
+    InMemoryEvaluationRegistry,
+)
 from qdrant_client import QdrantClient
 from .observability.request_id import RequestIdMiddleware
 from .settings import Settings
@@ -85,6 +94,32 @@ def build_document_service(
             QdrantClient(url=str(settings.qdrant_url)),
             QdrantSchema(),
         ),
+    )
+
+
+def build_evaluation_service(
+    settings: Settings,
+    *,
+    retrieval_service: RetrievalService | None = None,
+) -> EvaluationService:
+    """Wire golden-set evaluation to the optional live retrieval adapter."""
+
+    root = Path(__file__).resolve().parents[3]
+    return EvaluationService(
+        registry=InMemoryEvaluationRegistry(),
+        executor=OfflineEvaluationExecutor(
+            retrieval_service=retrieval_service,
+            answerability=AnswerabilityPolicy(
+                min_dense_score=settings.answerability_min_dense_score,
+                min_sparse_score=settings.answerability_min_sparse_score,
+                min_rerank_score=settings.answerability_min_rerank_score,
+                min_margin=settings.answerability_min_margin,
+                min_coverage=settings.answerability_min_coverage,
+            ),
+            repo_root=root,
+        ),
+        artifact_dir=root / settings.evaluation_artifact_dir,
+        repo_root=root,
     )
 
 
@@ -204,6 +239,7 @@ def create_app(
     ingestion_service: IngestionService | None = None,
     ingestion_worker: IngestionWorker | None = None,
     document_service: DocumentService | None = None,
+    evaluation_service: EvaluationService | None = None,
     retrieval_service: RetrievalService | None = None,
     query_service: QueryService | None = None,
 ) -> FastAPI:
@@ -213,6 +249,7 @@ def create_app(
     resolved_health_service = health_service or build_health_service(resolved_settings)
     resolved_ingestion_worker = ingestion_worker
     resolved_document_service = document_service
+    resolved_evaluation_service = evaluation_service
     resolved_retrieval_service = retrieval_service
     resolved_query_service = query_service
     if ingestion_service is None:
@@ -247,11 +284,21 @@ def create_app(
                 resolved_settings,
                 retrieval_service=resolved_retrieval_service,
             )
+        if resolved_evaluation_service is None:
+            resolved_evaluation_service = build_evaluation_service(
+                resolved_settings,
+                retrieval_service=resolved_retrieval_service,
+            )
     else:
         resolved_ingestion_service = ingestion_service
         if resolved_document_service is None:
             resolved_document_service = DocumentService(
                 registry=ingestion_service.registry,
+            )
+        if resolved_evaluation_service is None:
+            resolved_evaluation_service = build_evaluation_service(
+                resolved_settings,
+                retrieval_service=resolved_retrieval_service,
             )
         if (
             resolved_query_service is None
@@ -268,6 +315,7 @@ def create_app(
         application.state.ingestion_service = resolved_ingestion_service
         application.state.ingestion_worker = resolved_ingestion_worker
         application.state.document_service = resolved_document_service
+        application.state.evaluation_service = resolved_evaluation_service
         application.state.retrieval_service = resolved_retrieval_service
         application.state.query_service = resolved_query_service
         resolved_health_service.mark_started()
@@ -288,10 +336,12 @@ def create_app(
     application.state.ingestion_service = resolved_ingestion_service
     application.state.ingestion_worker = resolved_ingestion_worker
     application.state.document_service = resolved_document_service
+    application.state.evaluation_service = resolved_evaluation_service
     application.state.retrieval_service = resolved_retrieval_service
     application.state.query_service = resolved_query_service
     application.include_router(health_router, prefix="/v1")
     application.include_router(documents_router, prefix="/v1")
+    application.include_router(evaluations_router, prefix="/v1")
     application.include_router(jobs_router, prefix="/v1")
     application.include_router(queries_router, prefix="/v1")
     application.include_router(search_router, prefix="/v1")

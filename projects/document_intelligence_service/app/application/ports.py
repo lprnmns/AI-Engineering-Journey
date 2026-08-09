@@ -15,6 +15,7 @@ from ..domain.ingestion import (
     StageEvent,
     VersionVerification,
 )
+from ..domain.evaluation import EvaluationRunSnapshot
 from ..domain.generation import GeneratedAnswer
 from ..domain.chunks import ChildChunk, PageText
 from ..domain.retrieval import RetrievedChunk
@@ -187,6 +188,7 @@ class IngestionRegistry(Protocol):
 
         ...
 
+
     async def get_job(self, job_id: str) -> JobSnapshot | None:
         """Return one job snapshot, if it exists."""
 
@@ -235,5 +237,29 @@ class IngestionRegistry(Protocol):
         status: DocumentStatus,
     ) -> None:
         """Persist the lifecycle of one version independently from its job."""
+
+        ...
+
+
+class EvaluationRegistry(Protocol):
+    """Port for bounded evaluation run metadata."""
+
+    async def create(self, snapshot: EvaluationRunSnapshot) -> None:
+        """Persist a newly queued run."""
+
+        ...
+
+    async def get(self, run_id: str) -> EvaluationRunSnapshot | None:
+        """Return one evaluation run, if known."""
+
+        ...
+
+    async def update(self, snapshot: EvaluationRunSnapshot) -> None:
+        """Replace one run state transition."""
+
+        ...
+
+    async def list(self, limit: int) -> tuple[EvaluationRunSnapshot, ...]:
+        """Return the newest bounded run snapshots."""
 
         ...
