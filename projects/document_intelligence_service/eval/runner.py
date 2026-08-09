@@ -5,13 +5,17 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol, cast
 
+from ..app.application.query_service import assess_answerability
+from ..app.domain.answerability import AnswerabilityPolicy
 from ..app.domain.entities import RetrievalMode
 from ..app.domain.retrieval import RetrievedChunk, RetrievalResult
 from .contracts import EvidenceLike, GoldenCase
 from .metrics import (
     LatencyMetrics,
+    NoAnswerMetrics,
     RetrievalMetrics,
     evaluate_retrieval,
+    evaluate_no_answer,
     latency_metrics,
 )
 
@@ -56,6 +60,30 @@ class RetrievalBenchmarkRun:
     search_latency: LatencyMetrics
     rerank_latency: LatencyMetrics | None
     observations: tuple[RetrievalObservation, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerabilityObservation:
+    """Raw pre-LLM gate decision for one golden case."""
+
+    case_id: str
+    decision: str
+    reason: str | None
+    top_score: float | None
+    score_margin: float | None
+    coverage_ratio: float
+    total_ms: float
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerabilityBenchmarkRun:
+    """No-answer confusion metrics and gate latency."""
+
+    cases_run: int
+    warmup_count: int
+    metrics: NoAnswerMetrics
+    total_latency: LatencyMetrics
+    observations: tuple[AnswerabilityObservation, ...]
 
 
 def run_retrieval_benchmark(
@@ -131,5 +159,59 @@ def run_retrieval_benchmark(
             tuple(observation.search_ms for observation in observations)
         ),
         rerank_latency=latency_metrics(rerank_values) if rerank_values else None,
+        observations=tuple(observations),
+    )
+
+
+def run_answerability_benchmark(
+    *,
+    retrieval_service: RetrievalPort,
+    answerability: AnswerabilityPolicy,
+    cases: Sequence[GoldenCase],
+    mode: RetrievalMode,
+    top_k: int = 5,
+    warmup_questions: Sequence[str] = (),
+) -> AnswerabilityBenchmarkRun:
+    """Measure the live no-answer gate without calling an answer generator."""
+
+    if not cases:
+        raise ValueError("answerability benchmark needs at least one golden case")
+    for question in warmup_questions:
+        retrieval_service.search(question=question, mode=mode, top_k=top_k)
+
+    observations: list[AnswerabilityObservation] = []
+    predictions: dict[str, bool] = {}
+    for case in cases:
+        started = perf_counter()
+        retrieval = retrieval_service.search(
+            question=case.question,
+            mode=mode,
+            top_k=top_k,
+            document_ids=case.relevant_document_ids,
+        )
+        decision = assess_answerability(
+            question=case.question,
+            retrieval=retrieval,
+            answerability=answerability,
+        )
+        predictions[case.case_id] = decision.decision.value == "answered"
+        observations.append(
+            AnswerabilityObservation(
+                case_id=case.case_id,
+                decision=decision.decision.value,
+                reason=decision.reason.value if decision.reason is not None else None,
+                top_score=decision.top_score,
+                score_margin=decision.score_margin,
+                coverage_ratio=decision.coverage_ratio,
+                total_ms=(perf_counter() - started) * 1000,
+            )
+        )
+    return AnswerabilityBenchmarkRun(
+        cases_run=len(cases),
+        warmup_count=len(warmup_questions),
+        metrics=evaluate_no_answer(cases, predictions),
+        total_latency=latency_metrics(
+            tuple(observation.total_ms for observation in observations)
+        ),
         observations=tuple(observations),
     )

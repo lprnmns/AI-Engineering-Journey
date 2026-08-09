@@ -69,10 +69,10 @@ class QueryService:
             top_k=top_k,
             document_ids=document_ids,
         )
-        signals, score_kind = self._signals(question, retrieval)
-        gate = self._answerability.decide(
-            signals=signals,
-            score_kind=score_kind,
+        gate = assess_answerability(
+            question=question,
+            retrieval=retrieval,
+            answerability=self._answerability,
         )
         if gate.decision is Decision.NO_ANSWER:
             return QueryExecutionResult(
@@ -118,25 +118,7 @@ class QueryService:
     ) -> tuple[AnswerabilitySignals, str]:
         """Extract comparable score and coverage signals from retrieval trace."""
 
-        score_kind = self._score_kind(retrieval)
-        scores = tuple(
-            self._score_for(candidate, score_kind)
-            for candidate in retrieval.candidates
-        )
-        top_score = scores[0] if scores else None
-        margin = scores[0] - scores[1] if len(scores) > 1 else None
-        return (
-            AnswerabilitySignals(
-                evidence_count=len(retrieval.candidates),
-                top_score=top_score,
-                score_margin=margin,
-                coverage_ratio=self._coverage_ratio(
-                    question,
-                    retrieval.candidates,
-                ),
-            ),
-            score_kind,
-        )
+        return build_answerability_signals(question, retrieval)
 
     @staticmethod
     def _score_kind(retrieval: RetrievalResult) -> str:
@@ -180,3 +162,42 @@ class QueryService:
             for token in re.findall(r"\w+", candidate.text, flags=re.UNICODE)
         }
         return len(terms & evidence_terms) / len(terms)
+
+
+def assess_answerability(
+    *,
+    question: str,
+    retrieval: RetrievalResult,
+    answerability: AnswerabilityPolicy,
+) -> AnswerabilityDecision:
+    """Apply the pre-LLM gate to a previously captured retrieval result."""
+
+    signals, score_kind = build_answerability_signals(question, retrieval)
+    return answerability.decide(signals=signals, score_kind=score_kind)
+
+
+def build_answerability_signals(
+    question: str,
+    retrieval: RetrievalResult,
+) -> tuple[AnswerabilitySignals, str]:
+    """Build the same trace signals used by the live query path."""
+
+    score_kind = QueryService._score_kind(retrieval)
+    scores = tuple(
+        QueryService._score_for(candidate, score_kind)
+        for candidate in retrieval.candidates
+    )
+    top_score = scores[0] if scores else None
+    margin = scores[0] - scores[1] if len(scores) > 1 else None
+    return (
+        AnswerabilitySignals(
+            evidence_count=len(retrieval.candidates),
+            top_score=top_score,
+            score_margin=margin,
+            coverage_ratio=QueryService._coverage_ratio(
+                question,
+                retrieval.candidates,
+            ),
+        ),
+        score_kind,
+    )
