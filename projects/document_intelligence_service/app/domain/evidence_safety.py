@@ -43,7 +43,7 @@ class EvidenceSafetyPolicy:
             item_rules = tuple(
                 rule_name
                 for rule_name, pattern in _RULES
-                if pattern.search(_normalize(item.text))
+                if pattern.search(_normalize(item.context_text))
             )
             if item_rules:
                 blocked_sources.append(item.source_id)

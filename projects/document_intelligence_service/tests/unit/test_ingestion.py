@@ -72,6 +72,13 @@ def test_pipeline_fingerprint_changes_when_section_profile_changes() -> None:
     assert compute_pipeline_fingerprint(base) != compute_pipeline_fingerprint(mentor)
 
 
+def test_pipeline_fingerprint_does_not_reindex_for_query_reranker_change() -> None:
+    base = PipelineConfig(reranker_model="reranker-v1")
+    changed = PipelineConfig(reranker_model="reranker-v2")
+
+    assert compute_pipeline_fingerprint(base) == compute_pipeline_fingerprint(changed)
+
+
 def test_upload_metadata_validates_pdf_and_sanitizes_filename() -> None:
     metadata = validate_upload_metadata(
         content=make_pdf(),

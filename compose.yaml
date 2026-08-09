@@ -43,7 +43,10 @@ services:
       DIS_DEPENDENCY_TIMEOUT_SECONDS: "2.0"
       DIS_INGESTION_REGISTRY_BACKEND: sqlite
       DIS_INGESTION_DATABASE_PATH: /data/ingestions.sqlite3
-      DIS_SECTION_MARKER_PROFILE: mentor_program_v1
+      DIS_BM25_STATE_PATH: /data/bm25_state.json
+      # Generic PDFs stay document-level by default. Set this explicitly to
+      # mentor_program_v1 only when the uploaded family is the mentor PDF.
+      DIS_SECTION_MARKER_PROFILE: ${DIS_SECTION_MARKER_PROFILE:-none}
       DIS_RERANKER_ENABLED: "false"
       DIS_LLM_MODEL: gemma3:4b
       DIS_LLM_TIMEOUT_SECONDS: "120"

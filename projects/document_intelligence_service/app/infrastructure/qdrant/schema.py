@@ -12,7 +12,7 @@ class QdrantSchemaError(RuntimeError):
 class QdrantSchema:
     """Expected dense/sparse vectors and indexed payload fields."""
 
-    collection_name: str = "document_chunks_v1"
+    collection_name: str = "document_chunks_v2_bm25"
     dense_name: str = "dense"
     sparse_name: str = "sparse"
     dense_size: int = 384
@@ -84,6 +84,9 @@ class QdrantSchemaManager:
             raise QdrantSchemaError("existing dense vector dimension does not match")
         if not isinstance(sparse_config, dict) or self._schema.sparse_name not in sparse_config:
             raise QdrantSchemaError("existing collection is missing the sparse vector")
+        sparse_params = sparse_config[self._schema.sparse_name]
+        if sparse_params.modifier is not models.Modifier.IDF:
+            raise QdrantSchemaError("existing sparse vector must use Qdrant IDF for BM25")
 
     def collection_info(self) -> models.CollectionInfo:
         """Return validated collection information for startup diagnostics."""

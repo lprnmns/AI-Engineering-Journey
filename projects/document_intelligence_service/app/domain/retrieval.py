@@ -23,6 +23,13 @@ class RetrievedChunk:
     rerank_score: float | None = None
     dense_score: float | None = None
     sparse_score: float | None = None
+    parent_text: str | None = None
+
+    @property
+    def context_text(self) -> str:
+        """Return expanded parent context when the adapter supplied it."""
+
+        return self.parent_text or self.text
 
 
 @dataclass(frozen=True, slots=True)

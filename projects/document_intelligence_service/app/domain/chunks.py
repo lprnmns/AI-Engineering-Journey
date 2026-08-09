@@ -55,6 +55,7 @@ class ChildChunk:
     page_end: int
     token_count_estimate: int
     text_hash: str
+    parent_text: str = ""
 
 
 def normalize_page_text(text: str) -> str:
@@ -173,6 +174,7 @@ def chunk_parent_section(
                 page_end=parent.page_end,
                 token_count_estimate=len(text.split()),
                 text_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                parent_text=parent.text,
             )
         )
         if start + max_sentences >= len(sentences):

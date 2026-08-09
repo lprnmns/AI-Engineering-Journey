@@ -55,7 +55,7 @@ class PipelineConfig:
     chunk_overlap_sentences: int = 1
     section_marker_profile: str = "none"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    sparse_encoder: str = "hashing_tf_v1"
+    sparse_encoder: str = "bm25_qdrant_idf_v2"
     sparse_encoder_version: str = "1"
     reranker_model: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
     vector_schema_version: str = "1"
@@ -75,7 +75,6 @@ class PipelineConfig:
             "embedding_model": self.embedding_model,
             "sparse_encoder": self.sparse_encoder,
             "sparse_encoder_version": self.sparse_encoder_version,
-            "reranker_model": self.reranker_model,
             "vector_schema_version": self.vector_schema_version,
         }
 

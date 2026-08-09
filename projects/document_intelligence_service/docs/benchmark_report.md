@@ -77,7 +77,11 @@ LLM: çağrılmadı
 | Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 844.7 ms | 1224.6 ms |
 | Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 842.9 ms | 1128.5 ms |
 
-Sparse/BM25 mode bu sürümde ayrı bir klasik BM25 motoru değil; deterministic `HashingSparseEncoder` + Qdrant IDF sparse search'tür. Bu nedenle tablo “BM25 modu” olarak okunmalı, Türkçe morfoloji çözülmüş tam BM25 iddiası olarak değil.
+Sparse/BM25 mode artık exact vocabulary kullanan `BM25SparseEncoder` kullanır.
+BM25 term-frequency saturation encoder'da, corpus-level IDF Qdrant'ın IDF
+modifier'ında uygulanır. Online index'te eski vektörleri stale yapmamak için
+`b=0` seçilmiştir; bu tam BM25'in açıkça belgelenmiş bir online varyantıdır.
+Türkçe morfoloji yine ayrı bir tokenizer/lemmatizer kapsamıdır.
 
 ### Yorum
 

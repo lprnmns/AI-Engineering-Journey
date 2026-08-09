@@ -13,7 +13,7 @@ from projects.document_intelligence_service.app.infrastructure.ollama.answer_gen
 )
 
 
-def evidence(source_id: str, text: str) -> RetrievedChunk:
+def evidence(source_id: str, text: str, parent_text: str | None = None) -> RetrievedChunk:
     """Create one compact evidence fixture."""
 
     return RetrievedChunk(
@@ -27,6 +27,7 @@ def evidence(source_id: str, text: str) -> RetrievedChunk:
         page_end=1,
         score=0.8,
         rank=1,
+        parent_text=parent_text,
     )
 
 
@@ -111,3 +112,32 @@ def test_adapter_rejects_empty_evidence_before_http() -> None:
             await generator.generate(question="Soru", evidence=())
 
     asyncio.run(scenario())
+
+
+def test_adapter_uses_parent_context_for_generation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "projects.document_intelligence_service.app.infrastructure.ollama.answer_generator.httpx.AsyncClient",
+        FakeAsyncClient,
+    )
+    generator = OllamaAnswerGenerator(base_url="http://127.0.0.1:11434")
+
+    async def scenario() -> None:
+        await generator.generate(
+            question="Soru",
+            evidence=(
+                evidence(
+                    "source-1",
+                    "child evidence",
+                    parent_text="parent evidence with surrounding context",
+                ),
+            ),
+        )
+
+    asyncio.run(scenario())
+    assert FakeAsyncClient.last_payload is not None
+    prompt = FakeAsyncClient.last_payload["prompt"]
+    assert isinstance(prompt, str)
+    assert "parent evidence with surrounding context" in prompt
+    assert "child evidence" not in prompt

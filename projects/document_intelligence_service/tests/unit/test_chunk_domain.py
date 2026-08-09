@@ -76,6 +76,7 @@ def test_chunk_parent_section_keeps_overlap_and_parent_metadata() -> None:
     assert chunks[0].text == "Birinci bilgi. İkinci bilgi."
     assert chunks[1].text == "İkinci bilgi. Üçüncü bilgi."
     assert chunks[0].parent_id == parent.parent_id
+    assert chunks[0].parent_text == parent.text
     assert chunks[0].page_start == 2
     assert chunks[0].page_end == 3
     assert len(chunks[0].text_hash) == 64

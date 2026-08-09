@@ -96,7 +96,7 @@ class OllamaAnswerGenerator:
         sections: list[str] = []
         remaining = self._max_evidence_chars
         for index, item in enumerate(evidence, start=1):
-            text = item.text[:remaining]
+            text = item.context_text[:remaining]
             if not text:
                 break
             sections.append(

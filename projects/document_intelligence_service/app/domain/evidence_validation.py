@@ -66,7 +66,7 @@ def validate_answer_against_evidence(
     if not answer_mentions:
         return EvidenceValidationResult(warnings=())
 
-    evidence_text = "\n".join(item.text for item in evidence)
+    evidence_text = "\n".join(item.context_text for item in evidence)
     evidence_values = {
         mention.value for mention in _extract_numeric_mentions(evidence_text)
     }

@@ -8,6 +8,7 @@ import subprocess
 
 from ..app.domain.answerability import AnswerabilityPolicy
 from ..app.domain.entities import RetrievalMode
+from ..app.domain.ingestion import PipelineConfig
 from ..app.main import build_retrieval_service
 from ..app.settings import Settings
 from .contracts import load_jsonl, validate_case_set
@@ -83,6 +84,8 @@ def main() -> None:
             "min_margin": policy.min_margin,
             "min_coverage": policy.min_coverage,
         },
+        "qdrant_collection": "document_chunks_v2_bm25",
+        "sparse_encoder": PipelineConfig().sparse_encoder,
         "run": asdict(run),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

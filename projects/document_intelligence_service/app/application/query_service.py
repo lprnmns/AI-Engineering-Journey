@@ -245,7 +245,7 @@ class QueryService:
         evidence_terms = {
             token.casefold()
             for candidate in candidates
-            for token in re.findall(r"\w+", candidate.text, flags=re.UNICODE)
+            for token in re.findall(r"\w+", candidate.context_text, flags=re.UNICODE)
         }
         return len(terms & evidence_terms) / len(terms)
 

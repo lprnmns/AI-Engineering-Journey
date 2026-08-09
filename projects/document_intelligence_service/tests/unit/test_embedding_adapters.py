@@ -1,6 +1,7 @@
 """Unit tests for lazy dense and deterministic sparse embedding adapters."""
 
 from projects.document_intelligence_service.app.infrastructure.embeddings.sparse import (
+    BM25SparseEncoder,
     HashingSparseEncoder,
 )
 
@@ -25,3 +26,38 @@ def test_hashing_sparse_encoder_counts_repeated_terms() -> None:
 
     assert repeated.indices == single.indices
     assert repeated.values[0] > single.values[0]
+
+
+def test_bm25_encoder_fits_exact_vocabulary_and_survives_restart(tmp_path) -> None:
+    state_path = tmp_path / "bm25.json"
+    encoder = BM25SparseEncoder(state_path=state_path)
+    encoder.fit_documents(
+        (
+            "Qdrant belge araması",
+            "Qdrant vector store",
+            "Ollama model servisi",
+        )
+    )
+
+    document = encoder.embed_documents(("Qdrant Qdrant belge araması",))[0]
+    query = encoder.embed_query("Qdrant araması bilinmeyen")
+    restored = BM25SparseEncoder(state_path=state_path)
+    restored_query = restored.embed_query("Qdrant araması bilinmeyen")
+
+    assert document.indices == tuple(sorted(document.indices))
+    assert len(document.indices) == len(set(document.indices))
+    assert query == restored_query
+    assert len(query.indices) == 2
+    assert all(value > 0 for value in document.values)
+
+
+def test_bm25_query_does_not_mutate_corpus_state(tmp_path) -> None:
+    state_path = tmp_path / "bm25.json"
+    encoder = BM25SparseEncoder(state_path=state_path)
+    encoder.fit_documents(("qdrant belge",))
+    before = state_path.read_text(encoding="utf-8")
+
+    query = encoder.embed_query("yeni terim")
+
+    assert query.indices == ()
+    assert state_path.read_text(encoding="utf-8") == before

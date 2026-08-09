@@ -108,6 +108,7 @@ class QdrantChunkStore:
             "page_start",
             "page_end",
             "text_hash",
+            "parent_text",
             "pipeline_fingerprint",
             "is_active",
         }
@@ -138,18 +139,20 @@ class QdrantChunkStore:
         if not verification.is_valid:
             raise ValueError("cannot activate an unverified Qdrant version")
         self.ensure_schema()
-        document_filter = self._document_filter(document_id)
         version_filter = self._version_filter(document_id, version_id)
-        self._client.set_payload(
-            collection_name=self.collection_name,
-            payload={"is_active": False},
-            points=document_filter,
-            wait=True,
-        )
+        # Publish the new version first. If the cleanup call fails, the old
+        # version may remain visible temporarily, but a failed activation can
+        # never create a zero-active-version gap. A retry converges cleanup.
         self._client.set_payload(
             collection_name=self.collection_name,
             payload={"is_active": True},
             points=version_filter,
+            wait=True,
+        )
+        self._client.set_payload(
+            collection_name=self.collection_name,
+            payload={"is_active": False},
+            points=self._previous_versions_filter(document_id, version_id),
             wait=True,
         )
 
@@ -252,6 +255,7 @@ class QdrantChunkStore:
             "page_end": chunk.page_end,
             "token_count": chunk.token_count_estimate,
             "text_hash": chunk.text_hash,
+            "parent_text": chunk.parent_text,
             "pipeline_fingerprint": pipeline_fingerprint,
             "language": language,
             "is_active": is_active,
@@ -281,4 +285,23 @@ class QdrantChunkStore:
                     match=models.MatchValue(value=version_id),
                 ),
             ]
+        )
+
+    @staticmethod
+    def _previous_versions_filter(document_id: str, version_id: str) -> models.Filter:
+        """Select document points except the version being published."""
+
+        return models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="document_id",
+                    match=models.MatchValue(value=document_id),
+                )
+            ],
+            must_not=[
+                models.FieldCondition(
+                    key="version_id",
+                    match=models.MatchValue(value=version_id),
+                )
+            ],
         )

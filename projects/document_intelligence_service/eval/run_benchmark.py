@@ -67,8 +67,9 @@ def main() -> None:
         "reranker_enabled": args.reranker,
         "top_k": args.top_k,
         "warmup_questions": list(DEFAULT_WARMUPS),
-        "qdrant_collection": "document_chunks_v1",
+        "qdrant_collection": "document_chunks_v2_bm25",
         "embedding_model": PipelineConfig().embedding_model,
+        "sparse_encoder": PipelineConfig().sparse_encoder,
         "reranker_model": PipelineConfig().reranker_model if args.reranker else None,
         "llm_called": False,
         "run": asdict(run),
@@ -99,4 +100,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

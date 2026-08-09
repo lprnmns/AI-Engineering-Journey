@@ -149,6 +149,9 @@ class IngestionWorker:
                 {"chunks": len(chunks)},
             )
             active_stage = "embed_sparse"
+            fit_documents = getattr(self._sparse_embedder, "fit_documents", None)
+            if callable(fit_documents):
+                await asyncio.to_thread(fit_documents, texts)
             sparse_vectors = await asyncio.to_thread(
                 self._sparse_embedder.embed_documents,
                 texts,

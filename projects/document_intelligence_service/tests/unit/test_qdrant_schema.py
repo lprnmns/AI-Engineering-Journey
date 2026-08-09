@@ -156,6 +156,26 @@ def test_existing_dense_dimension_mismatch_fails_startup_validation() -> None:
         manager.ensure_collection()
 
 
+def test_existing_non_idf_sparse_collection_is_rejected_by_bm25_schema() -> None:
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        collection_name="idf_mismatch",
+        vectors_config={
+            "dense": models.VectorParams(size=2, distance=models.Distance.COSINE)
+        },
+        sparse_vectors_config={
+            "sparse": models.SparseVectorParams(modifier=models.Modifier.NONE)
+        },
+    )
+    manager = QdrantSchemaManager(
+        client,
+        QdrantSchema(collection_name="idf_mismatch", dense_size=2),
+    )
+
+    with pytest.raises(QdrantSchemaError, match="IDF"):
+        manager.ensure_collection()
+
+
 def test_stage_verify_activate_hides_previous_version() -> None:
     store = make_store()
     sparse = SparseEmbedding(indices=(1, 4), values=(0.8, 0.2))

@@ -34,7 +34,7 @@ from .domain.answerability import AnswerabilityPolicy
 from .domain.ingestion import IngestionLimits, PipelineConfig
 from .infrastructure.health_checks import HttpHealthProbe
 from .infrastructure.embeddings.dense import SentenceTransformerEmbedder
-from .infrastructure.embeddings.sparse import HashingSparseEncoder
+from .infrastructure.embeddings.sparse import BM25SparseEncoder
 from .infrastructure.parsing.pdf_inspector import PypdfInspector
 from .infrastructure.parsing.pdf_text import PypdfTextExtractor
 from .infrastructure.parsing.section_markers import get_section_markers
@@ -173,7 +173,7 @@ def build_ingestion_worker(
             model_name=pipeline_config.embedding_model,
             expected_dimension=schema.dense_size,
         ),
-        sparse_embedder=HashingSparseEncoder(),
+        sparse_embedder=BM25SparseEncoder(state_path=settings.bm25_state_path),
         vector_store=QdrantChunkStore(
             QdrantClient(url=str(settings.qdrant_url)),
             schema,
@@ -192,7 +192,7 @@ def build_retrieval_service(settings: Settings) -> RetrievalService:
             model_name=pipeline_config.embedding_model,
             expected_dimension=schema.dense_size,
         ),
-        sparse_embedder=HashingSparseEncoder(),
+        sparse_embedder=BM25SparseEncoder(state_path=settings.bm25_state_path),
         retriever=QdrantRetriever(
             QdrantClient(url=str(settings.qdrant_url)),
             schema,

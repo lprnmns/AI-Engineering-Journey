@@ -3,6 +3,7 @@
 from dataclasses import dataclass, replace
 from collections.abc import Sequence
 from time import perf_counter
+from typing import cast
 
 from ..domain.entities import RetrievalMode
 from ..domain.retrieval import RetrievedChunk, RetrievalResult
@@ -172,6 +173,9 @@ class RetrievalService:
         return vectors[0]
 
     def _one_sparse_vector(self, question: str) -> SparseVector:
+        embed_query = getattr(self._sparse_embedder, "embed_query", None)
+        if callable(embed_query):
+            return cast(SparseVector, embed_query(question))
         vectors = self._sparse_embedder.embed_documents((question,))
         if len(vectors) != 1:
             raise ValueError("sparse embedder returned an unexpected query batch")

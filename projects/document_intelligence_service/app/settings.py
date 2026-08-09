@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(default=200, gt=0)
     ingestion_registry_backend: Literal["memory", "sqlite"] = "memory"
     ingestion_database_path: str = "data/ingestions.sqlite3"
+    bm25_state_path: str = "data/bm25_state.json"
     evaluation_artifact_dir: str = "projects/document_intelligence_service/eval/results/api_runs"
     section_marker_profile: Literal["none", "mentor_program_v1"] = "none"
     reranker_enabled: bool = False

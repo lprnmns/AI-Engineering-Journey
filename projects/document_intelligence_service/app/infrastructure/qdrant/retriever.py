@@ -117,6 +117,7 @@ class QdrantRetriever:
             rank=rank,
             dense_score=score if score_kind == "dense" else None,
             sparse_score=score if score_kind == "sparse" else None,
+            parent_text=cls._optional_string(payload, "parent_text") or None,
         )
 
     @staticmethod
