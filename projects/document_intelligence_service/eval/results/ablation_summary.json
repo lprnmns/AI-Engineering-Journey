@@ -1,5 +1,6 @@
 {
-  "git_sha": "928e60868ab8cb67f8859acd297c394e7ff938fd",
+  "retrieval_git_sha": "928e60868ab8cb67f8859acd297c394e7ff938fd",
+  "gate_git_sha": "0deefb3726ca9d27168450998d5699799e7bdee8",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "cases": 44,
   "answerable_retrieval_cases": 30,
@@ -66,8 +67,17 @@
     "no_answer_false_negative_count": 2,
     "no_answer_false_positive_rate": 0.26666666666666666,
     "no_answer_false_negative_rate": 0.14285714285714285,
-    "total_p50_ms": 70.30233455589041,
-    "total_p95_ms": 133.02911426289938
+    "total_p50_ms": 46.27054202137515,
+    "total_p95_ms": 73.77081867307425
+  },
+  "security_test_gate": {
+    "test_case_count": 4,
+    "passed_count": 2,
+    "failed_count": 2,
+    "pass_rate": 0.5,
+    "leakage_acl_pass_rate": 1.0,
+    "prompt_injection_pass_rate": 0.0,
+    "failures": ["injection_03", "injection_04"]
   },
   "decision": "hybrid_rrf_with_reranker_disabled"
 }

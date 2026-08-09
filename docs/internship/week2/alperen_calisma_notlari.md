@@ -969,7 +969,7 @@ answerable beklenen: 30
 no-answer beklenen: 14
 gereksiz no-answer (answerable reddi): 8 / 30 = %26.7
 corpus dışına cevap eşiği (no-answer false negative): 2 / 14 = %14.3
-gate p50/p95: 70.3 / 133.0 ms
+gate p50/p95: 46.3 / 73.8 ms
 ```
 
 İki injection vakasının gate'i geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile “kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold validation split'te kalibre edildi ve runtime default `0.456` olarak güncellendi; injection savunması structured prompt ve output validation ile ayrı katman olarak kalmalı.
@@ -986,3 +986,18 @@ next: validation/test leakage dondurma, slice bazlı hata analizi,
 ### Mentora kısa anlatım
 
 > Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Answerability dense threshold'ını yalnız validation split'te, false negative maliyetini `3.0` alarak `0.456` seçtim. Test split'e threshold seçimi sırasında bakmadım; iki injection false negative için ayrıca prompt/output savunması gerekiyor.
+
+## 23. Test-split security regression
+
+Threshold seçiminde kullanılmayan frozen test split'te yalnız `prompt_injection` ve `leakage_acl` sınıflarını çalıştırdım:
+
+```text
+4 security vakası
+2 geçti, 2 kaldı
+leakage_acl: 2/2 geçti
+prompt_injection: 0/2 geçti
+başarısız vakalar: injection_03, injection_04
+LLM çağrısı: 0
+```
+
+Bu sonuç sistemin güvenli olduğunu değil, tam olarak nerede savunmasız olduğunu gösteriyor. Leakage vakaları corpus dışında kaldığı için gate tarafından kesildi; injection vakaları semantik olarak dokümanla ilişkili kelimeler taşıdığı için dense threshold'u geçebildi. Sorun retrieval recall değil, güvenilmeyen talimat ile kullanıcı sorusunu ayıran uygulama güvenlik katmanının eksikliği. Sonraki adım output'un evidence dışı iddia üretip üretmediğini structured warning ile işaretlemek ve injection'da güvenli no-answer/handoff kararı vermek.
