@@ -152,6 +152,11 @@ def test_optional_reranker_receives_fused_candidates_and_returns_final_window() 
 
     assert reranker.seen_count == 3
     assert result.reranked_candidates == 2
+    assert [item.source_id for item in result.candidate_window] == [
+        "shared",
+        "dense-top",
+        "sparse-only",
+    ]
     assert [item.source_id for item in result.candidates] == [
         "sparse-only",
         "dense-top",

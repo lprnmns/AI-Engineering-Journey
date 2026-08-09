@@ -132,6 +132,7 @@ class RetrievalService:
             )
             rrf_count = 0
         search_ms = (perf_counter() - search_started) * 1000
+        candidate_window = candidates
         reranked_count = 0
         rerank_ms = 0.0
         if self._reranker is not None and candidates:
@@ -156,6 +157,7 @@ class RetrievalService:
             search_ms=search_ms,
             reranked_candidates=reranked_count,
             rerank_ms=rerank_ms,
+            candidate_window=candidate_window,
         )
 
     def _candidate_window(self, top_k: int) -> int:

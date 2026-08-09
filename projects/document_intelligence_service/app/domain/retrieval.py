@@ -38,3 +38,4 @@ class RetrievalResult:
     search_ms: float
     reranked_candidates: int = 0
     rerank_ms: float = 0.0
+    candidate_window: tuple[RetrievedChunk, ...] = ()

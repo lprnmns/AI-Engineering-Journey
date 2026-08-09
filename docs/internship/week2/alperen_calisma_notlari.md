@@ -874,3 +874,69 @@ Section marker profili bu mentor PDF'i için bilinçli ve güvenilir bir adapter
 ### Mentora kısa anlatım
 
 > İlk ingestion'da mentor PDF'i tek parent ve 27 child point olarak indeksleniyordu. Bilinen başlıkları `mentor_program_v1` marker profiline taşıdım; şimdi 7 section parent ve 26 active point oluşuyor. Profil pipeline fingerprint'e girdiği için eski markersız index ile yeni index karışmıyor. Reranker `local_model` section'ını seçebiliyor. Ayrıca retrieval candidate window ile LLM context window'u ayırdım; top-5 CPU'da timeout olurken top-2 bounded context ile smoke tamamlandı. Bundan sonra bu iyileştirmeyi golden benchmark ile sayısal olarak doğrulayacağım.
+
+## 21. Evaluation benchmark sözleşmesi ve ilk ölçüm altyapısı
+
+### Önceki durum
+
+Şimdiye kadar retrieval kalitesi birkaç seçilmiş demo sorusu ve ham smoke çıktısıyla kontrol ediliyordu. Bu, sistemin çalıştığını gösterir; fakat “kaç soruda doğru section ilk 5'e girdi?”, “reranker aday havuzunda doğru kanıtı korudu mu?” ve “no-answer hangi yönde hata yaptı?” sorularını cevaplamaz. Ayrıca reranker açıkken top-20 aday penceresi ile final top-5 evidence aynı nesne gibi izleniyordu.
+
+### Golden vaka sözleşmesi
+
+`data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl` içinde 44 versionlanabilir vaka tanımladım:
+
+```text
+direct_fact       8
+paraphrase        6
+exact_term        6
+near_miss         6
+no_answer         6
+multi_evidence    4
+prompt_injection  4
+leakage_acl       4
+```
+
+Her vaka en az şu bilgileri taşır:
+
+```text
+id, split, category, question, expected_answerable,
+relevant_sections veya relevant_document_ids,
+expected_phrases, forbidden_phrases
+```
+
+Çocuk chunk ID'si yerine section adı (`rag`, `local_model` gibi) gold hedefi olarak kullanılabiliyor. Çünkü pipeline version değişince generated point ID değişebilir; fakat mentor PDF'inin bilgi section'ı aynı kalır. `multi_evidence` vakalarında birden fazla section bekleniyor. `prompt_injection` ve `leakage_acl` vakaları cevap üretme yetkisi olmayan istekleri temsil ediyor; ACL özelliği henüz bağlı olmadığı için bunlar hazırlık/regression vakasıdır.
+
+### Ölçülen metrikler
+
+```text
+Recall@1/3/5
+Candidate Recall@20     → reranker öncesi aday havuzunun kapsaması
+MRR@5/10                → ilk doğru kanıtın sırası
+nDCG@5/10               → birden fazla kanıt ve graded relevance
+p50/p95 latency         → toplam, embedding, search, rerank
+```
+
+Bir section'a ait birden fazla child chunk aynı hedef olarak sayılıyor; aksi halde overlap nedeniyle recall yapay biçimde yüksek görünürdü. `no_answer_false_positive`, answerable soruyu gereksiz reddetmeyi; `no_answer_false_negative`, corpus dışı soruya cevap vermeyi ifade ediyor. Bu iki yönü özellikle ayrı raporluyorum.
+
+### Benchmark akışı
+
+```text
+golden JSONL
+  → schema/balance validation
+  → warm-up soruları (kalite hesabı dışında)
+  → dense / bm25 / hybrid aynı soru sırası
+  → candidate window raw trace
+  → final evidence raw trace
+  → Recall/MRR/nDCG + p50/p95
+  → JSONL/CSV error analysis
+```
+
+Runner, warm-up sorgularını ölçümden çıkarıyor; her vaka için final adayları, reranker öncesi candidate window'u ve embedding/search/rerank/toplam süreleri saklıyor. Böylece yalnız özet skor değil, hangi sorunun neden kaybedildiği de incelenebilecek.
+
+### Bu aşamadaki kanıt ve sınır
+
+Şu an golden dataset sözleşmesi, metrik hesaplayıcıları, runner ve retrieval domain trace'i unit testlerle doğrulandı. `44` vaka şema ve kategori dengesi kontrolünden geçiyor; testlerde `11 passed`, ilgili mypy kontrolü temiz. Henüz gerçek Qdrant üzerinde 4 retrieval ablation koşusunun nihai sayıları üretilmedi. Bu nedenle şu anda “hybrid daha iyi” veya “reranker varsayılan olmalı” sonucu çıkarmıyorum. Sonraki adım, active section-aware Qdrant snapshot'ında aynı vaka sırasıyla dense/BM25/hybrid ve reranker açık/kapalı koşularını çalıştırıp raw sonuçları kaydetmek.
+
+### Mentora kısa anlatım
+
+> Demo sorularını 44 vakalık versionlanmış golden JSONL sözleşmesine dönüştürdüm. Direct, paraphrase, exact-term, near-miss, no-answer, multi-evidence ve injection/ACL hazırlık sınıfları var; development/validation/test split'i ayrılıyor. Retrieval için Recall@k, candidate Recall@20, MRR, nDCG; sistem davranışı için no-answer hata yönleri ve p50/p95 latency ölçülecek. Reranker öncesi aday penceresini final evidence'tan ayrı trace ediyorum. Şu an altyapı ve contract testleri tamam; gerçek Qdrant ablation sonuçları henüz karar vermek için çalıştırılmadı.
