@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     llm_model: str = "gemma3:4b"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=300)
     llm_max_output_tokens: int = Field(default=256, gt=0, le=1024)
-    answerability_min_dense_score: float = Field(default=0.456, ge=0, le=1)
+    answerability_min_dense_score: float = Field(default=0.379, ge=0, le=1)
     answerability_min_sparse_score: float = Field(default=0.1, ge=0)
     answerability_min_rerank_score: float = -5.0
     answerability_min_margin: float = 0.0

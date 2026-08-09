@@ -44,7 +44,7 @@ class AnswerabilityPolicy:
     turn them into safe rejection gates.
     """
 
-    min_dense_score: float = 0.456
+    min_dense_score: float = 0.379
     min_sparse_score: float = 0.1
     min_rerank_score: float = -5.0
     min_margin: float = 0.0
