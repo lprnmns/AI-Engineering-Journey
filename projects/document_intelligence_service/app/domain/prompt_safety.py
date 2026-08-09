@@ -72,6 +72,13 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(r"\bkaynak\w*\s+(?:yok say|gormezden gel)\b"),
     ),
     (
+        "acl_filter_bypass",
+        re.compile(
+            r"\b(?:document|dokuman)\s+id\s+filtre\w*\s+"
+            r"(?:yok say|gormezden gel|atlat|as)\w*\b"
+        ),
+    ),
+    (
         "secret_extraction",
         re.compile(
             r"\b(?:system prompt|gizli kural\w*)\b"
