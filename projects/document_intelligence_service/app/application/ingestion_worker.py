@@ -1,5 +1,7 @@
 """Asynchronous ingestion worker orchestration."""
 
+import asyncio
+
 from ..domain.entities import JobStatus
 from ..domain.entities import DocumentStatus
 from ..domain.errors import ErrorCode, ServiceError
@@ -58,14 +60,24 @@ class IngestionWorker:
 
         current = await self._set_progress(snapshot, JobStatus.RUNNING, 10)
         try:
-            chunks = self._build_chunks(prepared)
+            # Parsing, model inference and the Qdrant client are synchronous
+            # adapters. Running them directly here would block the ASGI event
+            # loop even though this orchestration method is async.
+            chunks = await asyncio.to_thread(self._build_chunks, prepared)
             current = await self._set_progress(current, JobStatus.RUNNING, 35)
             texts = tuple(f"{chunk.title}\n{chunk.text}" for chunk in chunks)
-            dense_vectors = self._dense_embedder.embed_documents(texts)
-            sparse_vectors = self._sparse_embedder.embed_documents(texts)
+            dense_vectors = await asyncio.to_thread(
+                self._dense_embedder.embed_documents,
+                texts,
+            )
+            sparse_vectors = await asyncio.to_thread(
+                self._sparse_embedder.embed_documents,
+                texts,
+            )
             current = await self._set_progress(current, JobStatus.RUNNING, 65)
 
-            self._vector_store.stage_version(
+            await asyncio.to_thread(
+                self._vector_store.stage_version,
                 chunks=chunks,
                 dense_vectors=dense_vectors,
                 sparse_vectors=sparse_vectors,
@@ -73,7 +85,8 @@ class IngestionWorker:
                 language=self._language,
             )
             current = await self._set_progress(current, JobStatus.RUNNING, 80)
-            verification = self._vector_store.verify_version(
+            verification = await asyncio.to_thread(
+                self._vector_store.verify_version,
                 document_id=self._document_id(prepared),
                 version_id=self._version_id(prepared),
                 expected_chunk_count=len(chunks),
@@ -83,7 +96,8 @@ class IngestionWorker:
                     code=ErrorCode.INGESTION_FAILED,
                     message="Staged vector version failed verification",
                 )
-            self._vector_store.activate_version(
+            await asyncio.to_thread(
+                self._vector_store.activate_version,
                 document_id=verification.document_id,
                 version_id=verification.version_id,
                 verification=verification,

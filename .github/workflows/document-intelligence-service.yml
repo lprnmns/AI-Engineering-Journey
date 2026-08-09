@@ -1,0 +1,59 @@
+name: Document Intelligence Service
+
+on:
+  push:
+    paths:
+      - "projects/document_intelligence_service/**"
+      - "data/evaluations/security_attack_matrix_v1.json"
+      - "compose.yaml"
+      - "demo_ui/**"
+      - ".github/workflows/document-intelligence-service.yml"
+  pull_request:
+    paths:
+      - "projects/document_intelligence_service/**"
+      - "data/evaluations/security_attack_matrix_v1.json"
+      - "compose.yaml"
+      - "demo_ui/**"
+      - ".github/workflows/document-intelligence-service.yml"
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: projects/document_intelligence_service/pyproject.toml
+
+      - name: Install service and development tools
+        run: >-
+          python -m pip install --upgrade pip &&
+          python -m pip install
+          --index-url https://download.pytorch.org/whl/cpu
+          "torch==2.13.0+cpu" &&
+          python -m pip install "projects/document_intelligence_service[dev]"
+
+      - name: Ruff
+        run: ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval
+
+      - name: Unit and contract tests
+        run: pytest -q projects/document_intelligence_service/tests
+
+      - name: Type check
+        run: mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval
+
+      - name: Validate security matrix evidence
+        run: >-
+          python -m projects.document_intelligence_service.eval.run_security_attack_matrix
+          --output projects/document_intelligence_service/eval/results/security_attack_matrix_v1.json
+          --markdown-output projects/document_intelligence_service/docs/security_attack_matrix_v1.md
+
+      - name: Validate Compose schema
+        working-directory: .
+        run: docker compose config --quiet

@@ -37,6 +37,50 @@ Current planning documents:
 - [Internship Week 1 program comparison and integration](docs/staj_1_hafta_program_karsilastirmasi.md)
 - [Internship Week 2 product engineering implementation plan](docs/internship/week2/hafta2_uygulama_plani.md)
 
+## Week 2 Document Intelligence Service
+
+The current local deployment is intentionally small: Qdrant, one API process,
+and a static demo UI. Ollama stays on the host so the 32 GB RAM machine does
+not run a second model container. The API uses the SQLite registry and a
+bounded background ingestion task; a separate worker and Redis are deliberately
+left for a later scale-out decision.
+
+```bash
+docker compose up --build -d
+curl -i http://127.0.0.1:8010/v1/health/live
+curl -i http://127.0.0.1:8010/v1/health/ready
+open http://127.0.0.1:8501
+```
+
+The Compose Qdrant service is reachable from the host on `6335` by default,
+because the earlier local demo may already occupy `6333`. Run the reproducible
+smoke with:
+
+```bash
+./toolbox/scripts/run_document_service_compose_smoke.sh
+```
+
+The API listens on container port `8000` and host port `8010` by default,
+because other local services occupy host ports `8000` and `8001`. Override either
+host port explicitly with `API_HOST_PORT=8000` or `QDRANT_HOST_PORT=6333` only
+after confirming that port is free.
+
+If readiness is `503`, inspect the dependency checks; this is deliberately
+reported as not-ready instead of allowing the UI to claim that answer queries
+are available. On this workstation Ollama runs as the existing
+`ai-journey-ollama` container and is bound to its Docker network rather than
+the host gateway. The reproducible local check connects that container to the
+Compose network and sets the correct URL automatically:
+
+```bash
+./toolbox/scripts/run_document_service_compose_smoke.sh
+```
+
+For a long-running local stack after that network connection exists, start it
+with `DIS_OLLAMA_URL=http://ai-journey-ollama:11434 docker compose up --build -d`.
+On another machine where Ollama is exposed through the host gateway, the
+default `host.docker.internal:11434` remains the portable setting.
+
 ## Repository Philosophy
 
 This is not a passive course repo.

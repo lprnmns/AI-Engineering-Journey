@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document Intelligence Demo</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; }
+      body { max-width: 980px; margin: 2rem auto; padding: 0 1rem; color: #202124; }
+      h1 { margin-bottom: .25rem; }
+      .muted { color: #5f6368; }
+      section { border: 1px solid #dadce0; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+      button { cursor: pointer; padding: .55rem .8rem; margin: .25rem .25rem .25rem 0; }
+      textarea { width: 100%; min-height: 7rem; box-sizing: border-box; padding: .6rem; }
+      pre { white-space: pre-wrap; background: #f8f9fa; padding: .8rem; border-radius: 6px; }
+      .source { border-left: 3px solid #1a73e8; padding: .5rem .75rem; margin: .5rem 0; background: #f8fbff; }
+      label { display: block; margin: .5rem 0 .25rem; font-weight: 600; }
+      #status { min-height: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Document Intelligence Demo</h1>
+    <p class="muted">Upload → job/version → retrieval veya grounded answer → canonical sources</p>
+
+    <section>
+      <h2>1. Health</h2>
+      <button id="health-button" type="button">Health kontrolü</button>
+      <pre id="health-output">Henüz kontrol edilmedi.</pre>
+    </section>
+
+    <section>
+      <h2>2. PDF upload</h2>
+      <input id="file-input" type="file" accept="application/pdf">
+      <button id="upload-button" type="button">PDF kabul et ve indeksle</button>
+      <pre id="upload-output">Dosya seçilmedi.</pre>
+    </section>
+
+    <section>
+      <h2>3. Soru</h2>
+      <label for="mode">Akış</label>
+      <select id="mode">
+        <option value="query">Answerability + LLM answer</option>
+        <option value="search">Evidence-only search</option>
+      </select>
+      <label for="question">Soru</label>
+      <textarea id="question">Yerel model karşılaştırmasında hangi değerler ölçülmelidir?</textarea>
+      <button id="ask-button" type="button">Çalıştır</button>
+      <pre id="answer-output">Henüz soru gönderilmedi.</pre>
+      <div id="sources"></div>
+    </section>
+
+    <p id="status" class="muted" aria-live="polite"></p>
+
+    <script>
+      const status = document.getElementById("status");
+      const healthOutput = document.getElementById("health-output");
+      const uploadOutput = document.getElementById("upload-output");
+      const answerOutput = document.getElementById("answer-output");
+      const sources = document.getElementById("sources");
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      async function request(path, options = {}) {
+        const response = await fetch(`/api${path}`, options);
+        let body;
+        try {
+          body = await response.json();
+        } catch (error) {
+          throw new Error(`JSON olmayan response: HTTP ${response.status}`);
+        }
+        if (!response.ok) {
+          throw new Error(body.error?.message || `HTTP ${response.status}`);
+        }
+        return body;
+      }
+
+      function wait(milliseconds) {
+        return new Promise((resolve) => setTimeout(resolve, milliseconds));
+      }
+
+      async function pollJob(jobId) {
+        for (let attempt = 0; attempt < 60; attempt += 1) {
+          const job = await request(`/v1/jobs/${encodeURIComponent(jobId)}`);
+          uploadOutput.textContent = JSON.stringify(job, null, 2);
+          if (job.status === "succeeded" || job.status === "failed") return job;
+          await wait(1000);
+        }
+        throw new Error("Job 60 saniye içinde terminal duruma geçmedi.");
+      }
+
+      function renderSources(items) {
+        sources.replaceChildren();
+        for (const item of items || []) {
+          const wrapper = document.createElement("div");
+          wrapper.className = "source";
+          const title = document.createElement("strong");
+          title.textContent = `${item.title || "Kaynak"} — sayfa ${item.page || "?"}`;
+          const detail = document.createElement("div");
+          detail.textContent = `${item.document_id} / ${item.version_id}`;
+          const snippet = document.createElement("p");
+          snippet.textContent = item.snippet;
+          wrapper.append(title, detail, snippet);
+          sources.append(wrapper);
+        }
+      }
+
+      document.getElementById("health-button").addEventListener("click", async () => {
+        setStatus("Health kontrol ediliyor...");
+        const results = {};
+        for (const endpoint of ["live", "startup", "ready"]) {
+          const response = await fetch(`/api/v1/health/${endpoint}`);
+          results[endpoint] = { http_status: response.status, body: await response.json() };
+        }
+        healthOutput.textContent = JSON.stringify(results, null, 2);
+        setStatus("Health sonucu hazır.");
+      });
+
+      document.getElementById("upload-button").addEventListener("click", async () => {
+        const file = document.getElementById("file-input").files[0];
+        if (!file) {
+          setStatus("Önce bir PDF seç.");
+          return;
+        }
+        setStatus("Upload kabul ediliyor...");
+        const form = new FormData();
+        form.append("file", file, file.name);
+        try {
+          const receipt = await request("/v1/documents", {
+            method: "POST",
+            headers: { "Idempotency-Key": `ui-${Date.now()}` },
+            body: form,
+          });
+          uploadOutput.textContent = JSON.stringify(receipt, null, 2);
+          setStatus("Upload kabul edildi; job izleniyor...");
+          const finalJob = await pollJob(receipt.job_id);
+          setStatus(`Job terminal durumu: ${finalJob.status}`);
+        } catch (error) {
+          uploadOutput.textContent = error.message;
+          setStatus("Upload başarısız.");
+        }
+      });
+
+      document.getElementById("ask-button").addEventListener("click", async () => {
+        const question = document.getElementById("question").value.trim();
+        const mode = document.getElementById("mode").value;
+        if (!question) {
+          setStatus("Soru boş olamaz.");
+          return;
+        }
+        setStatus("Soru çalıştırılıyor...");
+        sources.replaceChildren();
+        try {
+          const path = mode === "search" ? "/v1/search" : "/v1/query";
+          const body = await request(path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, retrieval_mode: "hybrid", top_k: 5 }),
+          });
+          answerOutput.textContent = JSON.stringify(body, null, 2);
+          renderSources(body.sources);
+          setStatus("Soru tamamlandı.");
+        } catch (error) {
+          answerOutput.textContent = error.message;
+          setStatus("Soru başarısız.");
+        }
+      });
+    </script>
+  </body>
+</html>

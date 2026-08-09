@@ -1440,3 +1440,145 @@ eksik özelliğin sessizce yok sayılmadığını gösterir.
 > fail-closed kesiyorum. HTML çıktısında JSON transport var ama sanitizer yok.
 > Upload ve version activation kontrolleri mevcut, rate limit ve provenance
 > gibi production katmanları sonraki iş olarak açıkça listelendi.
+
+## 31. Gün 5 — Compose, demo UI ve readiness sınırı
+
+### Önce ve şimdi
+
+Önceden servis yalnız host Python ortamında ve ayrı Qdrant komutuyla
+çalışıyordu. Bu, kod testleri için yeterliydi fakat mentorun “başka bir
+geliştirici nasıl ayağa kaldıracak?” sorusunu cevaplamıyordu. Şimdi kökteki
+`compose.yaml` üç küçük parçayı birlikte tanımlıyor:
+
+```text
+demo-ui:8501 → nginx reverse proxy → api:8000
+                                      ↘ qdrant:6333
+                                      ↘ host.docker.internal:11434 (Ollama)
+```
+
+- Qdrant yeni stack'e ait ayrı named volume ile kalıcı tutuluyor; eski
+  `ai_journey_qdrant_data` volume'una dokunulmuyor.
+- API tek process ve tek worker olarak çalışıyor; SQLite registry `/data` volume
+  üzerinde restart-safe ingestion kimliği/job durumunu saklıyor.
+- Ollama ayrı container'a taşınmıyor. Gemma modelini ikinci kez yüklememek ve
+  32 GB RAM'i korumak için host sınırında bırakıldı.
+- Docker API image'ında PyTorch CPU wheel'i açıkça seçiliyor. Varsayılan PyPI
+  çözümü CUDA runtime indirmeye çalıştığı için ilk build denemesinde bunu
+  yakaladım ve durdurdum; CPU-only image daha küçük ve donanıma uygun.
+- Demo UI upload → job polling → query/search → canonical source akışını
+  gösteriyor. Metinler `innerHTML` ile değil `textContent` ile yazıldığı için
+  demo client'ı HTML benzeri cevabı doğrudan çalıştırmıyor.
+
+### Port ve health kararı
+
+Compose içindeki Qdrant portu servisler arasında `6333`tür. Hostta varsayılan
+portu `6335` yaptım; daha önce çalışan `127.0.0.1:6333` Qdrant'a çarpmıyor.
+API container içinde `8000` dinler, hostta varsayılan `8010`a map edilir; çünkü
+makinede başka servisler host `8000` ve `8001`i kullanıyor.
+API'nin üç health davranışı ayrıdır:
+
+```text
+/v1/health/live   → process cevap verebiliyor mu?
+/v1/health/startup → lifespan/composition tamamlandı mı?
+/v1/health/ready  → Qdrant + Ollama query için hazır mı?
+```
+
+Compose API healthcheck yalnız liveness'ı kontrol eder; demo smoke script'i
+ayrıca readiness bekler. Böylece container “çalışıyor” görünürken model veya
+Qdrant yoksa kullanıcıya hazır sistem izlenimi verilmez.
+
+### Çalıştırma ve kanıt
+
+```bash
+docker compose up --build -d
+curl -i http://127.0.0.1:8010/v1/health/live
+curl -i http://127.0.0.1:8010/v1/health/ready
+open http://127.0.0.1:8501
+./toolbox/scripts/run_document_service_compose_smoke.sh
+```
+
+`run_document_service_compose_smoke.sh`, Compose config doğrulaması, Qdrant
+readiness, API liveness/readiness, UI erişimi ve Qdrant container restart
+sonrası collection snapshot kontrolünü yapıyor. Script volume'ları silmez;
+`down` yalnız container/network'i kaldırır.
+
+### Gerçek Compose ölçümü
+
+Çalışan stack üzerinde PDF upload ve iki query akışını tekrar ettim:
+
+```text
+PDF upload/job: active → succeeded, progress=100
+Kaynaklı query: answered, 3 canonical source, LLM çağrıldı
+Kaynaklı query: LLM=63.7 s, toplam=77.9 s (CPU üzerinde Gemma 3 4B)
+Kaynak dışı query: no_answer / LOW_RELEVANCE, LLM=0 ms, toplam=226 ms
+Readiness: qdrant=up, ollama=up, overall=ready
+```
+
+Plain `docker compose up` denemesinde API canlı olmasına rağmen readiness
+`503` kaldı; çünkü bu makinedeki Ollama host gateway'den değil, mevcut
+`ai-journey-ollama` Docker container adından erişilebiliyor. Smoke script bunu
+otomatik bağlayıp `DIS_OLLAMA_URL=http://ai-journey-ollama:11434` veriyor. Bu
+bir uygulama hatasını gizlemek değil, environment bağımlılığını açıkça
+tanımlamak: Qdrant erişilebilirken Ollama erişilemiyorsa sistem query için
+hazır sayılmıyor.
+
+### Son kalite kanıtı
+
+Kök repo dizininden alınan son sonuçlar:
+
+```text
+110 tests passed
+ruff check: All checks passed
+mypy: Success, no issues found in 72 source files
+security matrix: 8 controls, 27 evidence paths, 0 missing paths
+Compose smoke: live, ready, demo UI, Qdrant restart persistence passed
+```
+
+### Event loop ve kalite kapısı
+
+İlk gerçek upload denemesinde embedding sürerken aynı API process'indeki job
+polling'in gecikebildiğini gördüm. Bunun nedeni `async def` metodunun içindeki
+senkron PDF parser, embedding modeli ve Qdrant client çağrılarının event loop'ta
+çalışmasıydı. Worker artık bu adapter çağrılarını `asyncio.to_thread` ile
+offload ediyor; registry durum güncellemeleri async kalıyor. Böylece “arka
+planda çalışıyor” yalnızca bir isim değil, API'nin health/job polling
+isteklerine cevap verebildiği test edilebilir bir davranış.
+
+Bu davranışı, yapay olarak yavaşlatılmış embedding adapter'ı ve event-loop
+polling tick'leri ile test ettim. Production queue/backpressure çözümü değildir;
+tek process MVP'sinde event loop'un ağır senkron iş tarafından kilitlenmesini
+önleyen bir sınırdır.
+
+CI kalite kapısı şu kontrolleri çalıştırıyor:
+
+```text
+ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval
+pytest -q projects/document_intelligence_service/tests
+mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval
+python -m projects.document_intelligence_service.eval.run_security_attack_matrix ...
+docker compose config --quiet
+```
+
+Ruff için başlangıçta yalnız güvenli hata sınıflarını (`E4`, `E7`, `E9`, `F`)
+aktif ettim. Eski dosyalarda bulunan geniş stil uyarılarını bu kapsamda
+sessizce toplu refactor etmedim; kalite kapısının anlamını değiştirmeden
+sonraki ayrı bir temizlik işi olarak bıraktım.
+
+### Bilinçli kapsam sınırı
+
+Gün 5'in ilk dikey diliminde ayrı worker, Redis, image SBOM, gerçek container
+vulnerability scan ve production rate-limit eklenmedi. Planın kesme kuralına
+uyarak önce tek process çalışan demo, health/readiness ve tekrar üretilebilir
+kurulum kanıtını kuruyorum. Bu sınırlar README ve Compose dokümanında açıkça
+belirtiliyor.
+
+### Mentora kısa anlatım
+
+> Servisi üç parçalı küçük bir Compose topolojisine aldım: nginx demo UI,
+> FastAPI API ve Qdrant. API ile worker'ı şimdilik tek process'te tutup SQLite
+> registry ile job/version durumunu volume'a yazıyorum; Redis ve ayrı worker'ı
+> 32 GB makinede gereksiz operasyon yükü oluşturmaması için erteledim. Qdrant
+ > container içinde 6333, hostta çakışmayı önlemek için 6335; mevcut Ollama
+ > container'ı ayrı tutuluyor.
+> Liveness ile readiness'i ayırdım ve smoke script'i readiness geçmeden demo
+> akışını başarılı saymıyor.

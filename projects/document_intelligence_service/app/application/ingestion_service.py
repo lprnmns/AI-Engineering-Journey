@@ -1,5 +1,7 @@
 """Ingestion preparation use case."""
 
+import asyncio
+
 from ..domain.ingestion import (
     IngestionReceipt,
     JobSnapshot,
@@ -80,7 +82,11 @@ class IngestionService:
     ) -> IngestionReceipt:
         """Prepare an upload and return its stable acceptance receipt."""
 
-        prepared = self._preparation.prepare(
+        # PDF inspection is synchronous and can take noticeable time for a
+        # large upload. Keep that work off the API event loop so health and job
+        # polling remain responsive while the request is being accepted.
+        prepared = await asyncio.to_thread(
+            self._preparation.prepare,
             content=content,
             filename=filename,
             content_type=content_type,

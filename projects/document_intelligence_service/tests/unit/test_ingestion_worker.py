@@ -2,11 +2,13 @@
 
 import asyncio
 from io import BytesIO
+import time
 from typing import Sequence
 
 import pytest
 from pypdf import PdfWriter
 
+from projects.document_intelligence_service.app.domain.entities import JobStatus
 from projects.document_intelligence_service.app.application.chunking_service import (
     DocumentChunkingService,
 )
@@ -84,6 +86,17 @@ class FakeSparseEmbedder:
         return tuple(
             SparseVector(indices=(1, 2), values=(1.0, 0.5)) for _ in texts
         )
+
+
+class SlowDenseEmbedder(FakeDenseEmbedder):
+    """Make event-loop blocking visible without loading a real model."""
+
+    def embed_documents(
+        self,
+        texts: Sequence[str],
+    ) -> tuple[tuple[float, ...], ...]:
+        time.sleep(0.08)
+        return super().embed_documents(texts)
 
 
 @pytest.mark.filterwarnings("ignore:Payload indexes have no effect in the local Qdrant")
@@ -166,3 +179,47 @@ def test_worker_marks_empty_pdf_text_as_failed_without_indexing() -> None:
     failed_receipt = asyncio.run(registry.accept(prepared, "worker-empty"))
     assert failed_receipt.status.value == "failed"
     assert not store.client.collection_exists("worker_empty_test")
+
+
+def test_worker_offloads_sync_stages_so_event_loop_can_progress() -> None:
+    """A slow synchronous embedder must not starve async job polling."""
+
+    async def scenario() -> int:
+        preparation = IngestionPreparationService(
+            limits=IngestionLimits(),
+            pipeline_config=PipelineConfig(),
+            pdf_inspector=PypdfInspector(),
+        )
+        prepared = preparation.prepare(
+            content=make_pdf(),
+            filename="responsive.pdf",
+            content_type="application/pdf",
+        )
+        registry = InMemoryIngestionRegistry()
+        receipt = await registry.accept(prepared, "responsive-1")
+        store = QdrantChunkStore(
+            QdrantClient(":memory:"),
+            QdrantSchema(collection_name="worker_responsive_test", dense_size=2),
+        )
+        worker = IngestionWorker(
+            registry=registry,
+            chunker=DocumentChunkingService(
+                extractor=FakeExtractor(),
+                pipeline_config=PipelineConfig(),
+            ),
+            dense_embedder=SlowDenseEmbedder(),
+            sparse_embedder=FakeSparseEmbedder(),
+            vector_store=store,
+        )
+
+        task = asyncio.create_task(worker.run_job(receipt.job_id))
+        polling_ticks = 0
+        while not task.done():
+            polling_ticks += 1
+            await asyncio.sleep(0.01)
+        snapshot = await task
+
+        assert snapshot.status is JobStatus.SUCCEEDED
+        return polling_ticks
+
+    assert asyncio.run(scenario()) >= 4

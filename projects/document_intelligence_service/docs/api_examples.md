@@ -1,6 +1,32 @@
 # API v1 Examples
 
-Base URL: `http://127.0.0.1:8000`
+- Base URL (host Python): `http://127.0.0.1:8000`
+- Base URL (default Compose mapping): `http://127.0.0.1:8010`
+
+## Compose demo
+
+From the repository root:
+
+```bash
+docker compose up --build -d
+open http://127.0.0.1:8501
+```
+
+The API container reaches Qdrant through the Compose network at
+`http://qdrant:6333`. Ollama remains on the host at
+`http://host.docker.internal:11434`; on Linux Compose supplies the
+`host-gateway` mapping. The host-facing API port is `8010` and Qdrant port is
+`6335` by default to
+avoid colliding with the earlier local Qdrant demo on `6333`.
+
+If Ollama itself runs as an existing Docker container bound only to its Docker
+network, use the repository smoke script. It connects `ai-journey-ollama` to
+the Compose network and overrides `DIS_OLLAMA_URL` to the container DNS name;
+otherwise liveness can be healthy while readiness correctly remains `503`.
+
+There is one API process in this MVP. Upload processing uses the configured
+SQLite registry and bounded background task. A separate worker/Redis topology
+is a later scale-out option, not a hidden production claim.
 
 ## Health
 
