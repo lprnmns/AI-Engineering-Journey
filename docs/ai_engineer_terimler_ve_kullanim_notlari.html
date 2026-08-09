@@ -68,7 +68,7 @@
 </head>
 <body>
   <h1>AI Engineer Journey — Terimler ve Kısa Kullanım Notlarım</h1>
-  <p class="meta">Repo çalışmalarından çıkarılmış kişisel başvuru notu · 26 Temmuz 2026</p>
+  <p class="meta">Repo çalışmalarından çıkarılmış kişisel başvuru notu · 9 Ağustos 2026</p>
   <p class="note">Bu belgede yalnızca repoda çalıştığım veya deneyle kullandığım kavramlar var. Her maddede terimin kısa anlamı, nerede işe yaradığı ve küçük bir örnek bulunuyor. Amaç formül ezberlemek değil; ileride bir ML, LLM veya RAG sistemi kurarken doğru kavramı doğru yerde hatırlamak.</p>
 
   <h2>1. Yazılım ve çalışma düzeni</h2>
@@ -243,6 +243,8 @@
     <li><strong>Retrieval benchmark:</strong> Retriever'ı kolay ve zor golden query setinde düzenli ölçmektir. Yalnız birkaç güzel demo sorusu sistemin güvenilir olduğunu kanıtlamaz.</li>
     <li><strong>Paraphrase robustness:</strong> Aynı niyet farklı kelimelerle sorulduğunda sistemin davranışını korumasıdır. Dense embedding lexical yönteme göre bu konuda genellikle daha güçlüdür; yine de ölçülmelidir.</li>
     <li><strong>Repeatability:</strong> Aynı soru ve ayarlarda sonucun tekrarlar boyunca ne kadar kararlı olduğudur. Yerel Gemma V3 promptu 8 vaka × 3 tekrarda denenerek küçük ölçekte kontrol edildi.</li>
+    <li><strong>Phrase coverage:</strong> Bir cevabın beklenen ifade/claim gruplarını içerip içermediğini ölçen offline kalite sinyalidir. Gerçek Gemma smoke'unda beklenen “ilk cevap süresi, toplam süre, bellek” ifadelerinin <code>0/3</code>'ü bulundu. Exact phrase kullandığı için paraphrase'i kaçırabilir; tek başına doğruluk oracle'ı değildir.</li>
+    <li><strong>Expected phrase ve forbidden phrase:</strong> Expected phrase cevapta bulunması beklenen ifade, forbidden phrase ise güvenlik veya kalite nedeniyle bulunmaması gereken ifadedir. Örnek: model karşılaştırması sorusunda ölçüm ifadeleri expected; kaynakta olmayan bilgiyi uydurma talimatı forbidden olarak etiketlenebilir.</li>
   </ul>
 
   <h2>6. Kurduğum zihinsel akış</h2>

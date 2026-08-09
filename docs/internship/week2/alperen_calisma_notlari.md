@@ -1138,3 +1138,39 @@ dosyasındadır. Çalıştırma aracı
 ### Mentora kısa anlatım
 
 > Gerçek Qdrant + Gemma smoke'unda önce bir skor sırası hatası yakaladım: hybrid sonuçları RRF sırasındayken dense margin'i RRF sırasından hesaplanıyordu. Bunu düzelttikten sonra validation-only dense threshold'u `0.379` seçtim. Aynı bounded koşulda Gemma `answered` döndü, iki canonical kaynak verdi, output validator warning üretmedi. Embedding yaklaşık 14.6 saniye, Gemma üretimi 35.4 saniye sürdü; bu nedenle 32 GB CPU ortamında geniş LLM benchmarkı yerine seçilmiş smoke/evaluation slice kullanıyorum.
+
+## 26. Phrase coverage ile gerçek cevabın kapsamını ölçme
+
+Numeric output validator yalnız cevapta geçen sayıların evidence içinde bulunup bulunmadığını kontrol ediyordu. Bu, sayısal olmayan ama mentorun beklediği önemli ifadeleri ölçmiyordu. Bu nedenle ayrı ve deterministik bir offline kalite sinyali ekledim: `phrase coverage`.
+
+Akış:
+
+```text
+kaydedilmiş response JSON
+→ aynı soruya ait expected phrase etiketi
+→ Türkçe büyük/küçük harf ve noktalama normalizasyonu
+→ matched / missing / forbidden phrase
+→ coverage ratio ve passed kararı
+```
+
+Bu metrik bir doğruluk oracle'ı değildir. Model doğru bir paraphrase kurabilir fakat beklenen kelime grubunu birebir kullanmayabilir. Bu yüzden `missing` sonucu otomatik olarak cevabı silmez; insan incelemesi veya daha güçlü semantik evaluator için işaret üretir.
+
+Gerçek Gemma çıktısına uygulanan vaka:
+
+```text
+soru: Yerel model karşılaştırmasında hangi değerler ölçülmelidir?
+cevap: teknik doğruluk, uygulama kalitesi ve mühendislik yorumu ölçülmelidir.
+beklenen: ilk cevap süresi, toplam süre, bellek
+matched: 0 / 3
+coverage: 0.0
+forbidden phrase: yok
+passed: false
+```
+
+Sonuç önemli: retrieval ve answerability gate teknik olarak başarılıydı (`answered`, 2 canonical source, `warnings=[]`), fakat Gemma cevabı soruyla ilişkili olmasına rağmen beklenen ölçüm kapsamını vermedi. Yani `answered` yalnız “LLM çağrısına izin verildi ve metin üretildi” anlamına geliyor; cevap kalitesi ayrıca ölçülmeli. Bu vaka, output validation'ın yalnız sayısal grounding değil, kapsam/claim değerlendirmesi de gerektirdiğini gösteriyor.
+
+Ham rapor: [`local_gemma_output_quality.json`](../../../projects/document_intelligence_service/eval/results/local_gemma_output_quality.json). CLI: `projects/document_intelligence_service/eval/run_phrase_evaluation.py`.
+
+### Mentora kısa anlatım
+
+> Gerçek Gemma çağrısı `answered` döndü ve kaynaklar geçerliydi; fakat beklenen “ilk cevap süresi, toplam süre, bellek” ifadelerini cevapta bulamadım. Bu yüzden kaydedilmiş response'u expected-phrase etiketleriyle offline ölçtüm: coverage `0/3`, `passed=false`. Bunu otomatik ret politikası yapmadım; exact phrase metriği paraphrase'leri kaçırabilir. Böylece retrieval başarısı, LLM'in cevap üretmesi ve cevabın beklenen kapsamı üç ayrı ölçüm olarak izleniyor.

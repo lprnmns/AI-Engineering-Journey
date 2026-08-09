@@ -1,0 +1,26 @@
+{
+  "git_sha": "df6e7fc40a3d0c064a95e9d58551a79f3c2a581e",
+  "response_file": "projects/document_intelligence_service/eval/results/local_gemma_output_validation_smoke.json",
+  "cases_file": "data/evaluations/mentor_program_pdf_rag_cases_v2.json",
+  "case_id": "local_model_measurement",
+  "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
+  "answer": "Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi ve mühendislik yorumu ölçülmelidir.",
+  "decision": "answered",
+  "phrase_coverage": {
+    "expected_phrases": [
+      "ilk cevap süresi",
+      "toplam süre",
+      "bellek"
+    ],
+    "matched_phrases": [],
+    "missing_phrases": [
+      "ilk cevap süresi",
+      "toplam süre",
+      "bellek"
+    ],
+    "forbidden_phrases": [],
+    "forbidden_found": [],
+    "coverage_ratio": 0.0,
+    "passed": false
+  }
+}
