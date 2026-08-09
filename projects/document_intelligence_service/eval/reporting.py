@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -105,32 +106,94 @@ def build_run_manifest(
 ) -> dict[str, object]:
     """Build the manifest required to interpret one benchmark snapshot."""
 
+    revision = git_sha(root)
+    pipeline = dict(pipeline_config)
+    host = host_manifest()
+    memory_bytes = host.get("memory_bytes")
+    ram_gb = (
+        round(int(memory_bytes) / (1024**3), 2)
+        if isinstance(memory_bytes, int)
+        else None
+    )
+    candidate_k = _as_int(
+        pipeline.get("candidate_k", pipeline.get("retrieval_candidate_k")),
+        default=30,
+    )
+    fusion_k = _as_int(
+        pipeline.get("fusion_k", pipeline.get("retrieval_fusion_k")),
+        default=20,
+    )
+    rerank_k = _as_int(
+        pipeline.get("rerank_k", pipeline.get("retrieval_rerank_k")),
+        default=5,
+    )
+    rrf_k = _as_int(pipeline.get("rrf_k"), default=60)
+    chunk_config = {
+        key: pipeline.get(key)
+        for key in (
+            "chunker",
+            "chunker_version",
+            "chunk_size_sentences",
+            "chunk_overlap_sentences",
+            "section_marker_profile",
+        )
+    }
+    chunk_config_hash = hashlib.sha256(
+        json.dumps(chunk_config, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
     corpus_snapshot_id = hashlib.sha256(
         f"{dataset_sha256(dataset_path)}:{qdrant_collection}:{point_count}".encode()
     ).hexdigest()
     return {
-        "git_sha": git_sha(root),
+        "run_id": (
+            f"eval_{mode}_{'reranker' if reranker_enabled else 'baseline'}_"
+            f"{revision[:12]}_seed{query_order_seed}"
+        ),
+        "git_sha": revision,
+        "started_at": datetime.now(timezone.utc).isoformat(),
         "dataset": str(dataset_path),
         "dataset_sha256": dataset_sha256(dataset_path),
         "dataset_version": dataset_path.stem,
         "corpus_snapshot_id": corpus_snapshot_id,
         "qdrant_collection": qdrant_collection,
         "qdrant_point_count": point_count,
+        "chunk_config_hash": chunk_config_hash,
+        "prompt_version": pipeline.get("prompt_version", "structured_prompt_v1"),
         "case_count": len(cases),
         "split_counts": _counts(cases, lambda case: case.split),
         "language_counts": _counts(cases, lambda case: case.language),
-        "pipeline": dict(pipeline_config),
+        "pipeline": pipeline,
+        "models": {
+            "dense": pipeline.get("embedding_model"),
+            "sparse": pipeline.get("sparse_encoder"),
+            "reranker": pipeline.get("reranker_model"),
+            "llm": pipeline.get("llm_model"),
+        },
         "retrieval": {
             "mode": mode,
+            "candidate_k": candidate_k,
             "top_k": top_k,
+            "fusion_k": fusion_k,
+            "rerank_k": rerank_k,
+            "fusion_config": {"algorithm": "rrf", "k": rrf_k},
             "reranker_enabled": reranker_enabled,
         },
         "warmup_count": len(warmup_questions),
+        "warmup_runs": len(warmup_questions),
         "warmup_questions": list(warmup_questions),
         "query_order_seed": query_order_seed,
-        "host": host_manifest(),
+        "host": {**host, "ram_gb": ram_gb},
+        "metric_implementation_version": pipeline.get(
+            "metric_implementation_version", "retrieval_metrics_v1"
+        ),
         "llm_called": False,
     }
+
+
+def _as_int(value: object, *, default: int) -> int:
+    """Read an optional integer manifest field without trusting its type."""
+
+    return value if isinstance(value, int) and not isinstance(value, bool) else default
 
 
 def write_raw_artifacts(

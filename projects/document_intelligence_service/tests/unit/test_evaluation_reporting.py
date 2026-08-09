@@ -79,6 +79,18 @@ def test_manifest_records_dataset_host_and_pipeline_identity(tmp_path: Path) -> 
     assert manifest["qdrant_point_count"] == 3
     assert manifest["warmup_count"] == 1
     assert manifest["pipeline"] == {"chunker": "section_aware_v1"}
+    assert manifest["run_id"].startswith("eval_hybrid_baseline_")
+    assert manifest["retrieval"] == {
+        "mode": "hybrid",
+        "candidate_k": 30,
+        "top_k": 5,
+        "fusion_k": 20,
+        "rerank_k": 5,
+        "fusion_config": {"algorithm": "rrf", "k": 60},
+        "reranker_enabled": False,
+    }
+    assert manifest["warmup_runs"] == 1
+    assert manifest["metric_implementation_version"] == "retrieval_metrics_v1"
     assert len(cast(str, manifest["dataset_sha256"])) == 64
 
 

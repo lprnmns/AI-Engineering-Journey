@@ -107,6 +107,13 @@ def main() -> None:
         pipeline_config={
             **pipeline_config.canonical_dict(),
             "reranker_model": pipeline_config.reranker_model if args.reranker else None,
+            "candidate_k": settings.retrieval_candidate_k,
+            "fusion_k": settings.retrieval_fusion_k,
+            "rerank_k": settings.retrieval_rerank_k,
+            "rrf_k": settings.rrf_k,
+            "llm_model": settings.llm_model,
+            "prompt_version": "structured_prompt_v1",
+            "metric_implementation_version": "retrieval_metrics_v1",
             "answerability_policy": {
                 "min_dense_score": policy.min_dense_score,
                 "min_sparse_score": policy.min_sparse_score,

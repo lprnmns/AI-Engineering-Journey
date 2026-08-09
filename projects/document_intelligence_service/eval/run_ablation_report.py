@@ -105,17 +105,24 @@ def main() -> None:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     first = next(iter(reports.values()))
-    pipeline = {
-        "parser": PipelineConfig().parser,
-        "parser_version": PipelineConfig().parser_version,
-        "normalizer": PipelineConfig().normalizer,
-        "chunker": PipelineConfig().chunker,
-        "chunker_version": PipelineConfig().chunker_version,
-        "embedding_model": first.get("embedding_model"),
-        "sparse_encoder": first.get("sparse_encoder"),
-        "reranker_model": first.get("reranker_model"),
-        "vector_schema_version": PipelineConfig().vector_schema_version,
-    }
+    source_manifest = first.get("manifest", {})
+    pipeline = (
+        dict(source_manifest.get("pipeline", {}))
+        if isinstance(source_manifest, dict)
+        else {}
+    )
+    if not pipeline:
+        pipeline = {
+            "parser": PipelineConfig().parser,
+            "parser_version": PipelineConfig().parser_version,
+            "normalizer": PipelineConfig().normalizer,
+            "chunker": PipelineConfig().chunker,
+            "chunker_version": PipelineConfig().chunker_version,
+            "embedding_model": first.get("embedding_model"),
+            "sparse_encoder": first.get("sparse_encoder"),
+            "reranker_model": first.get("reranker_model"),
+            "vector_schema_version": PipelineConfig().vector_schema_version,
+        }
     manifest = build_run_manifest(
         dataset_path=args.dataset,
         cases=cases,
