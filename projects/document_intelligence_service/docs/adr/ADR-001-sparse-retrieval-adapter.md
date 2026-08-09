@@ -17,7 +17,12 @@ Başlangıç adayı Qdrant named dense + sparse collection yapısıdır. Gün 3'
 
 Recall@k, MRR, nDCG, p50/p95 latency ve kurulum karmaşıklığı karşılaştırılacak.
 
-İlk gerçek spike sonucu (44 vaka, 30 answerable): Qdrant sparse/IDF modu Recall@5 `0.840`, MRR@10 `0.778`, nDCG@10 `0.860`, p95 `3.5 ms`; dense Recall@5 `0.901`, hybrid RRF Recall@5 `0.934` verdi. Bu ölçüm legacy `HashingSparseEncoder + Qdrant IDF` koşusuna aittir. Yeni `BM25SparseEncoder` koşusu ayrı artifact olarak üretilmelidir; eski sonuç yeni motor için yeniden etiketlenmez.
+İlk legacy spike sonucu (44 vaka, 30 answerable) Qdrant sparse/IDF modu için
+Recall@5 `0.840`, MRR@10 `0.778`, nDCG@10 `0.860`, p95 `3.5 ms`; dense Recall@5
+`0.901`, hybrid RRF Recall@5 `0.934` verdi. Temiz section-aware corpus'ta
+güncel `BM25SparseEncoder` sonucu Recall@5 `0.818`, MRR@10 `0.784`, nDCG@10
+`0.838`, p95 `8.4 ms`; hybrid Recall@5 `0.923` oldu. Legacy ve güncel sonuçlar
+ayrı artifact olarak tutuluyor; eski değer yeni motor için yeniden etiketlenmedi.
 
 ## Güncel karar
 

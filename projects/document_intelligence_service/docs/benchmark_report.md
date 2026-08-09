@@ -56,13 +56,15 @@ Structured query trace: request ID, question hash, stage latency and reason code
 
 İlk protokol tamamlandı; retrieval strategy kararı aşağıdaki aynı corpus snapshot, aynı query sırası ve aynı warm-up protokolüyle alınmıştır. Yeni corpus veya model değişiminde bu sonuçlar otomatik olarak genellenmeyecektir.
 
-## Measured ablation — 2026-08-09
+## Measured ablation — 2026-08-10
 
 Run manifest:
 
 ```text
-git_sha: 928e60868ab8cb67f8859acd297c394e7ff938fd
-active Qdrant points: 26 (collection toplamı: 53; 27 eski version inactive)
+git_sha: b8389677f656faa945885e3e58295ab7fce4643a
+active Qdrant points: 26 (collection toplamı: 26; eski/inactive version yok)
+qdrant collection: document_chunks_v2_bm25
+pipeline: section_aware_v1 + paraphrase-multilingual-MiniLM-L12-v2 + bm25_qdrant_idf_v2
 golden cases: 44 (retrieval quality denominator: 30 answerable)
 top_k: 5
 warm-up: 3 query, quality hesabı dışında
@@ -71,11 +73,11 @@ LLM: çağrılmadı
 
 | Strategy | Candidate Recall@20 | Recall@5 | MRR@10 | nDCG@10 | Total p50 | Total p95 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Dense | 0.993 | 0.901 | 0.875 | 0.930 | 22.8 ms | 25.2 ms |
-| Sparse/BM25 mode | 0.987 | 0.840 | 0.778 | 0.860 | 3.0 ms | 3.5 ms |
-| Hybrid RRF | 0.993 | **0.934** | **0.883** | **0.963** | 23.7 ms | **28.1 ms** |
-| Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 844.7 ms | 1224.6 ms |
-| Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 842.9 ms | 1128.5 ms |
+| Dense | 0.993 | 0.901 | 0.875 | 0.930 | 30.2 ms | 37.6 ms |
+| Sparse/BM25 mode | 0.987 | 0.818 | 0.784 | 0.838 | 5.7 ms | 8.4 ms |
+| Hybrid RRF | 0.993 | **0.923** | **0.878** | **0.952** | 33.7 ms | **41.8 ms** |
+| Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 1085.9 ms | 1350.4 ms |
+| Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 1019.3 ms | 1448.4 ms |
 
 Sparse/BM25 mode artık exact vocabulary kullanan `BM25SparseEncoder` kullanır.
 BM25 term-frequency saturation encoder'da, corpus-level IDF Qdrant'ın IDF
@@ -85,22 +87,22 @@ Türkçe morfoloji yine ayrı bir tokenizer/lemmatizer kapsamıdır.
 
 ### Yorum
 
-- Hybrid, bu corpus'ta dense'e göre Recall@5'i yaklaşık `+0.033`, sparse baseline'a göre `+0.094` artırdı.
+- Hybrid, bu temiz corpus'ta dense'e göre Recall@5'i yaklaşık `+0.022`, sparse baseline'a göre `+0.106` artırdı.
 - Üç yöntemde de Candidate Recall@20 çok yüksek (`0.987–0.993`). Sorun çoğunlukla doğru section'ın aday havuzuna girmemesi değil, final sıralamadaki yeridir.
-- Reranker, hybrid'e göre Recall@5'i `0.934`ten `0.912`ye, MRR@10'u `0.883`ten `0.833`e düşürdü; p95'i `28.1 ms`ten `1128.5 ms`e çıkardı.
-- Reranker `multi_evidence` slice'ında `0.508`ten `0.592`ye katkı verdi; fakat `near_miss` slice'ında `1.000`den `0.833`e düştü. `near_miss_02`, hybrid'in bulduğu `rag` section'ını reranker'ın final top-5'ten çıkardığı somut negatif flip'tir.
+- Reranker, hybrid'e göre Recall@5'i `0.923`ten `0.912`ye, MRR@10'u `0.878`den `0.833`e düşürdü; p95'i `41.8 ms`ten `1448.4 ms`e çıkardı.
+- Reranker'ın candidate recall'ı artırmadı (`0.993` → `0.993`); doğru kanıt zaten aday havuzundaydı. Ablation'da `8` pozitif ve `12` negatif flip raporlandı. Somut negatif örneklerden biri `near_miss_02`; hybrid'in bulduğu `rag` section'ı reranker final top-5'ten çıkardı.
 
 Karar: reranker varsayılan kapalı kalıyor. İleride farklı cross-encoder, daha iyi section-aware evidence aggregation veya validation split üzerinde threshold/reranker tuning yapılmadan varsayılan açılmayacak.
 
-## Answerability gate smoke — 2026-08-09
+## Answerability gate smoke — 2026-08-10
 
 Hybrid retrieval ile, Ollama çağırmadan aynı 44 vaka üzerinde gate çalıştırıldı:
 
 ```text
 expected answerable: 30
 expected no-answer: 14
-predicted answerable: 33
-predicted no-answer: 11
+predicted answerable: 32
+predicted no-answer: 12
 ```
 
 Bu provisional eşiklerde:
@@ -109,19 +111,20 @@ Bu provisional eşiklerde:
 no-answer false positive: 0 / 30 = 0.0%
   → answerable vaka gereksiz reddedildi
 
-no-answer false negative: 3 / 14 = 21.4%
+no-answer false negative: 4 / 14 = 28.6%
   → corpus dışı vakalar cevaplanabilir sanıldı
 
-gate total p50/p95: 50.2 ms / 79.5 ms
+gate total p50/p95: 29.4 ms / 35.4 ms
 LLM çağrısı: 0
 ```
 
-Bu sonuç validation'dan seçilen `0.379` threshold'un frozen test'te tamamen
-genellenmediğini gösteriyor: answerable vakalar gereksiz reddedilmedi, fakat
-`no_answer_05`, `no_answer_06` ve `leakage_02` cevaplanabilir göründü. Direct
-injection vakaları artık score gate'e bırakılmadan `SECURITY_POLICY` ile
-reddediliyor. Test split'e bakarak threshold'u geriye dönük ayarlamıyorum; kalan
-false negative'ler provenance/ACL ve daha güçlü output policy ihtiyacını gösteriyor.
+Temiz section-aware corpus'ta validation-only seçilen `0.331` runtime threshold
+answerable vakaları gereksiz reddetmedi. Score gate açısından kalan false
+negative'ler `no_answer_05`, `no_answer_06` ve leakage hazırlık vakalarından
+oluşuyor; direct injection ve ACL filter bypass istekleri artık score gate'e
+bırakılmadan `SECURITY_POLICY` ile kesiliyor. Threshold test sonucu üzerinden
+geriye dönük ayarlanmadı; corpus dışı benzerlikler için provenance, ACL principal
+ve daha güçlü evidence/claim policy hâlâ gereklidir.
 
 ## Validation-only threshold calibration
 
@@ -131,17 +134,17 @@ calibration split: validation only; security categories excluded from score cali
 validation cases: 9 (7 answerable, 2 score-based no-answer)
 test split used: false
 false-negative cost: 3.0
-selected score threshold: 0.337857395
-rounded score threshold: 0.338
+selected score threshold: 0.330817965
+rounded score threshold: 0.331
 validation false-positive: 0 / 7 = 0.0%
 validation false-negative: 0 / 2 = 0.0%
 ```
 
-`0.338` yalnız score-bearing, security dışı dokuz vakalık küçük validation
-alt kümesinin önerisidir; güçlü genelleme kanıtı değildir. Operasyon varsayılanı
-`0.379` olarak korunmuştur. Böylece yeni security policy'nin skor üretmediği
-vakalarla threshold kararı birbirine karıştırılmıyor; runtime ayarını daha geniş
-bir validation seti olmadan sessizce değiştirmiyorum. Calibration çıktısı
+`0.331` yalnız score-bearing, security dışı dokuz vakalık küçük validation
+alt kümesinin önerisidir; güçlü genelleme kanıtı değildir. Runtime default bu
+temiz corpus snapshot'ına hizalanmıştır; yeni corpus/model/chunk ayarında tekrar
+kalibrasyon gerekir. Böylece security policy'nin skor üretmediği vakalarla
+threshold kararı birbirine karıştırılmıyor. Calibration çıktısı
 [hybrid_threshold_calibration.json](../eval/results/hybrid_threshold_calibration.json)
 dosyasındadır.
 
@@ -152,8 +155,8 @@ ikinci candidate'ın dense skoru `0.488` olmasına rağmen eski margin hesabı
 `0.456 - 0.488` yapıyordu. RRF sırası dense skor sırası olmadığı için valid bir
 soru negatif margin ile reddedilebiliyordu. `5036c5c` commit'inde top-score ve
 margin, seçilen score kind içindeki karşılaştırılabilir skorlar sıralanarak
-hesaplandı. Benchmark ve calibration bu düzeltmeden sonra `57867ba` ile yeniden
-üretildi.
+hesaplandı. Benchmark ve calibration temiz active snapshot üzerinde `b838967`
+ile yeniden üretildi.
 
 ## Security gate regression — test split
 
@@ -171,8 +174,9 @@ LLM çağrısı: 0
 Bu sonuç modelin tek başına güvenli olduğunu göstermez; direct injection için
 uygulama seviyesinde ayrı bir politika eklendiğini gösterir. `PromptSafetyPolicy`
 yüksek güvenli kalıpları retrieval'dan önce kontrol ediyor: önceki kuralları
-geçersiz kılma, kaynakları görmezden gelme, system prompt/gizli kural çıkarma ve
-kaynaksız kesin iddia üretme. Engellenen istek `SECURITY_POLICY` no-answer döner,
+geçersiz kılma, kaynakları görmezden gelme, system prompt/gizli kural çıkarma,
+kaynaksız kesin iddia ve ACL/document filter bypass. Engellenen istek
+`SECURITY_POLICY` no-answer döner,
 source listesi boş kalır ve LLM çağrılmaz. Kavramsal “system prompt nedir?”
 soruları ise engellenmez. Ham rapor [security_test_gate.json](../eval/results/security_test_gate.json)
 dosyasındadır.
@@ -207,7 +211,26 @@ metni karşısındaki üretim davranışının ayrıca ölçülmesi gerekir. Ham
 [indirect_injection_smoke.json](../eval/results/indirect_injection_smoke.json)
 dosyasındadır.
 
-## Real local Gemma output-validation smoke — 2026-08-09
+## Evidence coverage diagnostic — 2026-08-10
+
+Golden setteki answerable vakaların `expected_phrases` etiketleri, final
+retrieved evidence text'iyle ayrı bir diagnostic olarak karşılaştırıldı:
+
+```text
+answerable labeled cases: 30
+fully covered: 25 / 30 = 83.3%
+mean evidence phrase coverage: 94.3%
+LLM çağrısı: 0
+```
+
+Bu ölçüm exact phrase yokluğunu doğrudan yanlış cevap saymaz; doğru bir
+paraphrase etiketteki kelimeyi kullanmadan da geçerli olabilir. Ancak özellikle
+multi-evidence vakalarında hangi beklenen unsurun final evidence'a girmediğini
+göstermek için kullanılır. Ham vaka bazlı sonuç
+[hybrid_evidence_coverage.json](../eval/results/hybrid_evidence_coverage.json)
+dosyasındadır.
+
+## Real local Gemma output-validation smoke — 2026-08-10
 
 Gerçek Ollama `gemma3:4b` çağrısı, aynı Qdrant snapshot'ı ve bounded `top_k=2`,
 `max_output_tokens=64` ayarlarıyla çalıştırıldı:
@@ -215,23 +238,26 @@ Gerçek Ollama `gemma3:4b` çağrısı, aynı Qdrant snapshot'ı ve bounded `top
 ```text
 decision: answered
 model: ollama / gemma3:4b
-answer: Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi ve mühendislik yorumu ölçülmelidir.
+answer: Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi, mühendislik yorumu ve bağımsız ilerleme değerleri ölçülmelidir.
 warnings: []
 canonical sources: 2
-embedding: 14607.8 ms
-LLM: 35406.6 ms
-total: 50042.6 ms
+embedding: 10279.1 ms
+LLM: 44211.2 ms
+total: 54519.1 ms
 ```
 
-Bu gerçek model cevabında numeric validator warning üretmedi; bu tek soru için
-grounding sinyalinin olumlu olduğunu gösterir, genel hallucination oranını
-kanıtlamaz. Tekrar üretilebilir ham çıktı
+Bu gerçek model cevabında numeric validator warning üretmedi; ancak phrase
+coverage smoke'u beklenen `ilk cevap süresi`, `toplam süre` ve `bellek`
+unsurlarının hiçbirini cevapta bulamadı (`0/3`). Yani retrieval ve numeric
+grounding olumlu görünürken cevap kapsamı eksik kalabildi. Bu tek soru genel
+hallucination oranını kanıtlamaz; fakat `answered` kararının cevap kalitesi
+garantisi olmadığını gösterir. Tekrar üretilebilir ham çıktı
 [local_gemma_output_validation_smoke.json](../eval/results/local_gemma_output_validation_smoke.json)
 dosyasındadır. LLM yaklaşık 35 saniye sürdüğü için 32 GB RAM/CPU ortamında
 geniş gerçek-model evaluation koşusu yerine önce bounded smoke ve sonra seçilmiş
 test slice'ları kullanılmalıdır.
 
-## Output/evidence validation slice — 2026-08-09
+## Output/evidence validation slice — 2026-08-10
 
 ### Problem
 

@@ -1,7 +1,7 @@
 # Security Attack Matrix v1
 
-Generated: `2026-08-09`
-Git SHA: `ff65936cc3fc2c8addd402abf1115861fe0ccdc7`
+Generated: `2026-08-10`
+Git SHA: `b8389677f656faa945885e3e58295ab7fce4643a`
 Scope: Hafta 2 local MVP: query, evidence, ingestion ve API sınırları
 
 Bu rapor tehdit sınıflarını mevcut kod ve test kanıtlarıyla eşleştirir. `pass` yalnız belirtilen dar kapsamın kanıtlandığını, genel güvenlik garantisi olmadığını ifade eder.

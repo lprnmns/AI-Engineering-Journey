@@ -93,11 +93,38 @@ sınırı bilinçli olarak belgelenmiştir.
 ## Geliştirme kontrolleri
 
 ```bash
-/tmp/document-intelligence-qa-venv/bin/pytest -q projects/document_intelligence_service/tests
-/tmp/document-intelligence-qa-venv/bin/ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
-/tmp/document-intelligence-qa-venv/bin/mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
+.venv/bin/pytest -q projects/document_intelligence_service/tests
+.venv/bin/ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
+.venv/bin/mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
 docker compose config --quiet
 ```
+
+## Benchmarkı yeniden üretme
+
+Dedicated Week 2 Qdrant `6335` portunda açık ve benchmark PDF'i section-aware
+profil ile indekslenmiş olmalıdır. Worker volume'ündeki `/data/bm25_state.json`
+dosyası hostta erişilebilir bir kopyaya alınır; sparse query vocabulary'si ile
+ingestion state'i aynı kalmalıdır.
+
+```bash
+export DIS_QDRANT_URL=http://127.0.0.1:6335
+export DIS_QDRANT_COLLECTION=document_chunks_v2_bm25
+export DIS_BM25_STATE_PATH=/tmp/week2-benchmark/bm25_state.json
+export DIS_SECTION_MARKER_PROFILE=mentor_program_v1
+
+.venv/bin/python -m projects.document_intelligence_service.eval.run_benchmark \
+  --mode hybrid --top-k 5 --point-count 26 \
+  --output projects/document_intelligence_service/eval/results/hybrid_baseline.json \
+  --raw-output-dir projects/document_intelligence_service/eval/results
+
+.venv/bin/python -m projects.document_intelligence_service.eval.run_evidence_coverage \
+  --benchmark projects/document_intelligence_service/eval/results/hybrid_baseline.json \
+  --output projects/document_intelligence_service/eval/results/hybrid_evidence_coverage.json
+```
+
+Dense/BM25 ve reranker varyantları aynı komutun `--mode`/`--reranker`
+seçenekleriyle çalıştırılır. Full A/B/C/D özeti
+`eval/results/week2_report_v2/` altında oluşur; bu koşu Ollama çağırmaz.
 
 Ephemeral Qdrant entegrasyon testi yalnız URL verilirse çalışır:
 
@@ -117,5 +144,6 @@ chunk veya collection değişince yeniden çalıştırılmalıdır.
 
 Detaylı karar kayıtları `docs/adr/`, API örnekleri `docs/api_examples.md`,
 benchmark `docs/benchmark_report.md`, security matrisi
-`docs/security_attack_matrix_v1.md`, 28 sayfalık kabul matrisi ise
-`docs/acceptance/week2_pdf_acceptance_matrix.md` altındadır.
+`docs/security_attack_matrix_v1.md`, 28 sayfalık kabul matrisi
+`docs/acceptance/week2_pdf_acceptance_matrix.md` ve sayfa sayfa görsel inceleme
+`docs/acceptance/week2_pdf_visual_review.md` altındadır.

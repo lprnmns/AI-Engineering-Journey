@@ -6,8 +6,8 @@ Bu not, cevapları ezber tanım olarak değil, mevcut repo davranışı ve ölç
 ## 1. BM25 hangi query slice'ında dense'i geçti?
 
 BM25 exact-term/code sorgularında beklenen avantajı verir; dense paraphrase ve
-kavramsal sorularda daha güçlüdür. Mevcut 44-vaka benchmarkında genel sonuç
-hybrid lehine: dense Recall@5 `0.901`, sparse/BM25 `0.840`, hybrid RRF `0.934`.
+kavramsal sorularda daha güçlüdür. Temiz 44-vaka benchmarkında genel sonuç
+hybrid lehine: dense Recall@5 `0.901`, sparse/BM25 `0.818`, hybrid RRF `0.923`.
 Bu yüzden “BM25 her zaman daha iyi” demiyorum; query category slice'ını ve raw
 case listesini birlikte gösteriyorum.
 
@@ -31,13 +31,15 @@ olup final sırada gerideyse reranker/fusion katmanı incelenir.
 
 ## 4. Reranker hangi sorguları bozdu?
 
-Mevcut raporda reranker hybrid Recall@5'i `0.934`ten `0.912`ye, MRR@10'u
-`0.883`ten `0.833`e düşürdü ve p95'i yaklaşık `28 ms`ten `1128 ms`e çıkardı.
-`near_miss` vakaları ve çok kanıt gerektiren sıralamalar riskli örneklerdir.
+Temiz raporda reranker hybrid Recall@5'i `0.923`ten `0.912`ye, MRR@10'u
+`0.878`den `0.833`e düşürdü ve p95'i yaklaşık `41.8 ms`ten `1448.4 ms`e
+çıkardı. Candidate Recall@20 değişmedi; buna rağmen 8 pozitif ve 12 negatif
+per-case flip gözlendi. `near_miss` ve multi-evidence sıralamaları riskli
+örneklerdir.
 Bu yüzden reranker varsayılan kapalıdır; yalnız kalite kazanımı ve latency
 bütçesi birlikte sağlanırsa açılmalıdır.
 
-Kanıt: `docs/benchmark_report.md`, `eval/results/ablation_summary.json`.
+Kanıt: `docs/benchmark_report.md`, `eval/results/week2_report_v2/ablation_summary_v2.json`.
 
 ## 5. No-answer threshold hangi split'te seçildi?
 
