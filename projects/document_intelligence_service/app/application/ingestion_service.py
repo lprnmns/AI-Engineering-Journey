@@ -1,6 +1,7 @@
 """Ingestion preparation use case."""
 
 import asyncio
+import logging
 
 from ..domain.ingestion import (
     IngestionReceipt,
@@ -12,6 +13,7 @@ from ..domain.ingestion import (
     validate_upload_metadata,
 )
 from .ports import IngestionRegistry, PdfInspector
+from ..observability.audit import emit_audit
 
 
 class IngestionPreparationService:
@@ -65,10 +67,14 @@ class IngestionService:
         preparation: IngestionPreparationService,
         registry: IngestionRegistry,
         max_upload_bytes: int,
+        logger: logging.Logger | None = None,
     ) -> None:
         self._preparation = preparation
         self._registry = registry
         self._max_upload_bytes = max_upload_bytes
+        self._logger = logger or logging.getLogger(
+            "document_intelligence_service.ingestion"
+        )
 
     @property
     def max_upload_bytes(self) -> int:
@@ -105,7 +111,21 @@ class IngestionService:
             tenant_id=tenant_id,
             acl_tags=acl_tags,
         )
-        return await self._registry.accept(prepared, idempotency_key)
+        receipt = await self._registry.accept(prepared, idempotency_key)
+        emit_audit(
+            action="ingestion.accepted",
+            result="accepted",
+            document_id=receipt.document_id,
+            version_id=receipt.version_id,
+            tenant_id=prepared.upload.tenant_id,
+            job_id=receipt.job_id,
+            metadata={
+                "bytes": prepared.upload.size_bytes,
+                "pages": prepared.pdf.page_count,
+            },
+            logger=self._logger,
+        )
+        return receipt
 
     async def get_job(self, job_id: str) -> JobSnapshot:
         """Get a job or expose a stable not-found domain error."""

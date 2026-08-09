@@ -1,6 +1,7 @@
 """Document catalog use cases shared by HTTP and future worker adapters."""
 
 import asyncio
+import logging
 
 from ..domain.errors import ErrorCode, ServiceError
 from ..domain.ingestion import (
@@ -9,6 +10,7 @@ from ..domain.ingestion import (
     normalize_tenant_id,
 )
 from .ports import ChunkVectorStore, IngestionRegistry
+from ..observability.audit import emit_audit
 
 
 class DocumentService:
@@ -19,9 +21,13 @@ class DocumentService:
         *,
         registry: IngestionRegistry,
         vector_store: ChunkVectorStore | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self._registry = registry
         self._vector_store = vector_store
+        self._logger = logger or logging.getLogger(
+            "document_intelligence_service.documents"
+        )
 
     async def list_documents(
         self,
@@ -82,3 +88,11 @@ class DocumentService:
                     message="Vector store is unavailable for document deletion",
                 ) from error
         await self._registry.delete_document(document.document_id, normalized_tenant)
+        emit_audit(
+            action="document.deleted",
+            result="success",
+            document_id=document.document_id,
+            tenant_id=normalized_tenant,
+            metadata={"status_before_delete": document.status.value},
+            logger=self._logger,
+        )

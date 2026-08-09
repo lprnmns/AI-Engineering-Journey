@@ -25,6 +25,7 @@ from .ports import (
     SparseEmbedder,
 )
 from ..observability.metrics import MetricsRegistry
+from ..observability.audit import emit_audit
 
 
 class IngestionWorker:
@@ -322,6 +323,16 @@ class IngestionWorker:
                 "rag_ingestion_jobs_total",
                 {"status": JobStatus.SUCCEEDED.value},
             )
+        emit_audit(
+            action="ingestion.version_activated",
+            result="success",
+            document_id=self._document_id(prepared),
+            version_id=self._version_id(prepared),
+            tenant_id=prepared.upload.tenant_id,
+            job_id=completed.job_id,
+            metadata={"points": completed.point_count or 0},
+            logger=self._logger,
+        )
         return completed
 
     def _build_chunks(
@@ -521,4 +532,14 @@ class IngestionWorker:
                 "rag_ingestion_jobs_total",
                 {"status": JobStatus.FAILED.value, "error_code": code.value},
             )
+        emit_audit(
+            action="ingestion.failed",
+            result="failure",
+            document_id=previous.document_id,
+            version_id=(self._version_id(prepared) if prepared is not None else None),
+            tenant_id=(prepared.upload.tenant_id if prepared is not None else None),
+            job_id=previous.job_id,
+            metadata={"error_code": code.value},
+            logger=self._logger,
+        )
         return current
