@@ -340,10 +340,14 @@ def test_upload_returns_202_and_job_can_be_read() -> None:
         "current_stage": None,
         "stages": [],
         "page_count": 1,
-        "point_count": None,
-        "error_message": None,
-        "failed_stage": None,
-    }
+            "point_count": None,
+            "error_message": None,
+            "failed_stage": None,
+            "attempt_count": 0,
+            "max_attempts": 3,
+            "next_attempt_at": None,
+            "last_attempt_at": None,
+        }
 
 
 def test_same_pdf_and_pipeline_do_not_create_duplicate_job() -> None:

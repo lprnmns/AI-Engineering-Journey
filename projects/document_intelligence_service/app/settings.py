@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(default=200, gt=0)
     ingestion_registry_backend: Literal["memory", "sqlite"] = "memory"
     ingestion_database_path: str = "data/ingestions.sqlite3"
+    embedded_worker: bool = True
+    worker_poll_interval_seconds: float = Field(default=1.0, gt=0, le=60)
+    worker_stale_after_seconds: float = Field(default=300.0, gt=0, le=3600)
     bm25_state_path: str = "data/bm25_state.json"
     evaluation_artifact_dir: str = "projects/document_intelligence_service/eval/results/api_runs"
     section_marker_profile: Literal["none", "mentor_program_v1"] = "none"

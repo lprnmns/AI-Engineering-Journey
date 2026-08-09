@@ -53,4 +53,8 @@ async def get_job(
         point_count=snapshot.point_count,
         error_message=snapshot.error_message,
         failed_stage=snapshot.failed_stage,
+        attempt_count=snapshot.attempt_count,
+        max_attempts=snapshot.max_attempts,
+        next_attempt_at=snapshot.next_attempt_at,
+        last_attempt_at=snapshot.last_attempt_at,
     )

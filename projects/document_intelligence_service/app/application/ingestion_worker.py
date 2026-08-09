@@ -55,6 +55,10 @@ class IngestionWorker:
                 code=ErrorCode.JOB_NOT_FOUND,
                 message="Job was not found",
             )
+        claimed = await self._registry.claim_job(job_id)
+        if claimed is None:
+            return (await self._registry.get_job(job_id)) or snapshot
+        snapshot = claimed
         if snapshot.status is JobStatus.SUCCEEDED:
             return snapshot
 
@@ -66,9 +70,16 @@ class IngestionWorker:
                 "Staged ingestion content was not found",
             )
 
+        await self._registry.set_document_status(
+            document_id=self._document_id(prepared),
+            version_id=self._version_id(prepared),
+            status=DocumentStatus.INDEXING,
+        )
         current = await self._set_progress(snapshot, JobStatus.RUNNING, 1)
         active_stage: str | None = None
         stage_started: datetime | None = None
+        published = False
+        staged = False
         try:
             current, stage_started = await self._begin_stage(
                 current,
@@ -183,6 +194,7 @@ class IngestionWorker:
                 tenant_id=prepared.upload.tenant_id,
                 acl_tags=prepared.upload.acl_tags,
             )
+            staged = True
             current = await self._finish_stage(
                 current,
                 active_stage,
@@ -236,6 +248,7 @@ class IngestionWorker:
                 version_id=verification.version_id,
                 verification=verification,
             )
+            published = True
             await self._registry.set_document_status(
                 document_id=verification.document_id,
                 version_id=verification.version_id,
@@ -260,7 +273,13 @@ class IngestionWorker:
                     error_code=error.code,
                     error_message=error.message,
                 )
-            return await self._fail(current, error.code, error.message, prepared)
+            return await self._fail(
+                current,
+                error.code,
+                error.message,
+                prepared,
+                cleanup_version=staged and not published,
+            )
         except Exception as error:
             message = str(error) or "Ingestion worker failed"
             if active_stage is not None and stage_started is not None:
@@ -278,6 +297,7 @@ class IngestionWorker:
                 ErrorCode.INGESTION_FAILED,
                 message,
                 prepared,
+                cleanup_version=staged and not published,
             )
 
         current = await self._set_progress(current, JobStatus.SUCCEEDED, 100)
@@ -408,17 +428,47 @@ class IngestionWorker:
         code: ErrorCode,
         message: str,
         prepared: PreparedIngestion | None = None,
+        cleanup_version: bool = True,
     ) -> JobSnapshot:
+        if prepared is not None and cleanup_version:
+            discard_version = getattr(self._vector_store, "discard_version", None)
+            if callable(discard_version):
+                await asyncio.to_thread(
+                    discard_version,
+                    self._document_id(prepared),
+                    self._version_id(prepared),
+                )
         if prepared is not None:
             await self._registry.set_document_status(
                 document_id=self._document_id(prepared),
                 version_id=self._version_id(prepared),
                 status=DocumentStatus.FAILED,
             )
-        return await self._set_progress(
+        current = await self._set_progress(
             previous,
             JobStatus.FAILED,
             previous.progress_percent,
             error_code=code,
             error_message=message,
         )
+        retryable = code in {
+            ErrorCode.DEPENDENCY_UNAVAILABLE,
+            ErrorCode.INGESTION_FAILED,
+        }
+        if retryable and current.attempt_count < current.max_attempts:
+            from datetime import timedelta
+
+            delay_seconds = min(300, 2 ** max(current.attempt_count - 1, 0))
+            current = replace(
+                current,
+                next_attempt_at=datetime.now(timezone.utc)
+                + timedelta(seconds=delay_seconds),
+            )
+        else:
+            current = replace(
+                current,
+                attempt_count=current.max_attempts,
+                next_attempt_at=None,
+            )
+        await self._registry.update_job(current)
+        return current

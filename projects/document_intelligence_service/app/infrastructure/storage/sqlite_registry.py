@@ -1,7 +1,7 @@
 """Restart-safe SQLite adapter for ingestion identities, jobs and staged PDFs."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sqlite3
@@ -54,6 +54,36 @@ class SqliteIngestionRegistry:
         """Read one durable job snapshot."""
 
         return await asyncio.to_thread(self._get_job_sync, job_id)
+
+    async def claim_job(
+        self,
+        job_id: str,
+        stale_after_seconds: float = 300.0,
+    ) -> JobSnapshot | None:
+        """Atomically claim a queued, retryable or stale-running job."""
+
+        if stale_after_seconds <= 0:
+            raise ValueError("stale_after_seconds must be positive")
+        return await asyncio.to_thread(
+            self._claim_job_sync,
+            job_id,
+            stale_after_seconds,
+        )
+
+    async def list_recoverable_jobs(
+        self,
+        limit: int = 10,
+        stale_after_seconds: float = 300.0,
+    ) -> tuple[str, ...]:
+        """Return bounded jobs that the separate worker should poll."""
+
+        if limit <= 0 or stale_after_seconds <= 0:
+            raise ValueError("worker polling limits must be positive")
+        return await asyncio.to_thread(
+            self._list_recoverable_jobs_sync,
+            limit,
+            stale_after_seconds,
+        )
 
     async def get_staged_content(self, job_id: str) -> bytes | None:
         """Read the staged PDF bytes for a worker."""
@@ -163,6 +193,10 @@ class SqliteIngestionRegistry:
                     point_count INTEGER,
                     error_message TEXT,
                     failed_stage TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 3,
+                    next_attempt_at TEXT,
+                    last_attempt_at TEXT,
                     PRIMARY KEY (tenant_id, content_hash, pipeline_fingerprint)
                 );
 
@@ -218,6 +252,10 @@ class SqliteIngestionRegistry:
                 ("point_count", "INTEGER"),
                 ("error_message", "TEXT"),
                 ("failed_stage", "TEXT"),
+                ("attempt_count", "INTEGER NOT NULL DEFAULT 0"),
+                ("max_attempts", "INTEGER NOT NULL DEFAULT 3"),
+                ("next_attempt_at", "TEXT"),
+                ("last_attempt_at", "TEXT"),
             ):
                 if column not in columns:
                     connection.execute(
@@ -275,6 +313,10 @@ class SqliteIngestionRegistry:
                 point_count INTEGER,
                 error_message TEXT,
                 failed_stage TEXT,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                next_attempt_at TEXT,
+                last_attempt_at TEXT,
                 PRIMARY KEY (tenant_id, content_hash, pipeline_fingerprint)
             )
             """
@@ -286,13 +328,15 @@ class SqliteIngestionRegistry:
                 job_id, filename, content_type, size_bytes, page_count,
                 tenant_id, acl_tags_json, created_at, content, document_status,
                 status, progress_percent, error_code, current_stage, point_count,
-                error_message, failed_stage
+                error_message, failed_stage, attempt_count, max_attempts,
+                next_attempt_at, last_attempt_at
             )
             SELECT content_hash, pipeline_fingerprint, document_id, version_id,
                    job_id, filename, content_type, size_bytes, page_count,
                    tenant_id, acl_tags_json, created_at, content, document_status,
                    status, progress_percent, error_code, current_stage, point_count,
-                   error_message, failed_stage
+                   error_message, failed_stage, attempt_count, max_attempts,
+                   next_attempt_at, last_attempt_at
             FROM ingestions
             """
         )
@@ -362,8 +406,9 @@ class SqliteIngestionRegistry:
                     content_hash, pipeline_fingerprint, document_id, version_id,
                     job_id, filename, content_type, size_bytes, page_count,
                     tenant_id, acl_tags_json, created_at, content, document_status, status, progress_percent, error_code,
-                    current_stage, point_count, error_message, failed_stage
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    current_stage, point_count, error_message, failed_stage,
+                    attempt_count, max_attempts, next_attempt_at, last_attempt_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     prepared.upload.content_hash,
@@ -385,6 +430,10 @@ class SqliteIngestionRegistry:
                     None,
                     None,
                     None,
+                    None,
+                    None,
+                    0,
+                    3,
                     None,
                     None,
                 ),
@@ -412,6 +461,107 @@ class SqliteIngestionRegistry:
                 row,
                 self._stage_events_sync(connection, job_id),
             )
+
+    def _claim_job_sync(
+        self,
+        job_id: str,
+        stale_after_seconds: float,
+    ) -> JobSnapshot | None:
+        now = datetime.now(timezone.utc)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT * FROM ingestions WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            current = self._job_from_row(
+                row,
+                self._stage_events_sync(connection, job_id),
+            )
+            if current.status is JobStatus.SUCCEEDED:
+                return current
+            if current.attempt_count >= current.max_attempts:
+                return current
+            if current.next_attempt_at is not None and current.next_attempt_at > now:
+                return None
+            if current.status is JobStatus.RUNNING and (
+                current.last_attempt_at is not None
+                and now - current.last_attempt_at
+                < timedelta(seconds=stale_after_seconds)
+            ):
+                return None
+            connection.execute(
+                """
+                UPDATE ingestions
+                SET status = ?, progress_percent = MAX(progress_percent, 1),
+                    error_code = NULL, error_message = NULL,
+                    next_attempt_at = NULL, last_attempt_at = ?,
+                    attempt_count = attempt_count + 1
+                WHERE job_id = ?
+                """,
+                (JobStatus.RUNNING.value, now.isoformat(), job_id),
+            )
+            updated = connection.execute(
+                "SELECT * FROM ingestions WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+            if updated is None:
+                raise RuntimeError("claimed ingestion disappeared")
+            return self._job_from_row(
+                updated,
+                self._stage_events_sync(connection, job_id),
+            )
+
+    def _list_recoverable_jobs_sync(
+        self,
+        limit: int,
+        stale_after_seconds: float,
+    ) -> tuple[str, ...]:
+        now = datetime.now(timezone.utc)
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT job_id, status, attempt_count, max_attempts,
+                       next_attempt_at, last_attempt_at
+                FROM ingestions
+                WHERE status IN (?, ?, ?)
+                  AND attempt_count < max_attempts
+                ORDER BY COALESCE(next_attempt_at, created_at), job_id
+                LIMIT ?
+                """,
+                (
+                    JobStatus.QUEUED.value,
+                    JobStatus.FAILED.value,
+                    JobStatus.RUNNING.value,
+                    limit * 2,
+                ),
+            ).fetchall()
+        recoverable: list[str] = []
+        for row in rows:
+            next_attempt_at = (
+                datetime.fromisoformat(row["next_attempt_at"])
+                if row["next_attempt_at"]
+                else None
+            )
+            last_attempt_at = (
+                datetime.fromisoformat(row["last_attempt_at"])
+                if row["last_attempt_at"]
+                else None
+            )
+            if next_attempt_at is not None and next_attempt_at > now:
+                continue
+            if row["status"] == JobStatus.RUNNING.value and (
+                last_attempt_at is not None
+                and now - last_attempt_at
+                < timedelta(seconds=stale_after_seconds)
+            ):
+                continue
+            recoverable.append(row["job_id"])
+            if len(recoverable) >= limit:
+                break
+        return tuple(recoverable)
 
     def _get_staged_sync(self, job_id: str) -> PreparedIngestion | None:
         with self._connect() as connection:
@@ -511,7 +661,8 @@ class SqliteIngestionRegistry:
                 UPDATE ingestions
                 SET status = ?, progress_percent = ?, error_code = ?,
                     current_stage = ?, point_count = ?, error_message = ?,
-                    failed_stage = ?
+                    failed_stage = ?, attempt_count = ?, max_attempts = ?,
+                    next_attempt_at = ?, last_attempt_at = ?
                 WHERE job_id = ?
                 """,
                 (
@@ -522,6 +673,14 @@ class SqliteIngestionRegistry:
                     snapshot.point_count,
                     snapshot.error_message,
                     snapshot.failed_stage,
+                    snapshot.attempt_count,
+                    snapshot.max_attempts,
+                    snapshot.next_attempt_at.isoformat()
+                    if snapshot.next_attempt_at
+                    else None,
+                    snapshot.last_attempt_at.isoformat()
+                    if snapshot.last_attempt_at
+                    else None,
                     snapshot.job_id,
                 ),
             )
@@ -676,6 +835,18 @@ class SqliteIngestionRegistry:
             point_count=row["point_count"],
             error_message=row["error_message"],
             failed_stage=row["failed_stage"],
+            attempt_count=row["attempt_count"],
+            max_attempts=row["max_attempts"],
+            next_attempt_at=(
+                datetime.fromisoformat(row["next_attempt_at"])
+                if row["next_attempt_at"]
+                else None
+            ),
+            last_attempt_at=(
+                datetime.fromisoformat(row["last_attempt_at"])
+                if row["last_attempt_at"]
+                else None
+            ),
         )
 
     def _connect(self) -> sqlite3.Connection:

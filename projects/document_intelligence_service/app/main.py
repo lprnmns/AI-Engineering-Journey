@@ -267,6 +267,7 @@ def create_app(
         if (
             resolved_ingestion_worker is None
             and resolved_settings.ingestion_registry_backend == "sqlite"
+            and resolved_settings.embedded_worker
         ):
             resolved_ingestion_worker = build_ingestion_worker(
                 resolved_settings,

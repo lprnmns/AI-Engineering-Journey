@@ -7,7 +7,7 @@ replaced by durable document/job persistence before production deployment.
 import asyncio
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from ...domain.entities import DocumentStatus, JobStatus, StageStatus
 from ...domain.errors import ErrorCode, ServiceError
@@ -104,6 +104,64 @@ class InMemoryIngestionRegistry:
 
         async with self._lock:
             return self._jobs.get(job_id)
+
+    async def claim_job(
+        self,
+        job_id: str,
+        stale_after_seconds: float = 300.0,
+    ) -> JobSnapshot | None:
+        """Atomically claim a queued, retryable or stale-running job."""
+
+        if stale_after_seconds <= 0:
+            raise ValueError("stale_after_seconds must be positive")
+        now = datetime.now(timezone.utc)
+        async with self._lock:
+            current = self._jobs.get(job_id)
+            if current is None:
+                return None
+            if current.status is JobStatus.SUCCEEDED:
+                return current
+            if current.attempt_count >= current.max_attempts:
+                return current
+            if current.next_attempt_at is not None and current.next_attempt_at > now:
+                return None
+            if current.status is JobStatus.RUNNING and (
+                current.last_attempt_at is not None
+                and now - current.last_attempt_at
+                < timedelta(seconds=stale_after_seconds)
+            ):
+                return None
+            claimed = replace(
+                current,
+                status=JobStatus.RUNNING,
+                progress_percent=max(current.progress_percent, 1),
+                error_code=None,
+                error_message=None,
+                next_attempt_at=None,
+                last_attempt_at=now,
+                attempt_count=current.attempt_count + 1,
+            )
+            self._jobs[job_id] = claimed
+            return claimed
+
+    async def list_recoverable_jobs(
+        self,
+        limit: int = 10,
+        stale_after_seconds: float = 300.0,
+    ) -> tuple[str, ...]:
+        """Return jobs eligible for the next worker polling pass."""
+
+        if limit <= 0 or stale_after_seconds <= 0:
+            raise ValueError("worker polling limits must be positive")
+        now = datetime.now(timezone.utc)
+        async with self._lock:
+            candidates = [
+                job
+                for job in self._jobs.values()
+                if _job_recoverable(job, now, stale_after_seconds)
+            ]
+            candidates.sort(key=lambda job: (job.next_attempt_at or now, job.job_id))
+            return tuple(job.job_id for job in candidates[:limit])
 
     async def get_staged_content(self, job_id: str) -> bytes | None:
         """Return staged bytes for a future worker in this process."""
@@ -272,6 +330,25 @@ def _parse_cursor(cursor: str | None) -> int:
             message="Document cursor is invalid",
         )
     return int(cursor)
+
+
+def _job_recoverable(
+    job: JobSnapshot,
+    now: datetime,
+    stale_after_seconds: float,
+) -> bool:
+    """Return whether a job should be offered to a worker poller."""
+
+    if job.status is JobStatus.SUCCEEDED or job.attempt_count >= job.max_attempts:
+        return False
+    if job.next_attempt_at is not None and job.next_attempt_at > now:
+        return False
+    if job.status is JobStatus.RUNNING:
+        return job.last_attempt_at is None or (
+            now - job.last_attempt_at
+            >= timedelta(seconds=stale_after_seconds)
+        )
+    return job.status in (JobStatus.QUEUED, JobStatus.FAILED)
 
 
 def _snapshots(

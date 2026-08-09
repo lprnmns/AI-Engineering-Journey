@@ -178,6 +178,39 @@ def test_development_registry_keeps_staged_bytes_for_future_worker() -> None:
     assert staged == content
 
 
+def test_in_memory_registry_claims_once_and_recovers_stale_job() -> None:
+    preparation = IngestionPreparationService(
+        limits=IngestionLimits(),
+        pipeline_config=PipelineConfig(),
+        pdf_inspector=PypdfInspector(),
+    )
+    prepared = preparation.prepare(
+        content=make_pdf(),
+        filename="recoverable.pdf",
+        content_type="application/pdf",
+    )
+    registry = InMemoryIngestionRegistry()
+    receipt = asyncio.run(registry.accept(prepared, "recover-1"))
+
+    claimed = asyncio.run(registry.claim_job(receipt.job_id))
+    assert claimed is not None
+    assert claimed.status is JobStatus.RUNNING
+    assert claimed.attempt_count == 1
+    assert asyncio.run(registry.claim_job(receipt.job_id)) is None
+
+    stale = replace(
+        claimed,
+        last_attempt_at=datetime.fromtimestamp(0, tz=timezone.utc),
+    )
+    asyncio.run(registry.update_job(stale))
+    assert asyncio.run(registry.list_recoverable_jobs(stale_after_seconds=1)) == (
+        receipt.job_id,
+    )
+    recovered = asyncio.run(registry.claim_job(receipt.job_id, stale_after_seconds=1))
+    assert recovered is not None
+    assert recovered.attempt_count == 2
+
+
 def test_same_pdf_can_be_indexed_by_two_tenants_without_identity_collision() -> None:
     content = make_pdf()
     preparation = IngestionPreparationService(

@@ -102,6 +102,10 @@ class JobResponse(BaseModel):
     point_count: int | None = Field(default=None, ge=0)
     error_message: str | None = None
     failed_stage: str | None = None
+    attempt_count: int = Field(ge=0)
+    max_attempts: int = Field(ge=1)
+    next_attempt_at: datetime | None = None
+    last_attempt_at: datetime | None = None
 
 
 class StageEventResponse(BaseModel):

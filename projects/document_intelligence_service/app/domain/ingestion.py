@@ -180,6 +180,10 @@ class JobSnapshot:
     point_count: int | None = None
     error_message: str | None = None
     failed_stage: str | None = None
+    attempt_count: int = 0
+    max_attempts: int = 3
+    next_attempt_at: datetime | None = None
+    last_attempt_at: datetime | None = None
 
 
 def normalize_idempotency_key(value: str | None) -> str | None:

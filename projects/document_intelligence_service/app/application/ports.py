@@ -122,6 +122,11 @@ class ChunkVectorStore(Protocol):
 
         ...
 
+    def discard_version(self, document_id: str, version_id: str) -> None:
+        """Remove an unpublishable staged version during failure cleanup."""
+
+        ...
+
 
 class ChunkRetriever(Protocol):
     """Port for active-version dense and sparse evidence search."""
@@ -197,6 +202,24 @@ class IngestionRegistry(Protocol):
 
     async def get_job(self, job_id: str) -> JobSnapshot | None:
         """Return one job snapshot, if it exists."""
+
+        ...
+
+    async def claim_job(
+        self,
+        job_id: str,
+        stale_after_seconds: float = 300.0,
+    ) -> JobSnapshot | None:
+        """Atomically claim one queued or recoverable stale job."""
+
+        ...
+
+    async def list_recoverable_jobs(
+        self,
+        limit: int = 10,
+        stale_after_seconds: float = 300.0,
+    ) -> tuple[str, ...]:
+        """Return bounded queued/retryable/stale-running job IDs."""
 
         ...
 

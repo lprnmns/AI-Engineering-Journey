@@ -174,6 +174,18 @@ class QdrantChunkStore:
             wait=True,
         )
 
+    def discard_version(self, document_id: str, version_id: str) -> None:
+        """Delete one failed staged version without touching other versions."""
+
+        self.ensure_schema()
+        self._client.delete(
+            collection_name=self.collection_name,
+            points_selector=models.FilterSelector(
+                filter=self._version_filter(document_id, version_id)
+            ),
+            wait=True,
+        )
+
     def upsert(
         self,
         *,
