@@ -99,37 +99,42 @@
     {
       "id": "SEC-04",
       "threat": "Cross-document leakage / ACL bypass",
-      "status": "not_ready",
+      "status": "pass",
       "entry_point": "POST /v1/query ve POST /v1/search tenant_id / acl_tags",
-      "control": "Tenant/ACL parametresi verildiğinde sistem sessizce filtrelemeden FEATURE_NOT_READY ile fail-closed davranıyor.",
-      "observed_result": "Gerçek ACL filtresi ve request principal modeli henüz yok; bu nedenle tenant veya ACL isteyen istek 501 döndürüyor.",
+      "control": "Tenant/ACL filtreleri application sınırında normalize edilir, Qdrant pre-filter olarak uygulanır ve dönen source metadata'sı ikinci kez doğrulanır.",
+      "observed_result": "Tenant veya ACL kapsamı olmayan candidate source listesine giremiyor; cross-tenant ve yetkisiz-tag contract/unit testleri geçiyor. Bu, authentication/authorization sistemi değil, local ACL-ready izolasyon kontrolüdür.",
       "evidence": [
         {
-          "path": "projects/document_intelligence_service/app/api/v1/queries.py",
+          "path": "projects/document_intelligence_service/app/infrastructure/qdrant/retriever.py",
           "kind": "code",
-          "claim": "Query ACL yolu FEATURE_NOT_READY"
+          "claim": "Qdrant active, tenant, ACL ve document pre-filter"
         },
         {
-          "path": "projects/document_intelligence_service/app/api/v1/search.py",
+          "path": "projects/document_intelligence_service/app/application/retrieval_service.py",
           "kind": "code",
-          "claim": "Search ACL yolu FEATURE_NOT_READY"
+          "claim": "Adapter sonucunda tenant/ACL/document source re-check"
+        },
+        {
+          "path": "projects/document_intelligence_service/tests/unit/test_qdrant_schema.py",
+          "kind": "test",
+          "claim": "Cross-tenant ve ACL tag filtresi"
         },
         {
           "path": "projects/document_intelligence_service/tests/contract/test_search_api.py",
           "kind": "test",
-          "claim": "ACL filtresi sessizce yok sayılmıyor"
+          "claim": "Search ACL scope'u retrieval adapter'ına aktarılıyor"
         },
         {
           "path": "projects/document_intelligence_service/eval/results/security_test_gate.json",
           "kind": "artifact",
-          "claim": "Frozen leakage vakaları retrieval corpus sınırında regression kanıtı; runtime ACL kanıtı değildir"
+          "claim": "Frozen leakage regression sonucu"
         }
       ],
       "known_limitations": [
-        "Gerçek tenant/ACL pre-filter ve source re-check olmadığı için bu özellik production-ready değildir.",
-        "Frozen leakage 2/2 sonucu ACL bypass'ın çözüldüğü anlamına gelmez; corpus dışında kalan soruların gate davranışını ölçer."
+        "Request principal/authentication ve merkezi policy yönetimi bu local MVP'nin kapsamı değildir; tenant_id/acl_tags istemcinin beyan ettiği filtrelerdir.",
+        "Qdrant filtresi ve source re-check veri izolasyonunu kanıtlar; gerçek kullanıcı yetkisini tek başına kanıtlamaz."
       ],
-      "next_action": "Request principal → tenant/ACL policy → Qdrant pre-filter → source re-check zincirini ve cross-document leakage test setini uygulamak."
+      "next_action": "Bir sonraki kapsamda authenticated request principal, policy store ve signed provenance ile filtre değerlerinin istemciden beyan edilmesini kaldırmak."
     },
     {
       "id": "SEC-05",

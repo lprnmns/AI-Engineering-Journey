@@ -17,20 +17,20 @@ def test_security_attack_matrix_has_unique_controls_and_complete_evidence() -> N
 
     assert report["summary"] == {
         "control_count": 8,
-        "status_counts": {"not_ready": 1, "partial": 4, "pass": 3},
-        "evidence_path_count": 27,
+        "status_counts": {"not_ready": 0, "partial": 4, "pass": 4},
+        "evidence_path_count": 28,
         "missing_evidence_path_count": 0,
         "missing_evidence_paths": [],
-        "release_ready": False,
+        "release_ready": True,
     }
 
 
-def test_attack_matrix_keeps_acl_gap_explicit() -> None:
+def test_attack_matrix_records_acl_ready_isolation_boundary() -> None:
     matrix = load_matrix(MATRIX)
 
     acl_control = next(
         control for control in matrix["controls"] if control["id"] == "SEC-04"
     )
 
-    assert acl_control["status"] == "not_ready"
-    assert "501" in acl_control["observed_result"]
+    assert acl_control["status"] == "pass"
+    assert "local ACL-ready izolasyon" in acl_control["observed_result"]

@@ -100,8 +100,8 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Security Attack Matrix v1",
         "",
-        f"Generated: `{report['generated_on']}`  ",
-        f"Git SHA: `{report['git_sha']}`  ",
+        f"Generated: `{report['generated_on']}`",
+        f"Git SHA: `{report['git_sha']}`",
         f"Scope: {report['scope']}",
         "",
         "Bu rapor tehdit sınıflarını mevcut kod ve test kanıtlarıyla eşleştirir. "
@@ -138,11 +138,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Okuma notu",
             "",
-            "Özellikle `SEC-04` için frozen leakage testinin geçmesi gerçek ACL "
-            "yetkilendirmesinin hazır olduğu anlamına gelmez. API, tenant/ACL "
-            "parametresi geldiğinde şu an bilinçli olarak `501 FEATURE_NOT_READY` "
-            "döndürüyor. Bu, sessiz veri sızıntısından daha güvenli bir ara "
-            "davranıştır; ancak özellik tamamlanmış değildir.",
+            "Özellikle `SEC-04` için `pass`, local MVP kapsamındaki tenant/ACL "
+            "pre-filter ve source re-check izolasyonunun test edildiği anlamına "
+            "gelir; authentication veya merkezi authorization sistemi anlamına "
+            "gelmez. Filtre değerleri şu an istemci tarafından beyan edilir ve "
+            "bir sonraki kapsamda authenticated request principal ile bağlanmalıdır.",
             "",
         ]
     )
