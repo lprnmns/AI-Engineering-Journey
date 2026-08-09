@@ -40,13 +40,22 @@ jobs:
           python -m pip install "projects/document_intelligence_service[dev]"
 
       - name: Ruff
-        run: ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval
+        run: ruff check projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
 
       - name: Unit and contract tests
         run: pytest -q projects/document_intelligence_service/tests
 
       - name: Type check
-        run: mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval
+        run: mypy projects/document_intelligence_service/app projects/document_intelligence_service/eval projects/document_intelligence_service/tests
+
+      - name: Qdrant integration
+        run: >-
+          QDRANT_INTEGRATION_URL=http://127.0.0.1:6333
+          pytest -q projects/document_intelligence_service/tests/integration
+
+      - name: Evaluation dataset smoke
+        run: >-
+          python -c "from pathlib import Path; from projects.document_intelligence_service.eval.contracts import load_jsonl, validate_case_set; cases=validate_case_set(load_jsonl(Path('data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl')), minimum_count=44); print(f'{len(cases)} golden cases validated')"
 
       - name: Validate security matrix evidence
         run: >-
@@ -57,3 +66,14 @@ jobs:
       - name: Validate Compose schema
         working-directory: .
         run: docker compose config --quiet
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.18.3
+        ports:
+          - 6333:6333
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 12
