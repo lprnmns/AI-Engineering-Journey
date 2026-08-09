@@ -36,6 +36,11 @@ class CrossEncoderReranker:
         self._batch_size = batch_size
         self._model: _CrossEncoderModel | None = None
 
+    def warmup(self) -> None:
+        """Load the bounded reranker at an explicit lifecycle boundary."""
+
+        self._load_model()
+
     def rerank(
         self,
         *,

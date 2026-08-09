@@ -48,7 +48,10 @@ flowchart LR
     API -. optional .-> R[(Redis queue)]
 ```
 
-Query senkron kalır. PDF ingestion `202 Accepted + job_id` ile asenkron yürür. Redis hedef diyagramda opsiyoneldir; worker fallback ve job persistence kararı ADR ile ölçülecektir.
+Query senkron kalır. PDF ingestion `202 Accepted + job_id` ile asenkron yürür.
+Compose'ta API ve worker aynı image'i kullanır; SQLite registry job identity,
+idempotency ve staged PDF bytes'ı restart sonrasında korur. Redis hedef
+topolojide opsiyoneldir ve bu local MVP'nin zorunlu bağımlılığı değildir.
 
 ## Query sequence
 
@@ -163,3 +166,9 @@ aktarır. Event; request ID, question hash, karar/reason, retrieval aday sayıla
 answerability sinyalleri, warning kodları ve tüm stage latency'lerini taşır.
 Raw user question, prompt ve evidence loglanmaz. Böylece trace hem katman
 ayrımını sağlar hem de varsayılan log alanında belge/prompt sızıntısını azaltır.
+
+Doküman yaşam döngüsü için `emit_audit` ayrı `document.audit` olayları üretir.
+Kabul, version activate, ingestion failure ve delete olayları document/version/
+job/action/result kimlikleri ile bounded metadata taşır; raw PDF, chunk veya
+soru metni taşımaz. Audit log, query trace'in yerine geçmez: trace request
+karar yolunu, audit ise belge yaşam döngüsü sonucunu anlatır.

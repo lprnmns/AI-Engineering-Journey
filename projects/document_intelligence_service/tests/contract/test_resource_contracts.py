@@ -132,7 +132,8 @@ def test_wired_query_returns_structured_no_answer_and_skips_llm() -> None:
     assert body["decision"] == "no_answer"
     assert body["no_answer_reason"] == "LOW_RELEVANCE"
     assert body["no_answer"]["reason_code"] == "LOW_RELEVANCE"
-    assert "skipped" in body["no_answer"]["message"]
+    assert "atlandı" in body["no_answer"]["message"]
+    assert body["no_answer"]["searched_document_ids"] == []
     assert body["model"] == {"provider": None, "model": None}
     assert body["latency"]["llm_ms"] == 0
     assert generator.call_count == 0

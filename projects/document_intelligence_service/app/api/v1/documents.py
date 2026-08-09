@@ -10,6 +10,7 @@ from fastapi import (
     Path,
     Query,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -19,7 +20,6 @@ from ...application.ingestion_service import IngestionService
 from ...domain.ingestion import DocumentSnapshot
 from ...observability.request_id import get_request_id
 from .contracts import (
-    DeleteDocumentResponse,
     DocumentDetailResponse,
     DocumentListResponse,
     DocumentSummary,
@@ -122,23 +122,24 @@ async def get_document(
 
 @router.delete(
     "/{document_id}",
-    response_model=DeleteDocumentResponse,
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={**openapi_error_responses()},
 )
 async def delete_document(
     request: Request,
     document_id: Annotated[str, Path(min_length=1, max_length=128)],
     tenant_id: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
-) -> DeleteDocumentResponse:
+) -> Response:
     """Delete a document unless an active ingestion job makes it busy."""
 
     await request.app.state.document_service.delete_document(
         document_id,
         tenant_id or "default",
     )
-    return DeleteDocumentResponse(
-        document_id=document_id,
-        request_id=get_request_id(),
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+        headers={"X-Request-ID": get_request_id()},
     )
 
 

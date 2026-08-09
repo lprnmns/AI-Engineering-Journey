@@ -14,7 +14,10 @@ class QdrantSchema:
 
     collection_name: str = "document_chunks_v2_bm25"
     dense_name: str = "dense"
-    sparse_name: str = "sparse"
+    # Keep the vector name explicit in traces and collection inspection.  The
+    # PDF's schema calls this branch ``bm25``; it is still a named sparse
+    # vector, not a dense score disguised as a second cosine field.
+    sparse_name: str = "bm25"
     dense_size: int = 384
     payload_indexes: tuple[tuple[str, models.PayloadSchemaType], ...] = (
         ("document_id", models.PayloadSchemaType.KEYWORD),
@@ -26,7 +29,10 @@ class QdrantSchema:
         ("acl_tags", models.PayloadSchemaType.KEYWORD),
         ("page_start", models.PayloadSchemaType.INTEGER),
         ("page_end", models.PayloadSchemaType.INTEGER),
+        ("active", models.PayloadSchemaType.BOOL),
         ("is_active", models.PayloadSchemaType.BOOL),
+        ("filename", models.PayloadSchemaType.KEYWORD),
+        ("title_path", models.PayloadSchemaType.KEYWORD),
     )
 
     def __post_init__(self) -> None:

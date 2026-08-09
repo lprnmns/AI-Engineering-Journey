@@ -64,7 +64,7 @@ def test_schema_creates_named_dense_and_sparse_vectors() -> None:
     assert isinstance(info.config.params.vectors, dict)
     assert "dense" in info.config.params.vectors
     assert isinstance(info.config.params.sparse_vectors, dict)
-    assert "sparse" in info.config.params.sparse_vectors
+    assert "bm25" in info.config.params.sparse_vectors
     assert info.config.params.vectors["dense"].size == 2
 
 
@@ -164,7 +164,7 @@ def test_existing_non_idf_sparse_collection_is_rejected_by_bm25_schema() -> None
             "dense": models.VectorParams(size=2, distance=models.Distance.COSINE)
         },
         sparse_vectors_config={
-            "sparse": models.SparseVectorParams(modifier=models.Modifier.NONE)
+            "bm25": models.SparseVectorParams(modifier=models.Modifier.NONE)
         },
     )
     manager = QdrantSchemaManager(

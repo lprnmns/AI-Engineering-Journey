@@ -38,6 +38,9 @@ class QueryTraceEvent:
     rerank_ms: float
     llm_ms: float
     total_ms: float
+    candidate_limit: int = 0
+    fusion_limit: int = 0
+    rerank_limit: int = 0
 
     @classmethod
     def from_query_result(
@@ -84,6 +87,9 @@ class QueryTraceEvent:
             rerank_ms=retrieval.rerank_ms,
             llm_ms=llm_ms,
             total_ms=total_ms,
+            candidate_limit=retrieval.candidate_limit,
+            fusion_limit=retrieval.fusion_limit,
+            rerank_limit=retrieval.rerank_limit,
         )
 
     def as_dict(self) -> dict[str, object]:
@@ -106,6 +112,9 @@ class QueryTraceEvent:
                 "rrf_candidates": self.rrf_candidates,
                 "reranked_candidates": self.reranked_candidates,
                 "selected_evidence_count": self.selected_evidence_count,
+                "candidate_limit": self.candidate_limit,
+                "fusion_limit": self.fusion_limit,
+                "rerank_limit": self.rerank_limit,
             },
             "answerability": {
                 "top_score": self.top_score,

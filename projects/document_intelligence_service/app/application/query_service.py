@@ -119,6 +119,8 @@ class QueryService:
                 tenant_id=tenant_id,
                 acl_tags=acl_tags,
             )
+        except ServiceError:
+            raise
         except Exception as error:
             if self._metrics is not None:
                 self._metrics.increment(

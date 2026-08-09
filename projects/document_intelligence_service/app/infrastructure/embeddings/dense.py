@@ -38,6 +38,11 @@ class SentenceTransformerEmbedder:
 
         return self._expected_dimension
 
+    def warmup(self) -> None:
+        """Load the model at an explicit lifecycle boundary."""
+
+        self._load_model()
+
     def embed_documents(
         self,
         texts: Sequence[str],

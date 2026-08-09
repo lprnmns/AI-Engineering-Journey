@@ -21,3 +21,11 @@ Describe what changed in this PR.
 ## Evidence
 
 Add command output, screenshot, notebook link, PR link, or demo if relevant.
+
+## AI/RAG impact
+
+- Model or embedding change: none / describe
+- Prompt or safety-policy change: none / describe
+- Chunking, retrieval or reranker config change: none / describe
+- Evaluation dataset/split/threshold impact: none / describe
+- Benchmark artifact regenerated at Git SHA: yes / no / not applicable

@@ -1,9 +1,12 @@
 """Evidence-only retrieval contract routes."""
 
+import asyncio
+
 from fastapi import APIRouter, Request, status
 
 from ..errors import openapi_error_responses
 from ...observability.request_id import get_request_id
+from ...domain.errors import ErrorCode, ServiceError
 from ._not_ready import feature_not_ready
 from .contracts import (
     LatencyBreakdown,
@@ -32,14 +35,23 @@ async def search(request: Request, payload: SearchRequest) -> SearchResponse:
     retrieval_service = getattr(request.app.state, "retrieval_service", None)
     if retrieval_service is None:
         feature_not_ready("Search")
-    result = retrieval_service.search(
-        question=payload.question,
-        mode=payload.retrieval_mode,
-        top_k=payload.top_k,
-        document_ids=payload.document_ids,
-        tenant_id=payload.tenant_id or "default",
-        acl_tags=tuple(payload.acl_tags or ["public"]),
-    )
+    try:
+        result = await asyncio.to_thread(
+            retrieval_service.search,
+            question=payload.question,
+            mode=payload.retrieval_mode,
+            top_k=payload.top_k,
+            document_ids=payload.document_ids,
+            tenant_id=payload.tenant_id or "default",
+            acl_tags=tuple(payload.acl_tags or ["public"]),
+        )
+    except ServiceError:
+        raise
+    except Exception as error:
+        raise ServiceError(
+            code=ErrorCode.DEPENDENCY_UNAVAILABLE,
+            message="Retrieval dependency is unavailable",
+        ) from error
     return SearchResponse(
         sources=[
             SourceResponse(

@@ -20,6 +20,8 @@ async def run_worker(settings: Settings) -> None:
         registry=registry,
         metrics=MetricsRegistry(),
     )
+    if settings.preload_models:
+        worker.warmup()
     LOGGER.info("ingestion worker started")
     while True:
         job_ids = await registry.list_recoverable_jobs(

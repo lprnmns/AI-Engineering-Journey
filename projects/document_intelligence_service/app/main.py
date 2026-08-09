@@ -1,7 +1,9 @@
 """FastAPI composition root for the document intelligence service."""
 
 from collections.abc import AsyncIterator
+import asyncio
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -55,6 +57,8 @@ from .observability.request_id import RequestIdMiddleware
 from .observability.metrics import MetricsRegistry
 from .settings import Settings
 
+LOGGER = logging.getLogger("document_intelligence_service.lifecycle")
+
 
 def build_health_service(settings: Settings) -> HealthService:
     """Wire concrete dependency probes into the application service."""
@@ -95,7 +99,7 @@ def build_document_service(
         registry=registry if registry is not None else build_ingestion_registry(settings),
         vector_store=QdrantChunkStore(
             QdrantClient(url=str(settings.qdrant_url)),
-            QdrantSchema(),
+            QdrantSchema(collection_name=settings.qdrant_collection),
         ),
     )
 
@@ -107,7 +111,7 @@ def build_evaluation_service(
 ) -> EvaluationService:
     """Wire golden-set evaluation to the optional live retrieval adapter."""
 
-    root = Path(__file__).resolve().parents[3]
+    root = _repository_root()
     return EvaluationService(
         registry=InMemoryEvaluationRegistry(),
         executor=OfflineEvaluationExecutor(
@@ -126,10 +130,30 @@ def build_evaluation_service(
     )
 
 
+def _repository_root() -> Path:
+    """Resolve the repository root in both source and container layouts."""
+
+    module_path = Path(__file__).resolve()
+    for parent in module_path.parents:
+        if (parent / "data").is_dir() and (parent / "projects").is_dir():
+            return parent
+    # The production image has /app/app without the monorepo's sibling folders.
+    # Evaluation execution will then fail explicitly if its dataset is absent,
+    # but importing and serving the core API remains valid.
+    return module_path.parents[1]
+
+
 def build_pipeline_config(settings: Settings) -> PipelineConfig:
     """Build one shared fingerprint configuration for ingestion stages."""
 
-    return PipelineConfig(section_marker_profile=settings.section_marker_profile)
+    return PipelineConfig(
+        section_marker_profile=settings.section_marker_profile,
+        embedding_model=settings.dense_model,
+        sparse_encoder=settings.sparse_model,
+        reranker_model=settings.reranker_model,
+        chunk_size_sentences=settings.chunk_size_sentences,
+        chunk_overlap_sentences=settings.chunk_overlap_sentences,
+    )
 
 
 def build_ingestion_service(
@@ -166,7 +190,7 @@ def build_ingestion_worker(
     """Wire the lazy embedding, parser and Qdrant worker adapters."""
 
     pipeline_config = build_pipeline_config(settings)
-    schema = QdrantSchema()
+    schema = QdrantSchema(collection_name=settings.qdrant_collection)
     return IngestionWorker(
         registry=registry,
         chunker=DocumentChunkingService(
@@ -191,7 +215,7 @@ def build_retrieval_service(settings: Settings) -> RetrievalService:
     """Wire lazy query embedders to the active-version Qdrant retriever."""
 
     pipeline_config = build_pipeline_config(settings)
-    schema = QdrantSchema()
+    schema = QdrantSchema(collection_name=settings.qdrant_collection)
     return RetrievalService(
         dense_embedder=SentenceTransformerEmbedder(
             model_name=pipeline_config.embedding_model,
@@ -207,6 +231,10 @@ def build_retrieval_service(settings: Settings) -> RetrievalService:
             if settings.reranker_enabled
             else None
         ),
+        candidate_limit=settings.retrieval_candidate_k,
+        rrf_k=settings.rrf_k,
+        fusion_limit=settings.retrieval_fusion_k,
+        rerank_limit=settings.retrieval_rerank_k,
     )
 
 
@@ -332,8 +360,14 @@ def create_app(
         application.state.retrieval_service = resolved_retrieval_service
         application.state.query_service = resolved_query_service
         application.state.metrics = resolved_metrics
-        resolved_health_service.mark_started()
         try:
+            if resolved_settings.preload_models:
+                for adapter in (resolved_retrieval_service, resolved_ingestion_worker):
+                    warmup = getattr(adapter, "warmup", None)
+                    if callable(warmup):
+                        LOGGER.info("preloading model adapters")
+                        await asyncio.to_thread(warmup)
+            resolved_health_service.mark_started()
             yield
         finally:
             resolved_health_service.mark_stopped()

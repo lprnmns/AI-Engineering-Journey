@@ -60,6 +60,16 @@ class RetrievalService:
         self._reranker = reranker
         self._rerank_limit = min(rerank_limit, self._fusion_limit)
 
+    def warmup(self) -> None:
+        """Load model adapters before the first query when configured."""
+
+        warmup_dense = getattr(self._dense_embedder, "warmup", None)
+        if callable(warmup_dense):
+            warmup_dense()
+        warmup_reranker = getattr(self._reranker, "warmup", None)
+        if callable(warmup_reranker):
+            warmup_reranker()
+
     def search(
         self,
         *,
@@ -197,6 +207,9 @@ class RetrievalService:
             rerank_ms=rerank_ms,
             candidate_window=candidate_window,
             debug_candidates=debug_candidates,
+            candidate_limit=limit,
+            fusion_limit=self._fusion_limit if mode is RetrievalMode.HYBRID else 0,
+            rerank_limit=self._rerank_limit if self._reranker is not None else 0,
         )
 
     @staticmethod

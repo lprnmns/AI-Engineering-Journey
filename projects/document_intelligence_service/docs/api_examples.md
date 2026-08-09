@@ -9,6 +9,7 @@ From the repository root:
 
 ```bash
 docker compose up --build -d
+docker compose ps
 open http://127.0.0.1:8501
 ```
 
@@ -24,9 +25,9 @@ network, use the repository smoke script. It connects `ai-journey-ollama` to
 the Compose network and overrides `DIS_OLLAMA_URL` to the container DNS name;
 otherwise liveness can be healthy while readiness correctly remains `503`.
 
-There is one API process in this MVP. Upload processing uses the configured
-SQLite registry and bounded background task. A separate worker/Redis topology
-is a later scale-out option, not a hidden production claim.
+Compose API ve worker aynı image'i kullanır. API `202 + job_id` ile SQLite
+registry'ye bırakır; ayrı worker queued/retryable/stale job'ları alır. Redis
+bu local MVP'de opsiyonel bir sonraki scale-out kararıdır.
 
 ## Health
 
@@ -56,8 +57,10 @@ export DIS_LLM_MAX_OUTPUT_TOKENS=256
 ```bash
 curl -i \
   -H 'Idempotency-Key: upload-demo-001' \
+  -H 'X-Tenant-ID: default' \
+  -H 'X-ACL-Tags: public' \
   -F 'file=@sample.pdf;type=application/pdf' \
-  http://127.0.0.1:8000/v1/documents
+  http://127.0.0.1:8010/v1/documents
 ```
 
 Beklenen çalışan akış:
@@ -72,7 +75,10 @@ Beklenen çalışan akış:
 }
 ```
 
-Status: `202 Accepted`. Varsayılan demo/test composition'ı in-memory registry kullanır. SQLite backend seçilirse upload sonrası aynı process'teki bounded background worker stage → verify → activate akışını başlatır; ayrı process queue/recovery politikası sonraki production dilimidir.
+Status: `202 Accepted`. Compose'ta SQLite registry ve ayrı worker kullanılır;
+job response'u `attempt_count`, `max_attempts`, `current_stage`, stage listesi,
+duration ve hata/decision alanlarını taşır. Aynı content hash + pipeline
+fingerprint tekrarında duplicate point üretilmez.
 
 ## Job status
 
@@ -86,14 +92,20 @@ curl -i http://127.0.0.1:8000/v1/jobs/job_...
 curl -sS \
   -H 'Content-Type: application/json' \
   -H 'X-Request-ID: mentor-query-001' \
+  -H 'X-Tenant-ID: default' \
   -d '{
     "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
     "retrieval_mode": "hybrid",
     "top_k": 5,
     "include_debug": false
   }' \
-  http://127.0.0.1:8000/v1/query
+  http://127.0.0.1:8010/v1/queries
 ```
+
+İstek gövdesinde `tenant_id`, `acl_tags` ve `document_ids` de verilebilir.
+Filtreler retrieval çağrısından önce normalize edilir; Qdrant pre-filter ve
+application source re-check birlikte çalışır. `tenant_id` burada local ACL-ready
+izolasyon filtresidir, authentication değildir.
 
 ## Evidence search
 
@@ -108,7 +120,7 @@ curl -sS \
     "retrieval_mode": "hybrid",
     "top_k": 5
   }' \
-  http://127.0.0.1:8000/v1/search
+  http://127.0.0.1:8010/v1/search
 ```
 
 Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/sparse/RRF trace'inden gelir. `llm_ms` bu endpointte her zaman `0` olmalıdır.
@@ -150,3 +162,21 @@ payload'ından canonical olarak üretilir.
   "request_id": "mentor-query-001"
 }
 ```
+
+No-answer kararını operasyonel olarak kontrol etmek için response'taki
+`no_answer.reason_code`, `model.model: null`, `latency.llm_ms: 0` ve `/v1/metrics`
+çıktısındaki `rag_no_answer_total` birlikte okunur. Query trace raw soru/evidence
+yerine question hash ve stage span'leri taşır; lifecycle audit ise document,
+version, action ve result alanlarını taşır.
+
+## Metrics ve katalog
+
+```bash
+curl -sS http://127.0.0.1:8010/v1/metrics
+curl -sS -H 'X-Tenant-ID: default' \
+  'http://127.0.0.1:8010/v1/documents?limit=100'
+```
+
+Metrics endpoint local process snapshot'ıdır; merkezi Prometheus exporter'ı
+değildir. Worker stage sürelerinin asıl kanıtı `/v1/jobs/{job_id}` timeline'ı ve
+worker structured loglarıdır.

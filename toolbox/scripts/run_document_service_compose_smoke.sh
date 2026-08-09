@@ -7,13 +7,14 @@ qdrant_host_port="${QDRANT_HOST_PORT:-6335}"
 api_host_port="${API_HOST_PORT:-8010}"
 compose_network="ai-engineering-journey_default"
 legacy_ollama="ai-journey-ollama"
-ollama_network_connected=false
 
 "${compose[@]}" config --quiet
 "${compose[@]}" up --build -d qdrant
 
 cleanup() {
-  if [[ "$ollama_network_connected" == "true" ]]; then
+  if docker network inspect "$compose_network" \
+    --format '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' 2>/dev/null \
+    | rg -qx "$legacy_ollama"; then
     docker network disconnect "$compose_network" "$legacy_ollama" >/dev/null 2>&1 || true
   fi
   "${compose[@]}" down --remove-orphans >/dev/null
@@ -25,17 +26,16 @@ if docker inspect "$legacy_ollama" >/dev/null 2>&1; then
     --format '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' \
     | rg -qx "$legacy_ollama"; then
     docker network connect "$compose_network" "$legacy_ollama"
-    ollama_network_connected=true
   fi
   export DIS_OLLAMA_URL="http://${legacy_ollama}:11434"
 fi
 
-"${compose[@]}" up -d api worker demo-ui
+"${compose[@]}" up --build -d api worker demo-ui
 
 wait_for() {
   local url="$1"
   local attempts=0
-  until curl --fail --silent "$url" >/dev/null; do
+  until curl --fail --silent --show-error "$url" >/dev/null; do
     attempts=$((attempts + 1))
     if [[ "$attempts" -ge 60 ]]; then
       echo "Timed out waiting for $url" >&2
@@ -63,8 +63,9 @@ done
 
 sample_pdf="${SMOKE_PDF:-bgts-bilgeadamstaj/04_Canli_Demo/Alperen_Manas_Staj_Programi_1_Hafta.pdf}"
 if [[ -f "$sample_pdf" ]]; then
-  receipt="$(curl --fail --silent \
-    -H 'Idempotency-Key: compose-smoke-upload-001' \
+  smoke_idempotency_key="${SMOKE_IDEMPOTENCY_KEY:-compose-smoke-upload-v2}"
+  receipt="$(curl --fail --silent --show-error \
+    -H "Idempotency-Key: ${smoke_idempotency_key}" \
     -H 'X-Tenant-ID: default' \
     -H 'X-ACL-Tags: public' \
     -F "file=@${sample_pdf};type=application/pdf" \
@@ -72,7 +73,7 @@ if [[ -f "$sample_pdf" ]]; then
   job_id="$(printf '%s' "$receipt" | python3 -c 'import json,sys; print(json.load(sys.stdin)["job_id"])')"
   job_attempts=0
   while true; do
-    job="$(curl --fail --silent "http://127.0.0.1:${api_host_port}/v1/jobs/${job_id}")"
+    job="$(curl --fail --silent --show-error "http://127.0.0.1:${api_host_port}/v1/jobs/${job_id}")"
     job_status="$(printf '%s' "$job" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')"
     if [[ "$job_status" == "succeeded" ]]; then
       break
@@ -97,16 +98,16 @@ fi
 wait_for "http://127.0.0.1:${api_host_port}/v1/health/ready"
 
 collection_snapshot() {
-  curl --fail --silent "http://127.0.0.1:${qdrant_host_port}/collections" \
+  curl --fail --silent --show-error "http://127.0.0.1:${qdrant_host_port}/collections" \
     | python3 -c 'import json, sys; payload=json.load(sys.stdin); print(json.dumps(sorted(item["name"] for item in payload.get("result", {}).get("collections", []))))'
 }
 
 before="$(collection_snapshot)"
-before_points="$(curl --fail --silent "http://127.0.0.1:${qdrant_host_port}/collections/document_chunks_v2_bm25" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"].get("points_count", 0))')"
+before_points="$(curl --fail --silent --show-error "http://127.0.0.1:${qdrant_host_port}/collections/document_chunks_v2_bm25" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"].get("points_count", 0))')"
 "${compose[@]}" restart qdrant >/dev/null
 wait_for "http://127.0.0.1:${qdrant_host_port}/readyz"
 after="$(collection_snapshot)"
-after_points="$(curl --fail --silent "http://127.0.0.1:${qdrant_host_port}/collections/document_chunks_v2_bm25" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"].get("points_count", 0))')"
+after_points="$(curl --fail --silent --show-error "http://127.0.0.1:${qdrant_host_port}/collections/document_chunks_v2_bm25" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"].get("points_count", 0))')"
 
 if [[ "$before" != "$after" ]]; then
   echo "Qdrant collection snapshot changed after restart" >&2

@@ -86,7 +86,7 @@ class QdrantRetriever:
         acl_tags: Sequence[str],
     ) -> models.Filter:
         active_condition = models.FieldCondition(
-            key="is_active",
+            key="active",
             match=models.MatchValue(value=True),
         )
         normalized_ids = tuple(dict.fromkeys(document_id for document_id in document_ids if document_id))

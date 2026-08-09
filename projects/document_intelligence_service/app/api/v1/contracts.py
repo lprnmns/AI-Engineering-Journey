@@ -190,6 +190,7 @@ class NoAnswerInfo(BaseModel):
 
     reason_code: NoAnswerReason
     message: str
+    searched_document_ids: list[str] = Field(default_factory=list, max_length=100)
 
 
 class RetrievalInfo(BaseModel):
@@ -285,6 +286,7 @@ class QueryResponse(BaseModel):
                     "no_answer": {
                         "reason_code": "NO_EVIDENCE",
                         "message": "Sufficient evidence was not found.",
+                        "searched_document_ids": [],
                     },
                     "no_answer_reason": "NO_EVIDENCE",
                     "sources": [],

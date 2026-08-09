@@ -33,6 +33,12 @@ class FakeDenseEmbedder:
 
     dimension = 2
 
+    def __init__(self) -> None:
+        self.warmup_called = False
+
+    def warmup(self) -> None:
+        self.warmup_called = True
+
     def embed_documents(
         self,
         texts: Sequence[str],
@@ -80,6 +86,10 @@ class FakeReranker:
 
     def __init__(self) -> None:
         self.seen_count = 0
+        self.warmup_called = False
+
+    def warmup(self) -> None:
+        self.warmup_called = True
 
     def rerank(
         self,
@@ -110,6 +120,22 @@ def make_service(reranker: FakeReranker | None = None) -> RetrievalService:
         fusion_limit=20,
         reranker=reranker,
     )
+
+
+def test_warmup_calls_available_model_boundaries() -> None:
+    dense = FakeDenseEmbedder()
+    reranker = FakeReranker()
+    service = RetrievalService(
+        dense_embedder=dense,
+        sparse_embedder=FakeSparseEmbedder(),
+        retriever=FakeRetriever(),
+        reranker=reranker,
+    )
+
+    service.warmup()
+
+    assert dense.warmup_called
+    assert reranker.warmup_called
 
 
 def test_dense_mode_returns_only_dense_candidates() -> None:

@@ -50,7 +50,7 @@ Ana mühendislik sorusu her tasarım kararını yönetecektir:
 | Gemma 3 4B / Ollama | Kaynaklı cevap üretimi | Yeniden kullanılacak |
 | Prompt-injection deneyleri | Versionlanmış attack seti | Genişletilecek |
 | Eval ve ham JSON sonuç disiplini | Golden JSONL + run manifest | Genişletilecek |
-| 322 test ve strict mypy | Ürün kalite kapısının temeli | Korunacak |
+| Service unit/contract/integration testleri ve strict mypy | Ürün kalite kapısının temeli | Korunacak |
 
 Doğrudan hazır sayılmayacak noktalar:
 
@@ -175,16 +175,16 @@ Domain katmanı FastAPI, Pydantic, Qdrant, Ollama veya sentence-transformers bil
 - Python 3.12
 - FastAPI + Pydantic v2
 - Uvicorn
-- Qdrant `v1.15.4`, named volume
+- Qdrant `v1.18.3`, named volume
 - Dense model: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
 - Reranker: `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`
 - Yerel LLM: Ollama üzerinde `gemma3:4b`
 - Ollama host üzerinde kalacak; API container'ı `host.docker.internal` üzerinden erişecek
-- Demo UI: mentor diyagramıyla uyumlu, ayrı `demo-ui` servisi; başlangıç adayı Streamlit `:8501`
+- Demo UI: mentor diyagramıyla uyumlu, ayrı nginx static `demo-ui` servisi (`:8501`)
 
 ### Job yaklaşımı
 
-Upload `202 Accepted + job_id` döndürecek ve sorgu yolu senkron kalırken indeksleme asenkron yürütülecektir. Hedef topoloji, API ile aynı image digest'ini kullanan ayrı bir ingestion worker'dır. Redis küçük bir queue olarak değerlendirilecek fakat PDF'de opsiyonel olduğu için ADR/spike sonucunda çıkarılabilir. Worker yetişmezse kontrollü bounded executor fallback'i kullanılabilir; bu durumda process restart sırasında job dayanıklılığı known limitation olarak yazılır. Evaluation ve idempotency bu sadeleştirme için azaltılmaz.
+Upload `202 Accepted + job_id` döndürecek ve sorgu yolu senkron kalırken indeksleme asenkron yürütülecektir. Compose'ta API ile aynı image'i kullanan ayrı ingestion worker'ı ve restart-safe SQLite registry çalışır. Redis PDF'de opsiyonel olduğu için bu local MVP'ye zorunlu dependency yapılmamıştır. Evaluation ve idempotency bu sadeleştirme için azaltılmaz.
 
 Hedef Compose veri akışı:
 
@@ -571,6 +571,8 @@ Kod standardı:
 3. `ADR-003`: Ingestion version activation ve retention
 4. `ADR-004`: No-answer sinyalleri ve threshold kalibrasyonu
 5. `ADR-005`: Ollama host/container sınırı
+6. `ADR-006`: Durable SQLite ingestion registry ve worker sınırı
+7. `ADR-007`: Privacy-safe metrics, trace ve document audit sınırı
 
 Her ADR şu yapıyı kullanacaktır:
 

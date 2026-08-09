@@ -4,14 +4,14 @@ from argparse import ArgumentParser
 from dataclasses import asdict
 import csv
 import json
+import os
 from pathlib import Path
 import random
 import subprocess
 
 from ..app.domain.answerability import AnswerabilityPolicy
 from ..app.domain.entities import RetrievalMode
-from ..app.domain.ingestion import PipelineConfig
-from ..app.main import build_retrieval_service
+from ..app.main import build_pipeline_config, build_retrieval_service
 from ..app.settings import Settings
 from .contracts import load_jsonl, validate_case_set
 from .runner import run_answerability_benchmark
@@ -37,6 +37,23 @@ def main() -> None:
     parser.add_argument("--split", choices=("all", "development", "validation", "test"), default="all")
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--point-count", type=int, default=None)
+    parser.add_argument(
+        "--qdrant-url",
+        default=os.environ.get("DIS_QDRANT_URL", "http://127.0.0.1:6335"),
+    )
+    parser.add_argument(
+        "--collection",
+        default=os.environ.get("DIS_QDRANT_COLLECTION", "document_chunks_v2_bm25"),
+    )
+    parser.add_argument(
+        "--bm25-state-path",
+        default=os.environ.get("DIS_BM25_STATE_PATH", "data/bm25_state.json"),
+    )
+    parser.add_argument(
+        "--section-profile",
+        choices=("none", "mentor_program_v1"),
+        default=os.environ.get("DIS_SECTION_MARKER_PROFILE", "mentor_program_v1"),
+    )
     args = parser.parse_args()
 
     all_cases = validate_case_set(
@@ -59,9 +76,13 @@ def main() -> None:
     random.Random(args.seed).shuffle(ordered_cases)
     cases = tuple(ordered_cases)
     settings = Settings(
-        section_marker_profile="mentor_program_v1",
+        qdrant_url=args.qdrant_url,
+        qdrant_collection=args.collection,
+        bm25_state_path=args.bm25_state_path,
+        section_marker_profile=args.section_profile,
         reranker_enabled=args.reranker,
     )
+    pipeline_config = build_pipeline_config(settings)
     service = build_retrieval_service(settings)
     policy = AnswerabilityPolicy(
         min_dense_score=settings.answerability_min_dense_score,
@@ -81,12 +102,11 @@ def main() -> None:
     manifest = build_run_manifest(
         dataset_path=args.dataset,
         cases=cases,
-        qdrant_collection="document_chunks_v2_bm25",
+        qdrant_collection=settings.qdrant_collection,
         point_count=args.point_count,
         pipeline_config={
-            "embedding_model": PipelineConfig().embedding_model,
-            "sparse_encoder": PipelineConfig().sparse_encoder,
-            "reranker_model": PipelineConfig().reranker_model if args.reranker else None,
+            **pipeline_config.canonical_dict(),
+            "reranker_model": pipeline_config.reranker_model if args.reranker else None,
             "answerability_policy": {
                 "min_dense_score": policy.min_dense_score,
                 "min_sparse_score": policy.min_sparse_score,
@@ -118,8 +138,11 @@ def main() -> None:
             "min_margin": policy.min_margin,
             "min_coverage": policy.min_coverage,
         },
-        "qdrant_collection": "document_chunks_v2_bm25",
-        "sparse_encoder": PipelineConfig().sparse_encoder,
+        "qdrant_collection": settings.qdrant_collection,
+        "embedding_model": pipeline_config.embedding_model,
+        "sparse_encoder": pipeline_config.sparse_encoder,
+        "section_marker_profile": settings.section_marker_profile,
+        "bm25_state_path": settings.bm25_state_path,
         "run": asdict(run),
         "manifest": manifest,
         "query_order": [case.case_id for case in cases],

@@ -49,6 +49,9 @@ class RetrievalResult:
     rerank_ms: float = 0.0
     candidate_window: tuple[RetrievedChunk, ...] = ()
     debug_candidates: tuple["RetrievalDebugCandidate", ...] = ()
+    candidate_limit: int = 0
+    fusion_limit: int = 0
+    rerank_limit: int = 0
 
 
 @dataclass(frozen=True, slots=True)

@@ -60,9 +60,8 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
         no_answer=(
             NoAnswerInfo(
                 reason_code=result.no_answer_reason,
-                message=(
-                    "Sufficient evidence was not found; the LLM was skipped."
-                ),
+                message=_no_answer_message(result.no_answer_reason),
+                searched_document_ids=list(request.document_ids),
             )
             if result.no_answer_reason is not None
             else None
@@ -136,4 +135,19 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
             else None
         ),
         request_id=get_request_id(),
+    )
+
+
+def _no_answer_message(reason: object) -> str:
+    """Explain the policy gate without exposing scores or internal prompts."""
+
+    messages = {
+        "NO_EVIDENCE": "Aranan kapsamda kanıt bulunamadı; LLM çağrısı atlandı.",
+        "LOW_RELEVANCE": "Bulunan kanıt relevance eşiğini geçmedi; LLM çağrısı atlandı.",
+        "INSUFFICIENT_COVERAGE": "Kanıt sorunun gerekli kısmını kapsamıyor; LLM çağrısı atlandı.",
+        "SECURITY_POLICY": "İstek veya kanıt güvenlik politikası nedeniyle reddedildi; LLM çağrısı atlandı.",
+    }
+    return messages.get(
+        getattr(reason, "value", str(reason)),
+        "Yeterli kanıt bulunamadı; LLM çağrısı atlandı.",
     )

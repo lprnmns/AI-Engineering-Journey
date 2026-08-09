@@ -80,7 +80,7 @@ class QdrantChunkStore:
             must=[
                 *(version_filter.must or []),
                 models.FieldCondition(
-                    key="is_active",
+                    key="active",
                     match=models.MatchValue(value=False),
                 ),
             ]
@@ -116,7 +116,10 @@ class QdrantChunkStore:
             "pipeline_fingerprint",
             "tenant_id",
             "acl_tags",
+            "active",
             "is_active",
+            "filename",
+            "title_path",
         }
         metadata_complete = len(records) == actual_count and all(
             record.payload is not None
@@ -151,13 +154,13 @@ class QdrantChunkStore:
         # never create a zero-active-version gap. A retry converges cleanup.
         self._client.set_payload(
             collection_name=self.collection_name,
-            payload={"is_active": True},
+            payload={"active": True, "is_active": True},
             points=version_filter,
             wait=True,
         )
         self._client.set_payload(
             collection_name=self.collection_name,
-            payload={"is_active": False},
+            payload={"active": False, "is_active": False},
             points=self._previous_versions_filter(document_id, version_id),
             wait=True,
         )
@@ -272,7 +275,9 @@ class QdrantChunkStore:
             "document_id": chunk.document_id,
             "version_id": chunk.version_id,
             "source": chunk.source,
+            "filename": chunk.source,
             "title": chunk.title,
+            "title_path": [chunk.title],
             "text": chunk.text,
             "chunk_index": chunk.chunk_index,
             "page_start": chunk.page_start,
@@ -284,6 +289,7 @@ class QdrantChunkStore:
             "language": language,
             "tenant_id": tenant_id,
             "acl_tags": list(acl_tags),
+            "active": is_active,
             "is_active": is_active,
         }
 

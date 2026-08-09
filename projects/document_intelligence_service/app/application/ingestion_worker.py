@@ -56,6 +56,13 @@ class IngestionWorker:
             "document_intelligence_service.ingestion"
         )
 
+    def warmup(self) -> None:
+        """Load ingestion model adapters before polling jobs."""
+
+        warmup_dense = getattr(self._dense_embedder, "warmup", None)
+        if callable(warmup_dense):
+            warmup_dense()
+
     async def run_job(self, job_id: str) -> JobSnapshot:
         """Process one job and persist a terminal success/failure snapshot."""
 

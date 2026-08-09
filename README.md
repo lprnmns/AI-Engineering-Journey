@@ -30,6 +30,7 @@ Each day follows this structure:
 - Pre-roadmap foundation: Python engineering, SQL, EDA, baseline ML, validation, and experiment logging
 - Month 1/9 completed: mini RAG from scratch with chunking, TF-IDF, hybrid retrieval, no-answer detection, and answerability evaluation
 - Month 2/9 in progress: dense embeddings, semantic retrieval, dense/lexical hybrid retrieval, threshold experiments, and cross-encoder reranking
+- Week 2 product core: layered FastAPI service, durable PDF jobs, tenant/ACL-ready retrieval, evaluation artifacts, observability and Compose demo
 
 Current planning documents:
 
@@ -39,14 +40,16 @@ Current planning documents:
 
 ## Week 2 Document Intelligence Service
 
-The current local deployment is intentionally small: Qdrant, one API process,
-and a static demo UI. Ollama stays on the host so the 32 GB RAM machine does
-not run a second model container. The API uses the SQLite registry and a
-bounded background ingestion task; a separate worker and Redis are deliberately
-left for a later scale-out decision.
+The current local deployment is intentionally small but follows the Week 2
+topology: Qdrant, API, a separate durable ingestion worker and a static demo
+UI. Ollama stays on the host so the 32 GB RAM machine does not run a second
+model container. API and worker use the same locally built image; SQLite keeps
+accepted jobs, idempotency identities and staged PDF bytes across restarts.
+Redis remains an optional later scale-out decision, not a hidden dependency.
 
 ```bash
 docker compose up --build -d
+docker compose ps
 curl -i http://127.0.0.1:8010/v1/health/live
 curl -i http://127.0.0.1:8010/v1/health/ready
 open http://127.0.0.1:8501
@@ -69,8 +72,9 @@ If readiness is `503`, inspect the dependency checks; this is deliberately
 reported as not-ready instead of allowing the UI to claim that answer queries
 are available. On this workstation Ollama runs as the existing
 `ai-journey-ollama` container and is bound to its Docker network rather than
-the host gateway. The reproducible local check connects that container to the
-Compose network and sets the correct URL automatically:
+the host gateway. The reproducible local check starts API, worker and UI,
+connects that container to the Compose network when present, uploads the
+sample PDF, waits for the worker, and verifies Qdrant point persistence:
 
 ```bash
 ./toolbox/scripts/run_document_service_compose_smoke.sh
@@ -80,6 +84,35 @@ For a long-running local stack after that network connection exists, start it
 with `DIS_OLLAMA_URL=http://ai-journey-ollama:11434 docker compose up --build -d`.
 On another machine where Ollama is exposed through the host gateway, the
 default `host.docker.internal:11434` remains the portable setting.
+
+The UI exposes health, tenant/ACL context, document selection, upload
+idempotency, per-stage ingestion duration/decision, retry attempts, query mode,
+canonical evidence metadata, retrieval candidate scores, no-answer reason,
+latency breakdown and privacy-safe metrics. It renders returned text with
+`textContent`; model output is never treated as HTML.
+
+Useful operational endpoints:
+
+```bash
+curl -sS http://127.0.0.1:8010/v1/metrics
+curl -sS -H 'X-Tenant-ID: default' 'http://127.0.0.1:8010/v1/documents?limit=100'
+```
+
+Use `POST /v1/queries` for the current query contract. `/v1/query` remains as
+a compatibility alias. `POST /v1/search` returns evidence without calling
+Ollama. When the answerability gate rejects a query, the response contains
+`no_answer.reason_code`, `model: null`, `latency.llm_ms: 0` and the trace records
+the decision. Query trace logs contain a question hash and stage metadata, not
+the raw question or evidence. Document lifecycle audit events contain only
+document/version/action/result identifiers and bounded metadata.
+
+Detailed service setup, API examples, known limitations and the 28-page
+acceptance matrix are in:
+
+- [Document Intelligence service README](projects/document_intelligence_service/README.md)
+- [API examples](projects/document_intelligence_service/docs/api_examples.md)
+- [Architecture and query sequence](projects/document_intelligence_service/docs/architecture.md)
+- [28-page acceptance matrix](projects/document_intelligence_service/docs/acceptance/week2_pdf_acceptance_matrix.md)
 
 ## Repository Philosophy
 

@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 import asyncio
 from dataclasses import asdict
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -25,9 +26,24 @@ def main() -> None:
     parser.add_argument("--max-output-tokens", type=int, default=64)
     parser.add_argument("--timeout-seconds", type=float, default=180.0)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--qdrant-url",
+        default=os.environ.get("DIS_QDRANT_URL", "http://127.0.0.1:6335"),
+    )
+    parser.add_argument(
+        "--collection",
+        default=os.environ.get("DIS_QDRANT_COLLECTION", "document_chunks_v2_bm25"),
+    )
+    parser.add_argument(
+        "--bm25-state-path",
+        default=os.environ.get("DIS_BM25_STATE_PATH", "data/bm25_state.json"),
+    )
     args = parser.parse_args()
 
     settings = Settings(
+        qdrant_url=args.qdrant_url,
+        qdrant_collection=args.collection,
+        bm25_state_path=args.bm25_state_path,
         section_marker_profile="mentor_program_v1",
         reranker_enabled=False,
         llm_model=args.model,

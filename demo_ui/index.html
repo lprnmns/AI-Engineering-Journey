@@ -202,6 +202,12 @@
         return typeof value === "number" && Number.isFinite(value) ? value.toFixed(1) : "—";
       }
 
+      function shortTime(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString();
+      }
+
       function renderTimeline(job) {
         timeline.replaceChildren();
         const stages = job.stages || [];
@@ -214,7 +220,7 @@
           name.textContent = stage.name;
           const state = document.createElement("span");
           state.className = "stage-meta";
-          state.textContent = `${stage.status} — ${stage.duration_ms == null ? "çalışıyor" : `${safeNumber(stage.duration_ms)} ms`}`;
+          state.textContent = `${stage.status} — ${stage.duration_ms == null ? "çalışıyor" : `${safeNumber(stage.duration_ms)} ms`} — ${shortTime(stage.started_at)} → ${shortTime(stage.finished_at)}`;
           head.append(name, state);
           const detail = document.createElement("div");
           detail.className = "stage-data";

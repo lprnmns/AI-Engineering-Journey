@@ -58,7 +58,7 @@ class PipelineConfig:
     sparse_encoder: str = "bm25_qdrant_idf_v2"
     sparse_encoder_version: str = "1"
     reranker_model: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
-    vector_schema_version: str = "1"
+    vector_schema_version: str = "2"
 
     def canonical_dict(self) -> dict[str, str]:
         """Return deterministic, explicit fingerprint inputs."""

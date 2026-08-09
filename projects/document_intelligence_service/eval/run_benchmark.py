@@ -3,13 +3,13 @@
 from argparse import ArgumentParser
 from dataclasses import asdict
 import json
+import os
 from pathlib import Path
 import random
 import subprocess
 
 from ..app.domain.entities import RetrievalMode
-from ..app.domain.ingestion import PipelineConfig
-from ..app.main import build_retrieval_service
+from ..app.main import build_pipeline_config, build_retrieval_service
 from ..app.settings import Settings
 from .contracts import load_jsonl, validate_case_set
 from .runner import run_retrieval_benchmark
@@ -36,6 +36,23 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--point-count", type=int, default=None)
     parser.add_argument("--raw-output-dir", type=Path, default=None)
+    parser.add_argument(
+        "--qdrant-url",
+        default=os.environ.get("DIS_QDRANT_URL", "http://127.0.0.1:6335"),
+    )
+    parser.add_argument(
+        "--collection",
+        default=os.environ.get("DIS_QDRANT_COLLECTION", "document_chunks_v2_bm25"),
+    )
+    parser.add_argument(
+        "--bm25-state-path",
+        default=os.environ.get("DIS_BM25_STATE_PATH", "data/bm25_state.json"),
+    )
+    parser.add_argument(
+        "--section-profile",
+        choices=("none", "mentor_program_v1"),
+        default=os.environ.get("DIS_SECTION_MARKER_PROFILE", "mentor_program_v1"),
+    )
     args = parser.parse_args()
 
     all_cases = validate_case_set(
@@ -58,9 +75,13 @@ def main() -> None:
     random.Random(args.seed).shuffle(ordered_cases)
     cases = tuple(ordered_cases)
     settings = Settings(
-        section_marker_profile="mentor_program_v1",
+        qdrant_url=args.qdrant_url,
+        qdrant_collection=args.collection,
+        bm25_state_path=args.bm25_state_path,
+        section_marker_profile=args.section_profile,
         reranker_enabled=args.reranker,
     )
+    pipeline_config = build_pipeline_config(settings)
     service = build_retrieval_service(settings)
     run = run_retrieval_benchmark(
         retrieval_service=service,
@@ -72,12 +93,11 @@ def main() -> None:
     manifest = build_run_manifest(
         dataset_path=args.dataset,
         cases=cases,
-        qdrant_collection="document_chunks_v2_bm25",
+        qdrant_collection=settings.qdrant_collection,
         point_count=args.point_count,
         pipeline_config={
-            **PipelineConfig().canonical_dict(),
-            "embedding_model": PipelineConfig().embedding_model,
-            "reranker_model": PipelineConfig().reranker_model if args.reranker else None,
+            **pipeline_config.canonical_dict(),
+            "reranker_model": pipeline_config.reranker_model if args.reranker else None,
         },
         mode=args.mode,
         reranker_enabled=args.reranker,
@@ -94,10 +114,12 @@ def main() -> None:
         "reranker_enabled": args.reranker,
         "top_k": args.top_k,
         "warmup_questions": list(DEFAULT_WARMUPS),
-        "qdrant_collection": "document_chunks_v2_bm25",
-        "embedding_model": PipelineConfig().embedding_model,
-        "sparse_encoder": PipelineConfig().sparse_encoder,
-        "reranker_model": PipelineConfig().reranker_model if args.reranker else None,
+        "qdrant_collection": settings.qdrant_collection,
+        "embedding_model": pipeline_config.embedding_model,
+        "sparse_encoder": pipeline_config.sparse_encoder,
+        "reranker_model": pipeline_config.reranker_model if args.reranker else None,
+        "section_marker_profile": settings.section_marker_profile,
+        "bm25_state_path": settings.bm25_state_path,
         "llm_called": False,
         "run": asdict(run),
         "manifest": manifest,
