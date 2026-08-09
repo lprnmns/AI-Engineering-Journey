@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import re
 from time import perf_counter
 
@@ -15,6 +15,7 @@ from ..domain.answerability import (
 )
 from ..domain.entities import Decision, NoAnswerReason, RetrievalMode
 from ..domain.errors import ErrorCode, ServiceError
+from ..domain.evidence_safety import EvidenceSafetyPolicy
 from ..domain.evidence_validation import (
     EvidenceWarning,
     validate_answer_against_evidence,
@@ -53,11 +54,13 @@ class QueryService:
         answerability: AnswerabilityPolicy,
         answer_generator: AnswerGenerator,
         prompt_safety: PromptSafetyPolicy | None = None,
+        evidence_safety: EvidenceSafetyPolicy | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service
         self._answerability = answerability
         self._answer_generator = answer_generator
         self._prompt_safety = prompt_safety or PromptSafetyPolicy()
+        self._evidence_safety = evidence_safety or EvidenceSafetyPolicy()
 
     async def execute(
         self,
@@ -98,10 +101,16 @@ class QueryService:
             top_k=top_k,
             document_ids=document_ids,
         )
+        retrieval, blocked_evidence = _apply_evidence_safety(
+            retrieval,
+            policy=self._evidence_safety,
+        )
         gate = assess_answerability(
             question=question,
             retrieval=retrieval,
             answerability=self._answerability,
+            prompt_safety=self._prompt_safety,
+            evidence_safety_blocked=blocked_evidence and not retrieval.candidates,
         )
         if gate.decision is Decision.NO_ANSWER:
             return QueryExecutionResult(
@@ -205,11 +214,20 @@ def assess_answerability(
     retrieval: RetrievalResult,
     answerability: AnswerabilityPolicy,
     prompt_safety: PromptSafetyPolicy | None = None,
+    evidence_safety_blocked: bool = False,
 ) -> AnswerabilityDecision:
     """Apply the pre-LLM gate to a previously captured retrieval result."""
 
     safety = prompt_safety or PromptSafetyPolicy()
     if safety.evaluate(question).blocked:
+        return AnswerabilityDecision(
+            decision=Decision.NO_ANSWER,
+            reason=NoAnswerReason.SECURITY_POLICY,
+            top_score=None,
+            score_margin=None,
+            coverage_ratio=0.0,
+        )
+    if evidence_safety_blocked:
         return AnswerabilityDecision(
             decision=Decision.NO_ANSWER,
             reason=NoAnswerReason.SECURITY_POLICY,
@@ -268,4 +286,38 @@ def _empty_retrieval(mode: RetrievalMode) -> RetrievalResult:
         rrf_candidates=0,
         embedding_ms=0.0,
         search_ms=0.0,
+    )
+
+
+def _apply_evidence_safety(
+    retrieval: RetrievalResult,
+    *,
+    policy: EvidenceSafetyPolicy,
+) -> tuple[RetrievalResult, bool]:
+    """Filter unsafe final/context candidates before answerability or LLM."""
+
+    final_result = policy.filter(retrieval.candidates)
+    window = retrieval.candidate_window or retrieval.candidates
+    window_result = policy.filter(window)
+    blocked = bool(
+        final_result.blocked_source_ids or window_result.blocked_source_ids
+    )
+    if not blocked:
+        return retrieval, False
+
+    safe_final_ids = {item.source_id for item in final_result.safe_evidence}
+    safe_window_ids = {item.source_id for item in window_result.safe_evidence}
+    return (
+        replace(
+            retrieval,
+            candidates=tuple(
+                item
+                for item in retrieval.candidates
+                if item.source_id in safe_final_ids
+            ),
+            candidate_window=tuple(
+                item for item in window if item.source_id in safe_window_ids
+            ),
+        ),
+        True,
     )

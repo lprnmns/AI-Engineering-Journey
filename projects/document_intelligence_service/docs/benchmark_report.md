@@ -183,6 +183,25 @@ Bu yüzden güvenlik kararı tek bir regex veya tek bir LLM prompt'una değil,
 zincirine yayılır. Rule set büyütülürken benign soru false positive oranı ayrıca
 ölçülmelidir.
 
+### Indirect evidence smoke
+
+PDF içindeki talimat benzeri metnin doğrudan model komutuna dönüşmemesi için
+`EvidenceSafetyPolicy` eklendi. Üç yüksek güvenli indirect injection fixture'ı
+context'e girmeden çıkarıldı; prompt güvenliğini konu alan bir benign evidence
+parçası korundu:
+
+```text
+indirect attacks: 3
+blocked: 3 / 3
+benign evidence allowed: 1 / 1
+LLM çağrısı: 0
+```
+
+Bu deterministik smoke yalnız uygulama filtresini ölçer; gerçek LLM'in saldırı
+metni karşısındaki üretim davranışının ayrıca ölçülmesi gerekir. Ham sonuç
+[indirect_injection_smoke.json](../eval/results/indirect_injection_smoke.json)
+dosyasındadır.
+
 ## Real local Gemma output-validation smoke — 2026-08-09
 
 Gerçek Ollama `gemma3:4b` çağrısı, aynı Qdrant snapshot'ı ve bounded `top_k=2`,

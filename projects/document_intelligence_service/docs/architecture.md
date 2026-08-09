@@ -74,7 +74,8 @@ sequenceDiagram
         Q->>Q: RRF top-20
         Q->>R: rerank top-20
         R-->>Q: top-5 evidence
-        Q->>G: evidence + score + margin + coverage
+        Q->>Q: EvidenceSafetyPolicy
+        Q->>G: safe evidence + score + margin + coverage
         alt sufficient evidence
             G->>L: grounded prompt + evidence
             L-->>Q: answer
@@ -93,6 +94,7 @@ sequenceDiagram
 ```text
 Qdrant down  → readiness 503 / query dependency error
 direct injection → SECURITY_POLICY / retrieval and LLM skipped
+indirect injection evidence → unsafe chunk removed or SECURITY_POLICY
 weak evidence → no_answer / LLM latency 0
 invalid input → 400 INVALID_REQUEST
 active ingestion during delete → 409 DOCUMENT_BUSY
@@ -147,3 +149,9 @@ END_UNTRUSTED_EVIDENCE
 Evidence içindeki instruction-like metin veri kabul edilir, komut kabul edilmez.
 Bu, bilinmeyen saldırıları tek başına çözmez; provenance, output validation,
 tool-off ve ileride handoff politikasıyla birlikte değerlendirilmelidir.
+
+`EvidenceSafetyPolicy`, structured prompt'tan önce yüksek güvenli indirect
+injection parçalarını final evidence'tan çıkarır. Güvenli aday kalırsa akış devam
+eder; tüm adaylar çıkarılırsa `SECURITY_POLICY` ile LLM atlanır. Bu filtre normal
+prompt güvenliği açıklamalarını reddetmemek için dar tutulur ve ayrı smoke setiyle
+ölçülür.

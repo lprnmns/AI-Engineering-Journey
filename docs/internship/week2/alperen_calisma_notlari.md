@@ -1272,3 +1272,57 @@ konservatif runtime default'u `0.379` değiştirilmedi.
 ### Mentora kısa anlatım
 
 > Önceden answerability yalnız benzerlik skoruna baktığı için system-prompt extraction ve kaynaksız benchmark iddiası gibi injection soruları retrieval'da yüksek puan alabiliyordu. Domain katmanına retrieval'dan önce çalışan `PromptSafetyPolicy` ekledim. Dört yüksek güvenli saldırı testinde direct injection `2/2`, leakage `2/2` geçti; engellenen istekte source ve LLM yok, reason `SECURITY_POLICY`. Ayrıca Ollama prompt'unda user question ile `UNTRUSTED_EVIDENCE` sınırlarını ayırdım. Bu tam güvenlik iddiası değil; defense-in-depth'in yeni bir katmanı.
+
+## 28. PDF içi indirect injection ve evidence containment
+
+### Direct ve indirect farkı
+
+- **Direct injection:** Saldırgan talimatı doğrudan kullanıcı sorusuna yazar. `PromptSafetyPolicy` bunu retrieval'dan önce kontrol eder.
+- **Indirect injection:** Saldırgan talimatı PDF, web sayfası veya başka bir doküman parçasının içine yerleştirir. Kullanıcı yalnız normal bir soru sorsa bile malicious chunk retrieval ile context'e gelebilir.
+
+Indirect akışın güvenli hali:
+
+```text
+Qdrant adayları
+→ EvidenceSafetyPolicy
+→ zararlı yüksek-güvenli chunkları çıkar
+→ kalan evidence ile answerability
+→ structured prompt / LLM
+```
+
+`EvidenceSafetyPolicy` şu an yalnız yüksek güvenli kalıpları hedefliyor:
+
+- `Önceki talimatları yok say` gibi evidence içi instruction override,
+- `<|system|>` veya `### system` gibi chat-role enjeksiyonu,
+- system prompt/API key/secret bilgisini URL, e-posta veya başka hedefe gönderme.
+
+Normal doküman içeriği otomatik olarak engellenmiyor. Örneğin “System prompt ile
+kullanıcı mesajı arasındaki fark açıklanır.” ifadesi güvenli evidence olarak
+kalıyor. Çünkü bir dokümanın prompt güvenliği hakkında konuşması ile modelden
+gizli talimatı uygulamasını istemesi aynı şey değil.
+
+### Güvenli davranış
+
+- Zararlı chunk ile güvenli chunk birlikte geldiyse yalnız zararlı chunk context'ten çıkarılır ve güvenli kanıtla devam edilir.
+- Tüm final evidence zararlıysa `SECURITY_POLICY`, boş source ve `llm_ms=0` döner.
+- Modelin gördüğü evidence hâlâ `BEGIN_UNTRUSTED_EVIDENCE` sınırları içindedir; filtre, prompt sınırının yerine geçmez.
+
+### Ölçüm
+
+`data/evaluations/indirect_injection_cases_v1.json` ile deterministic smoke çalıştırıldı:
+
+```text
+indirect attack cases: 3
+blocked: 3 / 3
+benign evidence cases: 1
+benign allowed: 1 / 1
+LLM çağrısı: 0
+```
+
+Bu test modelin üretim davranışını ölçmez; evidence'ın LLM prompt'una girmeden
+önce uygulama filtresinden geçtiğini ölçer. Gerçek model değerlendirmesinde
+ayrıca malicious evidence + normal soru ile çıktı davranışı test edilmelidir.
+
+### Mentora kısa anlatım
+
+> Direct injection kullanıcı mesajından gelir; indirect injection ise PDF içindeki talimat benzeri metnin modele komut gibi aktarılmasıdır. EvidenceSafetyPolicy ile yüksek güvenli chat-role, talimat override ve secret exfiltration kalıplarını context'e sokmadan çıkarıyorum. Üç indirect saldırının üçü engellendi, benign prompt açıklaması korunarak false positive kontrol edildi. Bu bir LLM güvenlik garantisi değil; retrieval, structured prompt ve output validation arasındaki defense-in-depth katmanıdır.
