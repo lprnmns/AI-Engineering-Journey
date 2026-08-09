@@ -131,9 +131,47 @@ def test_wired_query_returns_structured_no_answer_and_skips_llm() -> None:
     body = response.json()
     assert body["decision"] == "no_answer"
     assert body["no_answer_reason"] == "LOW_RELEVANCE"
+    assert body["no_answer"]["reason_code"] == "LOW_RELEVANCE"
+    assert "skipped" in body["no_answer"]["message"]
     assert body["model"] == {"provider": None, "model": None}
     assert body["latency"]["llm_ms"] == 0
     assert generator.call_count == 0
+
+
+def test_query_plural_contract_path_returns_same_no_answer_shape() -> None:
+    from projects.document_intelligence_service.app.application.query_service import (
+        QueryService,
+    )
+    from projects.document_intelligence_service.app.domain.answerability import (
+        AnswerabilityPolicy,
+    )
+    from projects.document_intelligence_service.tests.unit.test_query_service import (
+        FakeAnswerGenerator,
+    )
+    from projects.document_intelligence_service.tests.unit.test_retrieval_service import (
+        make_service,
+    )
+
+    app = create_app(
+        health_service=HealthService(()),
+        query_service=QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.99),
+            answer_generator=FakeAnswerGenerator(),
+        ),
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/queries",
+            {"question": "Stajyer maaşı ne kadar?"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == "no_answer"
+    assert response.json()["no_answer"]["reason_code"] == "LOW_RELEVANCE"
 
 
 def test_wired_query_exposes_output_warning_and_canonical_sources() -> None:
@@ -358,10 +396,11 @@ def test_document_catalog_lists_details_and_rejects_busy_delete() -> None:
             "title": "guide.pdf",
             "content_hash": payload["document_id"][4:],
             "active_version_id": None,
-            "status": "indexing",
-            "created_at": listing.json()["items"][0]["created_at"],
-        }
-    ]
+                "status": "indexing",
+                "created_at": listing.json()["items"][0]["created_at"],
+                "tenant_id": "default",
+            }
+        ]
 
     detail = asyncio.run(get(app, f"/v1/documents/{payload['document_id']}"))
     assert detail.status_code == 200

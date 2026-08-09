@@ -19,6 +19,7 @@ from ...domain.ingestion import (
     UploadMetadata,
     create_ingestion_receipt,
     normalize_idempotency_key,
+    normalize_tenant_id,
 )
 
 class SqliteIngestionRegistry:
@@ -65,22 +66,48 @@ class SqliteIngestionRegistry:
 
         return await asyncio.to_thread(self._get_staged_sync, job_id)
 
-    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+    async def list_documents(
+        self,
+        limit: int,
+        cursor: str | None,
+        tenant_id: str = "default",
+    ) -> DocumentPage:
         """Return stable cursor pagination over logical documents."""
 
         if limit <= 0 or limit > 100:
             raise ValueError("document limit must be between 1 and 100")
-        return await asyncio.to_thread(self._list_documents_sync, limit, cursor)
+        return await asyncio.to_thread(
+            self._list_documents_sync,
+            limit,
+            cursor,
+            normalize_tenant_id(tenant_id),
+        )
 
-    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+    async def get_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> DocumentSnapshot | None:
         """Return one logical document and all known versions."""
 
-        return await asyncio.to_thread(self._get_document_sync, document_id)
+        return await asyncio.to_thread(
+            self._get_document_sync,
+            document_id,
+            normalize_tenant_id(tenant_id),
+        )
 
-    async def delete_document(self, document_id: str) -> None:
+    async def delete_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> None:
         """Mark all versions deleted unless an ingestion is still running."""
 
-        await asyncio.to_thread(self._delete_document_sync, document_id)
+        await asyncio.to_thread(
+            self._delete_document_sync,
+            document_id,
+            normalize_tenant_id(tenant_id),
+        )
 
     async def update_job(self, snapshot: JobSnapshot) -> None:
         """Persist one worker progress transition."""
@@ -412,14 +439,17 @@ class SqliteIngestionRegistry:
         self,
         limit: int,
         cursor: str | None,
+        tenant_id: str,
     ) -> DocumentPage:
         offset = _parse_cursor(cursor)
         with self._connect() as connection:
             rows = connection.execute(
                 """
                 SELECT * FROM ingestions
+                WHERE tenant_id = ?
                 ORDER BY created_at ASC, document_id ASC, version_id ASC
-                """
+                """,
+                (tenant_id,),
             ).fetchall()
         grouped: dict[str, list[sqlite3.Row]] = {}
         for row in rows:
@@ -433,24 +463,28 @@ class SqliteIngestionRegistry:
         next_cursor = str(offset + limit) if offset + limit < len(snapshots) else None
         return DocumentPage(items=tuple(page), next_cursor=next_cursor)
 
-    def _get_document_sync(self, document_id: str) -> DocumentSnapshot | None:
+    def _get_document_sync(
+        self,
+        document_id: str,
+        tenant_id: str,
+    ) -> DocumentSnapshot | None:
         with self._connect() as connection:
             rows = connection.execute(
                 """
                 SELECT * FROM ingestions
-                WHERE document_id = ?
+                WHERE document_id = ? AND tenant_id = ?
                 ORDER BY created_at ASC, version_id ASC
                 """,
-                (document_id,),
+                (document_id, tenant_id),
             ).fetchall()
         return _snapshot_from_rows(rows) if rows else None
 
-    def _delete_document_sync(self, document_id: str) -> None:
+    def _delete_document_sync(self, document_id: str, tenant_id: str) -> None:
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             rows = connection.execute(
-                "SELECT status FROM ingestions WHERE document_id = ?",
-                (document_id,),
+                "SELECT status FROM ingestions WHERE document_id = ? AND tenant_id = ?",
+                (document_id, tenant_id),
             ).fetchall()
             if not rows:
                 raise ServiceError(
@@ -466,8 +500,8 @@ class SqliteIngestionRegistry:
                     message="Document has an ingestion job in progress",
                 )
             connection.execute(
-                "UPDATE ingestions SET document_status = ? WHERE document_id = ?",
-                (DocumentStatus.DELETED.value, document_id),
+                "UPDATE ingestions SET document_status = ? WHERE document_id = ? AND tenant_id = ?",
+                (DocumentStatus.DELETED.value, document_id, tenant_id),
             )
 
     def _update_job_sync(self, snapshot: JobSnapshot) -> None:
@@ -698,4 +732,5 @@ def _snapshot_from_rows(rows: list[sqlite3.Row]) -> DocumentSnapshot:
         status=status,
         created_at=datetime.fromisoformat(ordered[0]["created_at"]),
         available_version_ids=tuple(row["version_id"] for row in ordered),
+        tenant_id=latest["tenant_id"],
     )

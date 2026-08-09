@@ -119,6 +119,7 @@ class DocumentSnapshot:
     status: DocumentStatus
     created_at: datetime
     available_version_ids: tuple[str, ...]
+    tenant_id: str = "default"
 
 
 @dataclass(frozen=True, slots=True)

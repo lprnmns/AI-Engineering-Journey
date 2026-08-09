@@ -20,6 +20,7 @@ from ...domain.ingestion import (
     StageEvent,
     create_ingestion_receipt,
     normalize_idempotency_key,
+    normalize_tenant_id,
 )
 
 
@@ -119,39 +120,61 @@ class InMemoryIngestionRegistry:
                     return stored.prepared
         return None
 
-    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+    async def list_documents(
+        self,
+        limit: int,
+        cursor: str | None,
+        tenant_id: str = "default",
+    ) -> DocumentPage:
         """Return stable cursor pagination over logical documents."""
 
         if limit <= 0 or limit > 100:
             raise ValueError("document limit must be between 1 and 100")
         offset = _parse_cursor(cursor)
+        normalized_tenant = normalize_tenant_id(tenant_id)
         async with self._lock:
-            snapshots = _snapshots(self._by_identity.values())
+            snapshots = _snapshots(
+                stored
+                for stored in self._by_identity.values()
+                if stored.prepared.upload.tenant_id == normalized_tenant
+            )
         page = snapshots[offset : offset + limit]
         next_cursor = str(offset + limit) if offset + limit < len(snapshots) else None
         return DocumentPage(items=tuple(page), next_cursor=next_cursor)
 
-    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+    async def get_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> DocumentSnapshot | None:
         """Return one logical document and all known versions."""
 
+        normalized_tenant = normalize_tenant_id(tenant_id)
         async with self._lock:
             records = tuple(
                 stored
                 for stored in self._by_identity.values()
                 if stored.receipt.document_id == document_id
+                and stored.prepared.upload.tenant_id == normalized_tenant
             )
             if not records:
                 return None
             return _snapshot(records)
 
-    async def delete_document(self, document_id: str) -> None:
+    async def delete_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> None:
         """Mark all versions deleted after rejecting active ingestion jobs."""
 
+        normalized_tenant = normalize_tenant_id(tenant_id)
         async with self._lock:
             records = [
                 stored
                 for stored in self._by_identity.values()
                 if stored.receipt.document_id == document_id
+                and stored.prepared.upload.tenant_id == normalized_tenant
             ]
             if not records:
                 raise ServiceError(
@@ -296,4 +319,5 @@ def _snapshot(
         status=status,
         created_at=ordered[0].accepted_at,
         available_version_ids=tuple(item.receipt.version_id for item in ordered),
+        tenant_id=latest.prepared.upload.tenant_id,
     )

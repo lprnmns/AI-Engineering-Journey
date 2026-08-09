@@ -81,12 +81,17 @@ async def create_document(
 )
 async def list_documents(
     request: Request,
+    tenant_id: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: Annotated[str | None, Query(max_length=256)] = None,
 ) -> DocumentListResponse:
     """List documents with bounded cursor pagination."""
 
-    page = await request.app.state.document_service.list_documents(limit, cursor)
+    page = await request.app.state.document_service.list_documents(
+        limit,
+        cursor,
+        tenant_id or "default",
+    )
     return DocumentListResponse(
         items=[_summary(document) for document in page.items],
         next_cursor=page.next_cursor,
@@ -101,10 +106,14 @@ async def list_documents(
 async def get_document(
     request: Request,
     document_id: Annotated[str, Path(min_length=1, max_length=128)],
+    tenant_id: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
 ) -> DocumentDetailResponse:
     """Return one document and its available versions."""
 
-    document = await request.app.state.document_service.get_document(document_id)
+    document = await request.app.state.document_service.get_document(
+        document_id,
+        tenant_id or "default",
+    )
     return DocumentDetailResponse(
         **_summary(document).model_dump(),
         available_version_ids=list(document.available_version_ids),
@@ -119,10 +128,14 @@ async def get_document(
 async def delete_document(
     request: Request,
     document_id: Annotated[str, Path(min_length=1, max_length=128)],
+    tenant_id: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
 ) -> DeleteDocumentResponse:
     """Delete a document unless an active ingestion job makes it busy."""
 
-    await request.app.state.document_service.delete_document(document_id)
+    await request.app.state.document_service.delete_document(
+        document_id,
+        tenant_id or "default",
+    )
     return DeleteDocumentResponse(
         document_id=document_id,
         request_id=get_request_id(),
@@ -139,4 +152,5 @@ def _summary(document: DocumentSnapshot) -> DocumentSummary:
         active_version_id=document.active_version_id,
         status=document.status,
         created_at=document.created_at,
+        tenant_id=document.tenant_id,
     )

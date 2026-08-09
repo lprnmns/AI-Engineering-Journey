@@ -190,8 +190,9 @@ def test_rest_contract_paths_are_published_in_openapi() -> None:
             "/v1/evaluations/runs/{run_id}",
             "/v1/health/live",
         "/v1/health/ready",
-        "/v1/health/startup",
-        "/v1/jobs/{job_id}",
-        "/v1/query",
-        "/v1/search",
+            "/v1/health/startup",
+            "/v1/jobs/{job_id}",
+            "/v1/queries",
+            "/v1/query",
+            "/v1/search",
     ]

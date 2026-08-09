@@ -11,15 +11,26 @@ from .contracts import (
     OutputWarningResponse,
     QueryRequest,
     QueryResponse,
+    NoAnswerInfo,
     RetrievalInfo,
     RetrievalDebugCandidateResponse,
     RetrievalDebugResponse,
     SourceResponse,
 )
 
-router = APIRouter(prefix="/query", tags=["query"])
+router = APIRouter(prefix="/queries", tags=["query"])
+legacy_router = APIRouter(prefix="/query", tags=["query"])
 
 
+@legacy_router.post(
+    "",
+    response_model=QueryResponse,
+    include_in_schema=True,
+    responses={
+        status.HTTP_200_OK: {"model": QueryResponse},
+        **openapi_error_responses(),
+    },
+)
 @router.post(
     "",
     response_model=QueryResponse,
@@ -46,19 +57,37 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
         decision=result.decision,
         answer=result.answer,
         no_answer_reason=result.no_answer_reason,
+        no_answer=(
+            NoAnswerInfo(
+                reason_code=result.no_answer_reason,
+                message=(
+                    "Sufficient evidence was not found; the LLM was skipped."
+                ),
+            )
+            if result.no_answer_reason is not None
+            else None
+        ),
         sources=[
             SourceResponse(
                 source_id=candidate.source_id,
                 document_id=candidate.document_id,
                 version_id=candidate.version_id,
+                chunk_id=candidate.source_id,
+                parent_id=candidate.parent_id,
                 page=candidate.page_start,
+                page_start=candidate.page_start,
+                page_end=candidate.page_end,
                 title=candidate.title or None,
                 snippet=candidate.text[:500],
+                excerpt=candidate.text[:500],
                 score=(
                     candidate.rerank_score
                     if candidate.rerank_score is not None
                     else candidate.score
                 ),
+                dense_score=candidate.dense_score,
+                sparse_score=candidate.sparse_score,
+                rerank_score=candidate.rerank_score,
             )
             for candidate in result.sources
         ],

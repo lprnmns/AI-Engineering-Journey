@@ -46,10 +46,18 @@ async def search(request: Request, payload: SearchRequest) -> SearchResponse:
                 source_id=candidate.source_id,
                 document_id=candidate.document_id,
                 version_id=candidate.version_id,
+                chunk_id=candidate.source_id,
+                parent_id=candidate.parent_id,
                 page=candidate.page_start,
+                page_start=candidate.page_start,
+                page_end=candidate.page_end,
                 title=candidate.title or None,
                 snippet=candidate.text[:500],
+                excerpt=candidate.text[:500],
                 score=candidate.score,
+                dense_score=candidate.dense_score,
+                sparse_score=candidate.sparse_score,
+                rerank_score=candidate.rerank_score,
             )
             for candidate in result.candidates
         ],

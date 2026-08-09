@@ -210,17 +210,30 @@ class IngestionRegistry(Protocol):
 
         ...
 
-    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+    async def list_documents(
+        self,
+        limit: int,
+        cursor: str | None,
+        tenant_id: str = "default",
+    ) -> DocumentPage:
         """Return a bounded page of logical documents."""
 
         ...
 
-    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+    async def get_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> DocumentSnapshot | None:
         """Return one logical document read model, if known."""
 
         ...
 
-    async def delete_document(self, document_id: str) -> None:
+    async def delete_document(
+        self,
+        document_id: str,
+        tenant_id: str = "default",
+    ) -> None:
         """Mark all versions deleted unless an ingestion is still running."""
 
         ...

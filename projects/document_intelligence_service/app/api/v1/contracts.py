@@ -63,6 +63,7 @@ class DocumentSummary(BaseModel):
     active_version_id: str | None
     status: DocumentStatus
     created_at: datetime
+    tenant_id: str = "default"
 
 
 class DocumentListResponse(BaseModel):
@@ -166,10 +167,25 @@ class SourceResponse(BaseModel):
     source_id: str
     document_id: str
     version_id: str
+    chunk_id: str
+    parent_id: str
     page: int | None = Field(default=None, ge=1)
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
     title: str | None
     snippet: str
+    excerpt: str
     score: float | None
+    dense_score: float | None = None
+    sparse_score: float | None = None
+    rerank_score: float | None = None
+
+
+class NoAnswerInfo(BaseModel):
+    """Stable machine-readable explanation for an intentionally skipped answer."""
+
+    reason_code: NoAnswerReason
+    message: str
 
 
 class RetrievalInfo(BaseModel):
@@ -262,6 +278,10 @@ class QueryResponse(BaseModel):
                 {
                     "decision": "no_answer",
                     "answer": None,
+                    "no_answer": {
+                        "reason_code": "NO_EVIDENCE",
+                        "message": "Sufficient evidence was not found.",
+                    },
                     "no_answer_reason": "NO_EVIDENCE",
                     "sources": [],
                     "retrieval": {
@@ -289,6 +309,7 @@ class QueryResponse(BaseModel):
     decision: Decision
     answer: str | None
     no_answer_reason: NoAnswerReason | None
+    no_answer: NoAnswerInfo | None = None
     sources: list[SourceResponse]
     retrieval: RetrievalInfo
     model: ModelInfo
@@ -302,10 +323,25 @@ class QueryResponse(BaseModel):
         """Keep answer and no-answer fields mutually consistent."""
 
         if self.decision is Decision.ANSWERED:
-            if not self.answer or self.no_answer_reason is not None:
+            if not self.answer or self.no_answer_reason is not None or self.no_answer is not None:
                 raise ValueError("answered responses require answer and no reason")
-        elif self.answer is not None or self.no_answer_reason is None:
+        if self.decision is Decision.NO_ANSWER and self.no_answer_reason is not None and self.no_answer is None:
+            self.no_answer = NoAnswerInfo(
+                reason_code=self.no_answer_reason,
+                message="Sufficient evidence was not found; the LLM was skipped.",
+            )
+        if self.decision is Decision.NO_ANSWER and (
+            self.answer is not None
+            or self.no_answer_reason is None
+            or self.no_answer is None
+        ):
             raise ValueError("no-answer responses require a reason and no answer")
+        if (
+            self.decision is Decision.NO_ANSWER
+            and self.no_answer is not None
+            and self.no_answer_reason is not self.no_answer.reason_code
+        ):
+            raise ValueError("no-answer reason fields must agree")
         return self
 
 

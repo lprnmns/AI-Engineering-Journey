@@ -12,6 +12,7 @@ from .api.v1.health import router as health_router
 from .api.v1.documents import router as documents_router
 from .api.v1.evaluations import router as evaluations_router
 from .api.v1.jobs import router as jobs_router
+from .api.v1.queries import legacy_router as legacy_queries_router
 from .api.v1.queries import router as queries_router
 from .api.v1.search import router as search_router
 from .application.health_service import HealthService
@@ -344,6 +345,7 @@ def create_app(
     application.include_router(evaluations_router, prefix="/v1")
     application.include_router(jobs_router, prefix="/v1")
     application.include_router(queries_router, prefix="/v1")
+    application.include_router(legacy_queries_router, prefix="/v1")
     application.include_router(search_router, prefix="/v1")
     return application
 
