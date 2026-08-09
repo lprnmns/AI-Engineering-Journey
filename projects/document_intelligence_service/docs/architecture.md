@@ -68,7 +68,8 @@ sequenceDiagram
     alt sufficient evidence
         G->>L: grounded prompt + evidence
         L-->>Q: answer
-        Q-->>A: answered + sources + metrics
+        Q->>Q: output/evidence validation
+        Q-->>A: answered + sources + warnings + metrics
     else insufficient evidence
         G-->>Q: no-answer reason
         Q-->>A: no_answer; LLM skipped
@@ -86,3 +87,29 @@ active ingestion during delete → 409 DOCUMENT_BUSY
 ```
 
 Bir altyapı arızası, kanıt bulunamaması gibi raporlanmaz.
+
+## Output/evidence validation sınırı
+
+`AnswerabilityPolicy` yalnızca model çağrısından önceki kanıt yeterliliğini
+değerlendirir. Gate'in geçmesi, modelin ürettiği her cümlenin kanıtlandığı
+anlamına gelmez. Bu nedenle `QueryService`, answered sonucunu döndürmeden önce
+üretilen cevaptaki sayısal ifadeleri getirilen evidence metnindeki sayılarla
+karşılaştırır.
+
+İlk sürüm yalnız `UNSUPPORTED_NUMBER` warning'i üretir. Warning cevabı
+değiştirmez veya otomatik olarak no-answer'a çevirmez; çünkü bu politikanın
+false-positive/false-negative maliyeti henüz ayrı bir validation setinde
+kalibre edilmemiştir. Kullanıcıya dönen `sources` ise model çıktısından değil,
+retrieval sonucundaki canonical `RetrievedChunk` nesnelerinden oluşturulur.
+
+```text
+Gemma answer: "Sistem 64 GB RAM kullanır."
+evidence:     "Sistem 32 GB RAM kullanır."
+warning:      UNSUPPORTED_NUMBER(values=["64"])
+sources:      retrieval candidates (modelin yazdığı kaynak değil)
+```
+
+Bu guardrail sayısal tutarlılık sinyalidir; bütün doğal dil iddialarını
+kanıtladığını iddia etmez. Bir sonraki aşamada tarih/yüzde-birim kontrolü,
+expected phrase/citation mapping ve warning sonrası güvenli handoff politikası
+ayrı ölçümlerle eklenebilir.

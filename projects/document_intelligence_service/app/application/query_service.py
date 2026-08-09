@@ -15,6 +15,10 @@ from ..domain.answerability import (
 )
 from ..domain.entities import Decision, NoAnswerReason, RetrievalMode
 from ..domain.errors import ErrorCode, ServiceError
+from ..domain.evidence_validation import (
+    EvidenceWarning,
+    validate_answer_against_evidence,
+)
 from ..domain.generation import AnswerGenerationError
 from ..domain.retrieval import RetrievedChunk, RetrievalResult
 from .ports import AnswerGenerator
@@ -35,6 +39,7 @@ class QueryExecutionResult:
     llm_ms: float
     total_ms: float
     answerability: AnswerabilityDecision
+    warnings: tuple[EvidenceWarning, ...]
 
 
 class QueryService:
@@ -86,6 +91,7 @@ class QueryService:
                 llm_ms=0.0,
                 total_ms=(perf_counter() - started) * 1000,
                 answerability=gate,
+                warnings=(),
             )
 
         try:
@@ -98,6 +104,10 @@ class QueryService:
                 code=ErrorCode.DEPENDENCY_UNAVAILABLE,
                 message="Answer generation dependency is unavailable",
             ) from exc
+        validation = validate_answer_against_evidence(
+            answer=generated.answer,
+            evidence=retrieval.candidates,
+        )
         return QueryExecutionResult(
             decision=Decision.ANSWERED,
             answer=generated.answer,
@@ -109,6 +119,7 @@ class QueryService:
             llm_ms=generated.latency_ms,
             total_ms=(perf_counter() - started) * 1000,
             answerability=gate,
+            warnings=validation.warnings,
         )
 
     def _signals(

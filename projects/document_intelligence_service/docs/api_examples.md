@@ -91,6 +91,12 @@ Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/s
 
 Query önce answerability gate'ten geçer. `NO_EVIDENCE` veya `LOW_RELEVANCE` kararında Ollama çağrılmaz ve `llm_ms=0` kalır. Kanıt yeterliyse `gemma3:4b` yalnız bounded evidence prompt'u ile çağrılır. Qdrant/embedding çalıştığı halde Ollama üretimi başarısızsa bu no-answer değildir; güvenli `503 DEPENDENCY_UNAVAILABLE` döner.
 
+Answered response'ta `warnings` alanı, model çıktısının final evidence ile
+karşılaştırılmasından doğan structured output/evidence uyarılarını taşır.
+İlk sürüm `UNSUPPORTED_NUMBER` koduyla evidence'ta bulunmayan sayıları bildirir.
+Bu warning cevabı otomatik olarak reddetmez; `sources` ise her zaman retrieval
+payload'ından canonical olarak üretilir.
+
 ## No-answer response
 
 ```json
@@ -107,6 +113,7 @@ Query önce answerability gate'ten geçer. `NO_EVIDENCE` veya `LOW_RELEVANCE` ka
     "reranked_candidates": 5
   },
   "model": {"provider": null, "model": null},
+  "warnings": [],
   "latency": {
     "embedding_ms": 12.4,
     "search_ms": 18.1,

@@ -8,6 +8,7 @@ from ._not_ready import feature_not_ready
 from .contracts import (
     LatencyBreakdown,
     ModelInfo,
+    OutputWarningResponse,
     QueryRequest,
     QueryResponse,
     RetrievalInfo,
@@ -68,6 +69,14 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
             reranked_candidates=result.retrieval.reranked_candidates,
         ),
         model=ModelInfo(provider=result.provider, model=result.model),
+        warnings=[
+            OutputWarningResponse(
+                code=warning.code,
+                message=warning.message,
+                values=list(warning.values),
+            )
+            for warning in result.warnings
+        ],
         latency=LatencyBreakdown(
             embedding_ms=result.retrieval.embedding_ms,
             search_ms=result.retrieval.search_ms,

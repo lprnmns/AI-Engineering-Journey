@@ -139,3 +139,60 @@ LLM çağrısı: 0
 ```
 
 Bu bir “model güvenli” sonucu değildir; tam tersine mevcut uygulama gate'inin iki direct/system-prompt injection hazırlık vakasını kaçırdığını gösteren kırmızı sonuçtur. `AnswerabilityPolicy` yalnız evidence score ve coverage ile çalıştığı için, sorunun talimat kısmını güvenilir kabul edip etmemeyi tek başına çözemez. Sonraki savunma katmanı structured prompt, output fact/evidence validation ve gerektiğinde güvenli handoff olmalıdır. Ham rapor [security_test_gate.json](../eval/results/security_test_gate.json) dosyasındadır.
+
+## Output/evidence validation slice — 2026-08-09
+
+### Problem
+
+`answered` kararı yalnızca answerability gate'in geçildiğini gösterir. Gate doğru
+section'ı bulsa bile local LLM evidence içinde olmayan bir sayı üretebilir.
+Örneğin evidence `32 GB` içerirken cevap `64 GB` diyebilir. Retrieval başarısı
+ile generation grounding başarısını aynı metrikte birleştirmemek için output
+validation ayrı bir domain adımı olarak eklendi.
+
+### İlk sözleşme
+
+```text
+generated answer + final RetrievedChunk evidence
+  → numeric mention extraction
+  → normalized numeric comparison
+  → zero veya bir structured warning
+```
+
+Response örneği:
+
+```json
+{
+  "warnings": [
+    {
+      "code": "UNSUPPORTED_NUMBER",
+      "message": "Cevapta geçen bazı sayılar getirilen kanıtta bulunamadı; cevap insan incelemesine gönderilmelidir.",
+      "values": ["64"]
+    }
+  ]
+}
+```
+
+Modelin yazdığı kaynak adları doğrulama için kullanılmaz. `sources` listesi
+retrieval'ın canonical payload'ından üretilmeye devam eder; böylece modelin
+uydurduğu bir source ID API response'una güvenilir kaynak olarak giremez.
+
+### Ne doğrulanıyor, ne doğrulanmıyor?
+
+- Tam sayı ve ondalık sayıların evidence'ta bulunup bulunmadığı kontrol ediliyor.
+- Türkçe ondalık virgül (`0,456`) ve nokta (`0.456`) aynı sayısal değer olarak ele alınıyor.
+- Liste numaraları (`1.`, `2)`) ve `gemma3:4b` gibi model identifier parçaları
+  factual number olarak işaretlenmiyor.
+- Bu sürüm sayının geçtiği cümlenin anlamını, birimini veya neden-sonuç
+  ilişkisini kanıtlamıyor.
+- Warning şu an otomatik no-answer değildir; policy kararı için validation
+  setinde warning precision/recall ve insan inceleme maliyeti ölçülmelidir.
+
+### Kanıt
+
+Domain, QueryService ve API contract seviyelerinde desteklenen sayı,
+unsupported number, injection-style unsupported claim, canonical source ve
+no-answer/LLM-skip davranışları test edildi. Hedefli testler ve mypy temizdir.
+Bu sonuç fake answer generator ile akış/sözleşme kanıtıdır; gerçek `gemma3:4b`
+cevaplarının numeric warning oranı sonraki gerçek query evaluation koşusunda
+ölçülecektir.

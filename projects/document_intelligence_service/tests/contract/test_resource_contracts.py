@@ -136,6 +136,57 @@ def test_wired_query_returns_structured_no_answer_and_skips_llm() -> None:
     assert generator.call_count == 0
 
 
+def test_wired_query_exposes_output_warning_and_canonical_sources() -> None:
+    from projects.document_intelligence_service.app.application.query_service import (
+        QueryService,
+    )
+    from projects.document_intelligence_service.app.domain.answerability import (
+        AnswerabilityPolicy,
+    )
+    from projects.document_intelligence_service.tests.unit.test_query_service import (
+        FakeAnswerGenerator,
+    )
+    from projects.document_intelligence_service.tests.unit.test_retrieval_service import (
+        make_service,
+    )
+
+    generator = FakeAnswerGenerator(answer="Sistem 64 GB RAM kullanır.")
+    app = create_app(
+        health_service=HealthService(()),
+        query_service=QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.45),
+            answer_generator=generator,
+        ),
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/query",
+            {"question": "Qdrant ne işe yarar?", "top_k": 2},
+        )
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision"] == "answered"
+    assert body["warnings"] == [
+        {
+            "code": "UNSUPPORTED_NUMBER",
+            "message": (
+                "Cevapta geçen bazı sayılar getirilen kanıtta bulunamadı; "
+                "cevap insan incelemesine gönderilmelidir."
+            ),
+            "values": ["64"],
+        }
+    ]
+    assert [source["source_id"] for source in body["sources"]] == [
+        "shared",
+        "dense-top",
+    ]
+
+
 def test_invalid_query_uses_common_validation_envelope() -> None:
     app = create_app(health_service=HealthService(()))
 

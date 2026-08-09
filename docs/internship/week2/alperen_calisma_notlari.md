@@ -1001,3 +1001,79 @@ LLM çağrısı: 0
 ```
 
 Bu sonuç sistemin güvenli olduğunu değil, tam olarak nerede savunmasız olduğunu gösteriyor. Leakage vakaları corpus dışında kaldığı için gate tarafından kesildi; injection vakaları semantik olarak dokümanla ilişkili kelimeler taşıdığı için dense threshold'u geçebildi. Sorun retrieval recall değil, güvenilmeyen talimat ile kullanıcı sorusunu ayıran uygulama güvenlik katmanının eksikliği. Sonraki adım output'un evidence dışı iddia üretip üretmediğini structured warning ile işaretlemek ve injection'da güvenli no-answer/handoff kararı vermek.
+
+## 24. Output/evidence validation: `answered` doğruluk garantisi değildir
+
+### Önceki akışta ne eksikti?
+
+Önceki query akışı şu noktada bitiyordu:
+
+```text
+soru
+→ retrieval
+→ answerability gate
+→ Gemma cevabı
+→ answered + sources
+```
+
+Buradaki `answered`, yalnızca “evidence skoru gate eşiğini geçti ve LLM çağrıldı”
+demektir. Model evidence içinde olmayan bir sayı veya iddia yazabilir. Örneğin
+retrieval doğru section'ı bulsa bile evidence `32 GB` içerirken model `64 GB`
+üretebilir. Bu durumda retrieval başarılı, generation grounding başarısızdır.
+
+### Yeni katman
+
+```text
+soru
+→ retrieval
+→ answerability gate
+→ Gemma cevabı
+→ output/evidence validator
+→ answer + structured warnings + canonical sources
+```
+
+İlk sürümde bütün doğal dil iddialarını otomatik doğrulamaya çalışmadım.
+Ölçülebilir ilk sinyal olarak cevapta geçen sayıları final evidence metnindeki
+sayılarla karşılaştıran framework-independent domain servisi ekledim.
+
+Örnek:
+
+```text
+Evidence: "Sistem 32 GB RAM kullanır."
+Answer:  "Sistem 64 GB RAM kullanır."
+Warning:  UNSUPPORTED_NUMBER, values=["64"]
+```
+
+Türkçe ondalık virgül ile nokta aynı `Decimal` değere normalize ediliyor;
+`1.`/`2)` gibi liste numaraları ve `gemma3:4b` gibi model identifier parçaları
+factual sayı olarak ele alınmıyor.
+
+### Neden warning, neden hemen no-answer değil?
+
+Şimdilik warning cevabı değiştirmiyor ve answered kararını otomatik olarak
+no-answer'a çevirmiyor. Çünkü warning'in tek başına yanlış cevap anlamına
+geldiğini henüz validation setinde ölçmedim; örneğin evidence içinde sayı
+başka biçimde geçebilir veya model bir hesaplama sonucu çıkarabilir. Önce
+warning oranı, precision/recall ve insan inceleme maliyeti ölçülmeli; sonra
+uygun vakalarda güvenli handoff ya da no-answer politikası kalibre edilmelidir.
+
+### Canonical source kuralı
+
+Modelin cevabında yazdığı source ID veya citation güvenilir kabul edilmiyor.
+API'deki `sources` listesi doğrudan retrieval'ın `RetrievedChunk` nesnelerinden
+üretiliyor. Böylece model “source=secret.pdf” yazsa bile response'ta gerçek
+retrieval kaynağı yerine geçemiyor.
+
+### Gerçekleştirilen kanıt ve sınır
+
+- Domain validator: `UNSUPPORTED_NUMBER` warning sözleşmesi.
+- Application: `QueryService` answered dalında validator çağrısı.
+- API: `QueryResponse.warnings` alanı (`code`, `message`, `values`).
+- Test: desteklenen sayı, desteklenmeyen sayı, injection-style sayı,
+  canonical source ve no-answer/LLM-skip senaryoları.
+- Henüz yapılmayan ölçüm: gerçek Ollama/Gemma cevaplarında warning oranı ve
+  warning'in doğru/yanlış alarm dağılımı.
+
+### Mentora kısa anlatım
+
+> Answerability gate yalnız LLM çağrısına izin veriyor; cevabın kanıta tamamen dayandığını garanti etmiyor. Bu nedenle Gemma çıktısından sonra ilk output validation katmanını ekledim. Şimdilik cevapta geçen sayıları final evidence ile karşılaştırıp `UNSUPPORTED_NUMBER` warning'i üretiyor; cevabı otomatik değiştirmiyorum çünkü bu politikayı validation setinde henüz kalibre etmedim. Kaynakları model metninden değil retrieval nesnelerinden üretiyorum. Böylece unsupported output görünür, canonical source ise güvenilir kalıyor.

@@ -15,6 +15,7 @@ from ...domain.entities import (
     NoAnswerReason,
     RetrievalMode,
 )
+from ...domain.evidence_validation import EvidenceWarningCode
 
 
 class PageQuery(BaseModel):
@@ -132,6 +133,14 @@ class ModelInfo(BaseModel):
     model: str | None
 
 
+class OutputWarningResponse(BaseModel):
+    """Structured output/evidence concern for human or policy review."""
+
+    code: EvidenceWarningCode
+    message: str
+    values: list[str]
+
+
 class QueryRequest(BaseModel):
     """Question and bounded retrieval controls."""
 
@@ -176,6 +185,7 @@ class QueryResponse(BaseModel):
                         "reranked_candidates": 5,
                     },
                     "model": {"provider": None, "model": None},
+                    "warnings": [],
                     "latency": {
                         "embedding_ms": 12.4,
                         "search_ms": 18.1,
@@ -195,6 +205,7 @@ class QueryResponse(BaseModel):
     sources: list[SourceResponse]
     retrieval: RetrievalInfo
     model: ModelInfo
+    warnings: list[OutputWarningResponse] = Field(default_factory=list)
     latency: LatencyBreakdown
     request_id: str
 
