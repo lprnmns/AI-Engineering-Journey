@@ -5,6 +5,7 @@ import logging
 
 from .application.ingestion_worker import IngestionWorker
 from .main import build_ingestion_registry, build_ingestion_worker
+from .observability.metrics import MetricsRegistry
 from .settings import Settings
 
 LOGGER = logging.getLogger("document_intelligence_service.worker")
@@ -14,7 +15,11 @@ async def run_worker(settings: Settings) -> None:
     """Poll durable jobs and resume queued, retryable or stale work."""
 
     registry = build_ingestion_registry(settings)
-    worker: IngestionWorker = build_ingestion_worker(settings, registry=registry)
+    worker: IngestionWorker = build_ingestion_worker(
+        settings,
+        registry=registry,
+        metrics=MetricsRegistry(),
+    )
     LOGGER.info("ingestion worker started")
     while True:
         job_ids = await registry.list_recoverable_jobs(

@@ -121,6 +121,12 @@ class QueryTraceEvent:
                 "llm": self.llm_ms,
                 "total": self.total_ms,
             },
+            "spans": [
+                {"name": "embed", "duration_ms": self.embedding_ms},
+                {"name": "search", "duration_ms": self.search_ms},
+                {"name": "rerank", "duration_ms": self.rerank_ms},
+                {"name": "llm", "duration_ms": self.llm_ms},
+            ],
         }
 
 

@@ -3,6 +3,8 @@
 import asyncio
 from dataclasses import replace
 from datetime import datetime, timezone
+import json
+import logging
 
 from ..domain.entities import DocumentStatus, JobStatus, StageStatus
 from ..domain.errors import ErrorCode, ServiceError
@@ -22,6 +24,7 @@ from .ports import (
     IngestionRegistry,
     SparseEmbedder,
 )
+from ..observability.metrics import MetricsRegistry
 
 
 class IngestionWorker:
@@ -37,6 +40,8 @@ class IngestionWorker:
         vector_store: ChunkVectorStore,
         language: str = "tr",
         section_markers: tuple[SectionMarker, ...] = (),
+        metrics: MetricsRegistry | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self._registry = registry
         self._chunker = chunker
@@ -45,6 +50,10 @@ class IngestionWorker:
         self._vector_store = vector_store
         self._language = language
         self._section_markers = section_markers
+        self._metrics = metrics
+        self._logger = logger or logging.getLogger(
+            "document_intelligence_service.ingestion"
+        )
 
     async def run_job(self, job_id: str) -> JobSnapshot:
         """Process one job and persist a terminal success/failure snapshot."""
@@ -301,13 +310,19 @@ class IngestionWorker:
             )
 
         current = await self._set_progress(current, JobStatus.SUCCEEDED, 100)
-        return await self._finish_stage(
+        completed = await self._finish_stage(
             current,
             "complete",
             datetime.now(timezone.utc),
             outputs={"points": current.point_count or 0},
             decision="succeeded",
         )
+        if self._metrics is not None:
+            self._metrics.increment(
+                "rag_ingestion_jobs_total",
+                {"status": JobStatus.SUCCEEDED.value},
+            )
+        return completed
 
     def _build_chunks(
         self,
@@ -384,6 +399,36 @@ class IngestionWorker:
             error_message=error_message,
         )
         await self._registry.record_stage_event(previous.job_id, event)
+        if self._metrics is not None and event.duration_ms is not None:
+            self._metrics.observe(
+                "rag_ingestion_duration_ms",
+                event.duration_ms,
+                {"stage": name},
+            )
+            if status is StageStatus.FAILED:
+                self._metrics.increment(
+                    "rag_ingestion_errors_total",
+                    {"stage": name, "error_code": error_code.value if error_code else "unknown"},
+                )
+        self._logger.info(
+            "%s",
+            json.dumps(
+                {
+                    "event": "ingestion.stage",
+                    "job_id": previous.job_id,
+                    "document_id": previous.document_id,
+                    "stage": name,
+                    "status": status.value,
+                    "duration_ms": event.duration_ms,
+                    "inputs": event.inputs or {},
+                    "outputs": event.outputs or {},
+                    "decision": decision,
+                    "error_code": error_code.value if error_code else None,
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+        )
         refreshed = await self._registry.get_job(previous.job_id)
         return refreshed or previous
 
@@ -471,4 +516,9 @@ class IngestionWorker:
                 next_attempt_at=None,
             )
         await self._registry.update_job(current)
+        if self._metrics is not None:
+            self._metrics.increment(
+                "rag_ingestion_jobs_total",
+                {"status": JobStatus.FAILED.value, "error_code": code.value},
+            )
         return current

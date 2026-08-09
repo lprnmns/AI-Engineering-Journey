@@ -12,6 +12,7 @@ from .api.v1.health import router as health_router
 from .api.v1.documents import router as documents_router
 from .api.v1.evaluations import router as evaluations_router
 from .api.v1.jobs import router as jobs_router
+from .api.v1.metrics import router as metrics_router
 from .api.v1.queries import legacy_router as legacy_queries_router
 from .api.v1.queries import router as queries_router
 from .api.v1.search import router as search_router
@@ -51,6 +52,7 @@ from .infrastructure.storage.in_memory_evaluation_registry import (
 )
 from qdrant_client import QdrantClient
 from .observability.request_id import RequestIdMiddleware
+from .observability.metrics import MetricsRegistry
 from .settings import Settings
 
 
@@ -159,6 +161,7 @@ def build_ingestion_worker(
     settings: Settings,
     *,
     registry: IngestionRegistry,
+    metrics: MetricsRegistry | None = None,
 ) -> IngestionWorker:
     """Wire the lazy embedding, parser and Qdrant worker adapters."""
 
@@ -180,6 +183,7 @@ def build_ingestion_worker(
             schema,
         ),
         section_markers=get_section_markers(settings.section_marker_profile),
+        metrics=metrics,
     )
 
 
@@ -210,6 +214,7 @@ def build_query_service(
     settings: Settings,
     *,
     retrieval_service: RetrievalService | None = None,
+    metrics: MetricsRegistry | None = None,
 ) -> QueryService:
     """Wire answerability policy and the host-local Ollama boundary."""
 
@@ -230,6 +235,7 @@ def build_query_service(
             timeout_seconds=settings.llm_timeout_seconds,
             max_output_tokens=settings.llm_max_output_tokens,
         ),
+        metrics=metrics,
     )
 
 
@@ -243,10 +249,12 @@ def create_app(
     evaluation_service: EvaluationService | None = None,
     retrieval_service: RetrievalService | None = None,
     query_service: QueryService | None = None,
+    metrics_registry: MetricsRegistry | None = None,
 ) -> FastAPI:
     """Create an application with replaceable dependencies for testing."""
 
     resolved_settings = settings or Settings()
+    resolved_metrics = metrics_registry or MetricsRegistry()
     resolved_health_service = health_service or build_health_service(resolved_settings)
     resolved_ingestion_worker = ingestion_worker
     resolved_document_service = document_service
@@ -272,6 +280,7 @@ def create_app(
             resolved_ingestion_worker = build_ingestion_worker(
                 resolved_settings,
                 registry=registry,
+                metrics=resolved_metrics,
             )
         if (
             resolved_retrieval_service is None
@@ -285,6 +294,7 @@ def create_app(
             resolved_query_service = build_query_service(
                 resolved_settings,
                 retrieval_service=resolved_retrieval_service,
+                metrics=resolved_metrics,
             )
         if resolved_evaluation_service is None:
             resolved_evaluation_service = build_evaluation_service(
@@ -309,6 +319,7 @@ def create_app(
             resolved_query_service = build_query_service(
                 resolved_settings,
                 retrieval_service=resolved_retrieval_service,
+                metrics=resolved_metrics,
             )
 
     @asynccontextmanager
@@ -320,6 +331,7 @@ def create_app(
         application.state.evaluation_service = resolved_evaluation_service
         application.state.retrieval_service = resolved_retrieval_service
         application.state.query_service = resolved_query_service
+        application.state.metrics = resolved_metrics
         resolved_health_service.mark_started()
         try:
             yield
@@ -341,6 +353,7 @@ def create_app(
     application.state.evaluation_service = resolved_evaluation_service
     application.state.retrieval_service = resolved_retrieval_service
     application.state.query_service = resolved_query_service
+    application.state.metrics = resolved_metrics
     application.include_router(health_router, prefix="/v1")
     application.include_router(documents_router, prefix="/v1")
     application.include_router(evaluations_router, prefix="/v1")
@@ -348,6 +361,7 @@ def create_app(
     application.include_router(queries_router, prefix="/v1")
     application.include_router(legacy_queries_router, prefix="/v1")
     application.include_router(search_router, prefix="/v1")
+    application.include_router(metrics_router, prefix="/v1")
     return application
 
 

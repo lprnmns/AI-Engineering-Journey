@@ -28,6 +28,7 @@ from ..observability.query_trace import (
     QueryTraceEvent,
     QueryTraceSink,
 )
+from ..observability.metrics import MetricsRegistry
 from .ports import AnswerGenerator
 from .retrieval_service import RetrievalService
 
@@ -61,6 +62,7 @@ class QueryService:
         prompt_safety: PromptSafetyPolicy | None = None,
         evidence_safety: EvidenceSafetyPolicy | None = None,
         trace_sink: QueryTraceSink | None = None,
+        metrics: MetricsRegistry | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service
         self._answerability = answerability
@@ -68,6 +70,7 @@ class QueryService:
         self._prompt_safety = prompt_safety or PromptSafetyPolicy()
         self._evidence_safety = evidence_safety or EvidenceSafetyPolicy()
         self._trace_sink = trace_sink or JsonQueryTraceSink()
+        self._metrics = metrics
 
     async def execute(
         self,
@@ -106,15 +109,26 @@ class QueryService:
                     warnings=(),
                 ),
             )
-        retrieval = await asyncio.to_thread(
-            self._retrieval_service.search,
-            question=question,
-            mode=mode,
-            top_k=top_k,
-            document_ids=document_ids,
-            tenant_id=tenant_id,
-            acl_tags=acl_tags,
-        )
+        try:
+            retrieval = await asyncio.to_thread(
+                self._retrieval_service.search,
+                question=question,
+                mode=mode,
+                top_k=top_k,
+                document_ids=document_ids,
+                tenant_id=tenant_id,
+                acl_tags=acl_tags,
+            )
+        except Exception as error:
+            if self._metrics is not None:
+                self._metrics.increment(
+                    "rag_dependency_errors_total",
+                    {"dependency": "retrieval"},
+                )
+            raise ServiceError(
+                code=ErrorCode.DEPENDENCY_UNAVAILABLE,
+                message="Retrieval dependency is unavailable",
+            ) from error
         retrieval, blocked_evidence = _apply_evidence_safety(
             retrieval,
             policy=self._evidence_safety,
@@ -150,6 +164,11 @@ class QueryService:
                 evidence=retrieval.candidates,
             )
         except AnswerGenerationError as exc:
+            if self._metrics is not None:
+                self._metrics.increment(
+                    "rag_dependency_errors_total",
+                    {"dependency": "ollama"},
+                )
             raise ServiceError(
                 code=ErrorCode.DEPENDENCY_UNAVAILABLE,
                 message="Answer generation dependency is unavailable",
@@ -199,6 +218,38 @@ class QueryService:
                 total_ms=result.total_ms,
             )
         )
+        if self._metrics is not None:
+            labels = {
+                "decision": result.decision.value,
+                "mode": result.retrieval.mode,
+            }
+            self._metrics.increment("rag_query_total", labels)
+            self._metrics.observe(
+                "rag_query_duration_ms",
+                result.total_ms,
+                {"mode": result.retrieval.mode},
+            )
+            for stage, duration in (
+                ("embed", result.retrieval.embedding_ms),
+                ("search", result.retrieval.search_ms),
+                ("rerank", result.retrieval.rerank_ms),
+                ("llm", result.llm_ms),
+            ):
+                self._metrics.observe(
+                    "rag_query_duration_ms",
+                    duration,
+                    {"mode": result.retrieval.mode, "stage": stage},
+                )
+            self._metrics.observe(
+                "rag_retrieval_candidate_count",
+                float(result.retrieval.dense_candidates + result.retrieval.sparse_candidates),
+                {"mode": result.retrieval.mode},
+            )
+            if result.no_answer_reason is not None:
+                self._metrics.increment(
+                    "rag_no_answer_total",
+                    {"reason_code": result.no_answer_reason.value},
+                )
         return result
 
     def _signals(
