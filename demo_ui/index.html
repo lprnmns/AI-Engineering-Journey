@@ -235,7 +235,12 @@
           throw new Error(`JSON olmayan response: HTTP ${response.status}`);
         }
         if (!response.ok) {
-          throw new Error(body.error?.message || body.detail || `HTTP ${response.status}`);
+          const error = new Error(body.error?.message || body.detail || `HTTP ${response.status}`);
+          error.status = response.status;
+          error.code = body.error?.code;
+          error.stage = body.error?.stage;
+          error.reason = body.error?.reason;
+          throw error;
         }
         return body;
       }
@@ -335,6 +340,66 @@
             status: "succeeded",
             duration: info.total_ms,
             detail: `HTTP response hazırlandı — ${decision}`,
+          },
+        ];
+        for (const stage of stages) {
+          const wrapper = document.createElement("div");
+          wrapper.className = `pipeline-stage ${stage.status}`;
+          const head = document.createElement("div");
+          head.className = "pipeline-stage-head";
+          const name = document.createElement("span");
+          name.textContent = stage.name;
+          const duration = document.createElement("span");
+          duration.className = "pipeline-stage-duration";
+          duration.textContent = `${stage.status} — ${formatDuration(stage.duration)}`;
+          head.append(name, duration);
+          const detail = document.createElement("div");
+          detail.className = "pipeline-stage-detail";
+          detail.textContent = stage.detail;
+          wrapper.append(head, detail);
+          queryPipelineStages.append(wrapper);
+        }
+      }
+
+      function renderFailedQueryPipeline(error) {
+        queryPipelineStages.replaceChildren();
+        const failedStage = error.stage || "unknown";
+        const stages = [
+          {
+            name: "Prompt / evidence safety",
+            status: failedStage === "unknown" ? "skipped" : "succeeded",
+            duration: null,
+            detail: failedStage === "unknown" ? "API structured trace dönmedi." : "Bu aşamadan geçildi.",
+          },
+          {
+            name: "Embedding",
+            status: failedStage === "llm" ? "succeeded" : "skipped",
+            duration: null,
+            detail: failedStage === "llm" ? "Query embedding hazırlandı." : "Ölçüm alınamadı.",
+          },
+          {
+            name: "Search + RRF",
+            status: failedStage === "llm" ? "succeeded" : "skipped",
+            duration: null,
+            detail: failedStage === "llm" ? "Kanıt adayları oluşturuldu." : "Ölçüm alınamadı.",
+          },
+          {
+            name: "Answerability gate",
+            status: failedStage === "llm" ? "passed" : "skipped",
+            duration: null,
+            detail: failedStage === "llm" ? "Gate geçti; model çağrısına geçildi." : "Ölçüm alınamadı.",
+          },
+          {
+            name: "LLM / Ollama",
+            status: failedStage === "llm" ? "failed" : "skipped",
+            duration: null,
+            detail: failedStage === "llm" ? `${error.reason || "GENERATION_FAILED"} — ${error.message}` : "Bu aşamaya gelinmedi.",
+          },
+          {
+            name: "Response",
+            status: "failed",
+            duration: null,
+            detail: `HTTP ${error.status || "?"} — yapılandırılmış cevap üretilemedi.`,
           },
         ];
         for (const stage of stages) {
@@ -623,8 +688,9 @@
           finishQueryProgress(body);
           setStatus(body.decision === "no_answer" ? "No-answer kararı verildi; LLM atlandı." : "Soru tamamlandı.", body.decision === "no_answer" ? "warn" : "ok");
         } catch (error) {
-          answerOutput.textContent = error.message;
+          answerOutput.textContent = `Sorgu tamamlanamadı.\n${error.message}`;
           debugOutput.textContent = "";
+          renderFailedQueryPipeline(error);
           failQueryProgress(error.message);
           setStatus("Soru başarısız.", "bad");
         }

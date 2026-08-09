@@ -14,16 +14,15 @@ open http://127.0.0.1:8501
 ```
 
 The API container reaches Qdrant through the Compose network at
-`http://qdrant:6333`. Ollama remains on the host at
-`http://host.docker.internal:11434`; on Linux Compose supplies the
-`host-gateway` mapping. The host-facing API port is `8010` and Qdrant port is
-`6335` by default to
-avoid colliding with the earlier local Qdrant demo on `6333`.
+`http://qdrant:6333`. The default local setup reaches the existing Ollama
+container at `http://ai-journey-ollama:11434`. If Ollama runs as a host
+process instead, set `DIS_OLLAMA_URL=http://host.docker.internal:11434`; the
+Compose file provides the `host-gateway` mapping. The host-facing API port is
+`8010` and Qdrant port is `6335` by default to avoid colliding with the earlier
+local Qdrant demo on `6333`.
 
-If Ollama itself runs as an existing Docker container bound only to its Docker
-network, use the repository smoke script. It connects `ai-journey-ollama` to
-the Compose network and overrides `DIS_OLLAMA_URL` to the container DNS name;
-otherwise liveness can be healthy while readiness correctly remains `503`.
+If Ollama itself is not running, readiness correctly remains `503`; liveness
+alone does not prove that model generation is available.
 
 Compose API ve worker aynı image'i kullanır. API `202 + job_id` ile SQLite
 registry'ye bırakır; ayrı worker queued/retryable/stale job'ları alır. Redis

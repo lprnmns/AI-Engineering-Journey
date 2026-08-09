@@ -24,7 +24,16 @@ class ErrorCode(StrEnum):
 class ServiceError(Exception):
     """Expected application error that the API can safely expose."""
 
-    def __init__(self, *, code: ErrorCode, message: str) -> None:
+    def __init__(
+        self,
+        *,
+        code: ErrorCode,
+        message: str,
+        stage: str | None = None,
+        reason: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.stage = stage
+        self.reason = reason

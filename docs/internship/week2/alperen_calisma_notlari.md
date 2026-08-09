@@ -1476,15 +1476,15 @@ geliştirici nasıl ayağa kaldıracak?” sorusunu cevaplamıyordu. Şimdi kök
 ```text
 demo-ui:8501 → nginx reverse proxy → api:8000
                                       ↘ qdrant:6333
-                                      ↘ host.docker.internal:11434 (Ollama)
+                                      ↘ ai-journey-ollama:11434 (Ollama)
 ```
 
 - Qdrant yeni stack'e ait ayrı named volume ile kalıcı tutuluyor; eski
   `ai_journey_qdrant_data` volume'una dokunulmuyor.
 - API tek process ve tek worker olarak çalışıyor; SQLite registry `/data` volume
   üzerinde restart-safe ingestion kimliği/job durumunu saklıyor.
-- Ollama ayrı container'a taşınmıyor. Gemma modelini ikinci kez yüklememek ve
-  32 GB RAM'i korumak için host sınırında bırakıldı.
+- Ollama API image'ına taşınmıyor. Gemma modelini ikinci kez yüklememek ve
+  32 GB RAM'i korumak için mevcut `ai-journey-ollama` runtime'ı kullanılıyor.
 - Docker API image'ında PyTorch CPU wheel'i açıkça seçiliyor. Varsayılan PyPI
   çözümü CUDA runtime indirmeye çalıştığı için ilk build denemesinde bunu
   yakaladım ve durdurdum; CPU-only image daha küçük ve donanıma uygun.
@@ -1705,3 +1705,43 @@ Smoke scripti yalnız dedicated Week 2 stack'ini kapatır; hostta daha önce ça
 artifact'lerin paketleme commit'i olacaktır; benchmark manifestindeki source
 SHA'nın paketleme commit'inden farklı olması Git'in self-referential SHA
 üretilememesi nedeniyle beklenen durumdur.
+
+### Query timeout ve container ağı düzeltmesi — 10 Ağustos 2026
+
+UI'da `hangi üniversite bölümü seçeceğim?` sorgusu 503 ile sonuçlandığında bunu
+no-answer sanmadım; API logu retrieval sonrasında LLM sınırında hata verdiğini
+gösterdi. İlk ölçümde 8.000 karakter evidence parent context'i prompt'a girdi ve
+Gemma 3 4B CPU üzerinde yaklaşık 3.934 tokenlık prompt'u işlerken 120 saniyelik
+HTTP timeout'a ulaştı. Bu yüzden `ready` olsa bile gerçek generation başarısız
+olabiliyordu: readiness yalnız Qdrant/Ollama endpoint erişimini kontrol ediyor.
+
+Çözüm olarak LLM evidence bütçesini `DIS_LLM_MAX_EVIDENCE_CHARS=4000` ile
+bounded yaptım. API/adapter artık timeout, HTTP, bağlantı ve boş cevap nedenini
+secret veya soru metni yazmadan logluyor; hata response'una güvenli `stage=llm`
+ve `reason` alanları ekleniyor. UI da hata sonrası “Pipeline çalışıyor” satırını
+bırakmıyor; LLM başarısızlığını ve response üretilemediğini ayrı gösteriyor.
+
+Image recreate sonrasında ayrıca Compose varsayılanının bu makinedeki gerçek
+runtime ile uyuşmadığı görüldü: `host.docker.internal:11434` host process'i
+olmayan ortamda `ConnectError` üretiyordu. Varsayılan adres
+`http://ai-journey-ollama:11434` yapıldı; host Ollama kullanan ortamlar bunu
+`DIS_OLLAMA_URL` ile override edebilir. Worker HTTP API sunmadığı için API
+healthcheck'i worker'dan kaldırıldı; worker durumu polling process/job
+timeline üzerinden izlenir.
+
+Son tekrar ölçümü:
+
+```text
+model: gemma3:4b (Ollama container)
+prompt: 2.253 token / 4.465 karakter (system + bounded evidence dahil)
+embedding: 15.5 ms
+search: 120.4 ms
+LLM: 84,012.4 ms
+total: 84,284.6 ms
+HTTP: 200 / decision=answered
+readiness: qdrant=up, ollama=up, overall=ready
+```
+
+Bu sonuç 32 GB RAM sınırında başarılı bir CPU smoke'udur; latency hâlâ yüksek
+olduğu için production UX'te streaming, daha küçük model veya daha dar evidence
+bütçesi ayrıca ölçülmelidir.

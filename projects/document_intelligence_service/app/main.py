@@ -261,6 +261,7 @@ def build_query_service(
             base_url=str(settings.ollama_url),
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,
+            max_evidence_chars=settings.llm_max_evidence_chars,
             max_output_tokens=settings.llm_max_output_tokens,
         ),
         metrics=metrics,

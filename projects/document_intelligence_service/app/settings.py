@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     reranker_enabled: bool = False
     llm_model: str = "gemma3:4b"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=300)
+    llm_max_evidence_chars: int = Field(default=4_000, gt=0, le=32_000)
     llm_max_output_tokens: int = Field(default=256, gt=0, le=1024)
     answerability_min_dense_score: float = Field(default=0.331, ge=0, le=1)
     answerability_min_sparse_score: float = Field(default=0.1, ge=0)

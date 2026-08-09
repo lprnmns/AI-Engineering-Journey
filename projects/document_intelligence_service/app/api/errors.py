@@ -17,6 +17,8 @@ class ErrorDetail(BaseModel):
     code: ErrorCode
     message: str
     request_id: str
+    stage: str | None = None
+    reason: str | None = None
 
 
 class ErrorEnvelope(BaseModel):
@@ -41,13 +43,26 @@ _STATUS_BY_CODE: dict[ErrorCode, int] = {
 }
 
 
-def _error_response(*, code: ErrorCode, message: str, request_id: str) -> JSONResponse:
+def _error_response(
+    *,
+    code: ErrorCode,
+    message: str,
+    request_id: str,
+    stage: str | None = None,
+    reason: str | None = None,
+) -> JSONResponse:
     payload = ErrorEnvelope(
-        error=ErrorDetail(code=code, message=message, request_id=request_id)
+        error=ErrorDetail(
+            code=code,
+            message=message,
+            request_id=request_id,
+            stage=stage,
+            reason=reason,
+        )
     )
     return JSONResponse(
         status_code=_STATUS_BY_CODE[code],
-        content=payload.model_dump(mode="json"),
+        content=payload.model_dump(mode="json", exclude_none=True),
         headers={"X-Request-ID": request_id},
     )
 
@@ -62,6 +77,8 @@ async def service_error_handler(request: Request, exc: Exception) -> JSONRespons
         code=exc.code,
         message=exc.message,
         request_id=get_request_id(),
+        stage=exc.stage,
+        reason=exc.reason,
     )
 
 

@@ -11,8 +11,9 @@ demo-ui :8501 → api :8000 → SQLite job registry
                     ├── POST /v1/queries → dense/BM25/RRF → gate → Ollama
                     └── POST /v1/documents → worker → Qdrant :6333
 
-worker ve api aynı image'i kullanır; Ollama host/container dışında tek model
-runtime olarak çalışır. Qdrant named volume ile kalıcıdır.
+worker ve api aynı image'i kullanır; Ollama API image'ının dışında tek model
+runtime olarak `ai-journey-ollama` container'ında çalışır. Qdrant named volume
+ile kalıcıdır.
 ```
 
 Host portları çakışmayı önlemek için varsayılan olarak API `8010`, UI `8501`,
@@ -32,11 +33,12 @@ open http://127.0.0.1:8501
 ```
 
 Readiness `503` ise bu bir “cevap vermeyi dene” durumu değildir. Response içindeki
-Qdrant/Ollama check'lerini oku. Mevcut Ollama Docker container'ı host gateway'e
-bağlı değilse:
+Qdrant/Ollama check'lerini oku. Varsayılan Compose kurulumu mevcut
+`ai-journey-ollama` container'ının aynı ağa bağlı olmasını bekler. Host üzerinde
+çalışan Ollama kullanacaksan:
 
 ```bash
-./toolbox/scripts/run_document_service_compose_smoke.sh
+DIS_OLLAMA_URL=http://host.docker.internal:11434 docker compose up --build -d
 ```
 
 Smoke script API, worker ve UI'yi açar; örnek PDF'i upload eder, job'ın

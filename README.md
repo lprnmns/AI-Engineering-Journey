@@ -71,19 +71,18 @@ after confirming that port is free.
 If readiness is `503`, inspect the dependency checks; this is deliberately
 reported as not-ready instead of allowing the UI to claim that answer queries
 are available. On this workstation Ollama runs as the existing
-`ai-journey-ollama` container and is bound to its Docker network rather than
-the host gateway. The reproducible local check starts API, worker and UI,
-connects that container to the Compose network when present, uploads the
-sample PDF, waits for the worker, and verifies Qdrant point persistence:
+`ai-journey-ollama` container and is bound to the Compose network. The
+reproducible local check starts API, worker and UI, uploads the sample PDF,
+waits for the worker, and verifies Qdrant point persistence:
 
 ```bash
 ./toolbox/scripts/run_document_service_compose_smoke.sh
 ```
 
-For a long-running local stack after that network connection exists, start it
-with `DIS_OLLAMA_URL=http://ai-journey-ollama:11434 docker compose up --build -d`.
-On another machine where Ollama is exposed through the host gateway, the
-default `host.docker.internal:11434` remains the portable setting.
+For a long-running local stack, `docker compose up --build -d` uses
+`http://ai-journey-ollama:11434`. On another machine where Ollama is exposed
+through the host gateway, override it with
+`DIS_OLLAMA_URL=http://host.docker.internal:11434`.
 
 The UI exposes health, tenant/ACL context, document selection, upload
 idempotency, per-stage ingestion duration/decision, retry attempts, query mode,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
+import logging
 import re
 from time import perf_counter
 
@@ -31,6 +32,9 @@ from ..observability.query_trace import (
 from ..observability.metrics import MetricsRegistry
 from .ports import AnswerGenerator
 from .retrieval_service import RetrievalService
+
+
+LOGGER = logging.getLogger("document_intelligence_service.query")
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,9 +175,21 @@ class QueryService:
                     "rag_dependency_errors_total",
                     {"dependency": "ollama"},
                 )
+            LOGGER.warning(
+                "query answer generation failed stage=llm reason=%s",
+                exc.reason_code,
+            )
+            message = (
+                "LLM cevap üretme süresi doldu; retrieval tamamlandı ancak "
+                "cevap oluşturulamadı."
+                if exc.reason_code == "TIMEOUT"
+                else "Answer generation dependency is unavailable"
+            )
             raise ServiceError(
                 code=ErrorCode.DEPENDENCY_UNAVAILABLE,
-                message="Answer generation dependency is unavailable",
+                message=message,
+                stage="llm",
+                reason=exc.reason_code,
             ) from exc
         validation = validate_answer_against_evidence(
             answer=generated.answer,

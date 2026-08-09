@@ -1,12 +1,16 @@
 """Async Ollama adapter for grounded local answer generation."""
 
 from collections.abc import Sequence
+import logging
 import time
 
 import httpx
 
 from ...domain.generation import AnswerGenerationError, GeneratedAnswer
 from ...domain.retrieval import RetrievedChunk
+
+
+LOGGER = logging.getLogger("document_intelligence_service.ollama")
 
 
 class OllamaAnswerGenerator:
@@ -73,12 +77,64 @@ class OllamaAnswerGenerator:
                 )
                 response.raise_for_status()
                 body = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            raise AnswerGenerationError("Ollama request failed") from exc
+        except httpx.TimeoutException as exc:
+            LOGGER.warning(
+                "ollama generation timed out model=%s timeout_seconds=%.1f "
+                "prompt_chars=%d evidence_count=%d",
+                self._model,
+                self._timeout_seconds,
+                len(prompt),
+                len(evidence),
+            )
+            raise AnswerGenerationError(
+                "Ollama generation timed out",
+                reason_code="TIMEOUT",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            LOGGER.warning(
+                "ollama generation returned HTTP error model=%s status=%d "
+                "prompt_chars=%d evidence_count=%d",
+                self._model,
+                exc.response.status_code,
+                len(prompt),
+                len(evidence),
+            )
+            raise AnswerGenerationError(
+                "Ollama returned an HTTP error",
+                reason_code="HTTP_ERROR",
+            ) from exc
+        except httpx.HTTPError as exc:
+            LOGGER.warning(
+                "ollama generation request failed model=%s error_type=%s "
+                "prompt_chars=%d evidence_count=%d",
+                self._model,
+                type(exc).__name__,
+                len(prompt),
+                len(evidence),
+            )
+            raise AnswerGenerationError(
+                "Ollama request failed",
+                reason_code="REQUEST_ERROR",
+            ) from exc
+        except ValueError as exc:
+            LOGGER.warning(
+                "ollama generation returned invalid JSON model=%s "
+                "prompt_chars=%d evidence_count=%d",
+                self._model,
+                len(prompt),
+                len(evidence),
+            )
+            raise AnswerGenerationError(
+                "Ollama returned invalid JSON",
+                reason_code="INVALID_RESPONSE",
+            ) from exc
 
         answer = body.get("response") if isinstance(body, dict) else None
         if not isinstance(answer, str) or not answer.strip():
-            raise AnswerGenerationError("Ollama returned an empty answer")
+            raise AnswerGenerationError(
+                "Ollama returned an empty answer",
+                reason_code="EMPTY_RESPONSE",
+            )
         return GeneratedAnswer(
             answer=answer.strip(),
             provider=self.provider,

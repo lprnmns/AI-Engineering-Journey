@@ -42,11 +42,15 @@ flowchart LR
     API --> WORKER[ingestion-worker]
     WORKER --> Q[Qdrant :6333]
     API --> Q
-    API --> O[host Ollama :11434]
+    API --> O[local Ollama runtime :11434]
     WORKER --> O
     Q --> V[(qdrant_data volume)]
     API -. optional .-> R[(Redis queue)]
 ```
+
+Bu makinede local runtime mevcut `ai-journey-ollama` container'ıdır; host'ta
+çalışan Ollama için `DIS_OLLAMA_URL=http://host.docker.internal:11434`
+override'ı kullanılabilir.
 
 Query senkron kalır. PDF ingestion `202 Accepted + job_id` ile asenkron yürür.
 Compose'ta API ve worker aynı image'i kullanır; SQLite registry job identity,

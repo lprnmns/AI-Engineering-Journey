@@ -41,7 +41,9 @@ services:
       DIS_SERVICE_NAME: document-intelligence-service
       DIS_QDRANT_URL: http://qdrant:6333
       DIS_QDRANT_COLLECTION: document_chunks_v2_bm25
-      DIS_OLLAMA_URL: ${DIS_OLLAMA_URL:-http://host.docker.internal:11434}
+      # Ollama is the existing local container attached to this Compose network.
+      # Override DIS_OLLAMA_URL only when using a host process or another runtime.
+      DIS_OLLAMA_URL: ${DIS_OLLAMA_URL:-http://ai-journey-ollama:11434}
       DIS_DEPENDENCY_TIMEOUT_SECONDS: "2.0"
       DIS_INGESTION_REGISTRY_BACKEND: sqlite
       DIS_INGESTION_DATABASE_PATH: /data/ingestions.sqlite3
@@ -63,6 +65,7 @@ services:
       DIS_RERANKER_ENABLED: "false"
       DIS_LLM_MODEL: gemma3:4b
       DIS_LLM_TIMEOUT_SECONDS: "120"
+      DIS_LLM_MAX_EVIDENCE_CHARS: "4000"
       DIS_LLM_MAX_OUTPUT_TOKENS: "128"
       DIS_MAX_UPLOAD_BYTES: "10485760"
       DIS_MAX_PDF_PAGES: "200"
@@ -110,7 +113,7 @@ services:
       DIS_SERVICE_NAME: document-intelligence-worker
       DIS_QDRANT_URL: http://qdrant:6333
       DIS_QDRANT_COLLECTION: document_chunks_v2_bm25
-      DIS_OLLAMA_URL: ${DIS_OLLAMA_URL:-http://host.docker.internal:11434}
+      DIS_OLLAMA_URL: ${DIS_OLLAMA_URL:-http://ai-journey-ollama:11434}
       DIS_DEPENDENCY_TIMEOUT_SECONDS: "2.0"
       DIS_INGESTION_REGISTRY_BACKEND: sqlite
       DIS_INGESTION_DATABASE_PATH: /data/ingestions.sqlite3
@@ -144,6 +147,9 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
+    # Worker is a polling process and does not expose the API's HTTP health endpoint.
+    healthcheck:
+      disable: true
     restart: unless-stopped
     mem_limit: 4g
     cpus: "2.00"

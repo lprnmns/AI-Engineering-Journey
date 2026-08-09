@@ -14,7 +14,10 @@ from projects.document_intelligence_service.app.domain.entities import (
     NoAnswerReason,
     RetrievalMode,
 )
-from projects.document_intelligence_service.app.domain.generation import GeneratedAnswer
+from projects.document_intelligence_service.app.domain.generation import (
+    AnswerGenerationError,
+    GeneratedAnswer,
+)
 from projects.document_intelligence_service.app.domain.retrieval import (
     RetrievedChunk,
     RetrievalResult,
@@ -281,5 +284,49 @@ def test_relevant_evidence_is_sent_to_generator() -> None:
         assert result.model == "fake-model"
         assert result.llm_ms == 4.0
         assert generator.call_count == 1
+
+    asyncio.run(scenario())
+
+
+def test_generation_timeout_is_exposed_as_safe_llm_stage_error() -> None:
+    async def scenario() -> None:
+        class TimeoutGenerator:
+            async def generate(
+                self,
+                *,
+                question: str,
+                evidence: Sequence[RetrievedChunk],
+            ) -> GeneratedAnswer:
+                del question, evidence
+                raise AnswerGenerationError(
+                    "Ollama generation timed out",
+                    reason_code="TIMEOUT",
+                )
+
+        service = QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.45),
+            answer_generator=TimeoutGenerator(),  # type: ignore[arg-type]
+        )
+
+        try:
+            await service.execute(
+                question="Qdrant ne işe yarar?",
+                mode=RetrievalMode.HYBRID,
+                top_k=2,
+            )
+        except Exception as error:
+            from projects.document_intelligence_service.app.domain.errors import (
+                ErrorCode,
+                ServiceError,
+            )
+
+            assert isinstance(error, ServiceError)
+            assert error.code is ErrorCode.DEPENDENCY_UNAVAILABLE
+            assert error.stage == "llm"
+            assert error.reason == "TIMEOUT"
+            assert "süresi doldu" in error.message
+        else:
+            raise AssertionError("expected generation timeout to fail the query")
 
     asyncio.run(scenario())
