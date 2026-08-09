@@ -155,3 +155,11 @@ injection parçalarını final evidence'tan çıkarır. Güvenli aday kalırsa a
 eder; tüm adaylar çıkarılırsa `SECURITY_POLICY` ile LLM atlanır. Bu filtre normal
 prompt güvenliği açıklamalarını reddetmemek için dar tutulur ve ayrı smoke setiyle
 ölçülür.
+
+## Query observability
+
+`JsonQueryTraceSink` tamamlanan query'leri standard logger'a JSON event olarak
+aktarır. Event; request ID, question hash, karar/reason, retrieval aday sayıları,
+answerability sinyalleri, warning kodları ve tüm stage latency'lerini taşır.
+Raw user question, prompt ve evidence loglanmaz. Böylece trace hem katman
+ayrımını sağlar hem de varsayılan log alanında belge/prompt sızıntısını azaltır.

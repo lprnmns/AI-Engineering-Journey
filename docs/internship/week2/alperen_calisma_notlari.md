@@ -1326,3 +1326,60 @@ ayrıca malicious evidence + normal soru ile çıktı davranışı test edilmeli
 ### Mentora kısa anlatım
 
 > Direct injection kullanıcı mesajından gelir; indirect injection ise PDF içindeki talimat benzeri metnin modele komut gibi aktarılmasıdır. EvidenceSafetyPolicy ile yüksek güvenli chat-role, talimat override ve secret exfiltration kalıplarını context'e sokmadan çıkarıyorum. Üç indirect saldırının üçü engellendi, benign prompt açıklaması korunarak false positive kontrol edildi. Bu bir LLM güvenlik garantisi değil; retrieval, structured prompt ve output validation arasındaki defense-in-depth katmanıdır.
+
+## 29. Privacy-conscious query observability
+
+### Problem
+
+Bir query yanlış cevap verdiğinde yalnız toplam süreyi bilmek yeterli değildir.
+Şunları ayırabilmemiz gerekir:
+
+```text
+embedding yavaş mı?
+Qdrant search mü yavaş?
+reranker mı maliyetli?
+answerability gate mi reddetti?
+LLM mi geç cevap verdi?
+çıktıda warning oluştu mu?
+```
+
+Ham kullanıcı sorusunu veya evidence metnini loglamak ise prompt, kişisel veri
+ve kurumsal belge sızıntısı riski oluşturur.
+
+### Eklenen trace event
+
+`JsonQueryTraceSink` her tamamlanan query için standard logger'a tek JSON event
+gönderiyor. Event'te:
+
+- request ID,
+- ham soru yerine `question_sha256`,
+- `answered` / `no_answer` kararı ve reason code,
+- dense/sparse/RRF/rerank aday sayıları,
+- top score, margin ve coverage,
+- model/provider ve warning kodları,
+- embedding, search, rerank, LLM ve toplam süre
+
+bulunuyor. Raw question, prompt ve evidence event'e yazılmıyor.
+
+Örnek zihinsel çıktı:
+
+```json
+{
+  "event": "rag_query",
+  "request_id": "req_demo",
+  "question_sha256": "...",
+  "decision": "no_answer",
+  "no_answer_reason": "LOW_RELEVANCE",
+  "retrieval": {"mode": "hybrid", "rrf_candidates": 20},
+  "latency_ms": {"embedding": 12.4, "search": 18.1, "llm": 0, "total": 30.5}
+}
+```
+
+Bu event, “LLM çağrılmadı çünkü gate reddetti” ile “Ollama dependency arızası”
+arasındaki farkı ölçülebilir hale getiriyor. İleride logger backend'inde retention,
+sampling ve erişim yetkisi ayrıca ayarlanmalı; hash de orijinal soruyu geri
+getiren bir şifreleme değildir, yalnız aynı girdiyi korele etmek için kullanılır.
+
+### Mentora kısa anlatım
+
+> Query trace event'i ekledim. Ham soru veya evidence loglamadan request ID, soru hash'i, karar/reason, aday sayıları, answerability sinyalleri, warning kodları ve embedding–search–rerank–LLM latency'lerini JSON olarak kaydediyorum. Böylece yanlış cevap veya yavaşlıkta hangi katmanın sorumlu olduğunu ölçebiliyorum; privacy için raw prompt'u loglamıyorum.

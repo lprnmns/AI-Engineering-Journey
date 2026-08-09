@@ -51,6 +51,7 @@ Metric/runner unit tests: passed
 Mypy for evaluation slice: clean
 Real Qdrant retrieval ablation: recorded
 Real Gemma output-validation smoke: recorded (1 bounded query)
+Structured query trace: request ID, question hash, stage latency and reason code
 ```
 
 İlk protokol tamamlandı; retrieval strategy kararı aşağıdaki aynı corpus snapshot, aynı query sırası ve aynı warm-up protokolüyle alınmıştır. Yeni corpus veya model değişiminde bu sonuçlar otomatik olarak genellenmeyecektir.

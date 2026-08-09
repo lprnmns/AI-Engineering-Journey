@@ -23,6 +23,11 @@ from ..domain.evidence_validation import (
 from ..domain.generation import AnswerGenerationError
 from ..domain.prompt_safety import PromptSafetyPolicy
 from ..domain.retrieval import RetrievedChunk, RetrievalResult
+from ..observability.query_trace import (
+    JsonQueryTraceSink,
+    QueryTraceEvent,
+    QueryTraceSink,
+)
 from .ports import AnswerGenerator
 from .retrieval_service import RetrievalService
 
@@ -55,12 +60,14 @@ class QueryService:
         answer_generator: AnswerGenerator,
         prompt_safety: PromptSafetyPolicy | None = None,
         evidence_safety: EvidenceSafetyPolicy | None = None,
+        trace_sink: QueryTraceSink | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service
         self._answerability = answerability
         self._answer_generator = answer_generator
         self._prompt_safety = prompt_safety or PromptSafetyPolicy()
         self._evidence_safety = evidence_safety or EvidenceSafetyPolicy()
+        self._trace_sink = trace_sink or JsonQueryTraceSink()
 
     async def execute(
         self,
@@ -81,18 +88,21 @@ class QueryService:
                 answerability=self._answerability,
                 prompt_safety=self._prompt_safety,
             )
-            return QueryExecutionResult(
-                decision=gate.decision,
-                answer=None,
-                no_answer_reason=gate.reason,
-                sources=(),
-                retrieval=retrieval,
-                provider=None,
-                model=None,
-                llm_ms=0.0,
-                total_ms=(perf_counter() - started) * 1000,
-                answerability=gate,
-                warnings=(),
+            return self._record_and_return(
+                question,
+                QueryExecutionResult(
+                    decision=gate.decision,
+                    answer=None,
+                    no_answer_reason=gate.reason,
+                    sources=(),
+                    retrieval=retrieval,
+                    provider=None,
+                    model=None,
+                    llm_ms=0.0,
+                    total_ms=(perf_counter() - started) * 1000,
+                    answerability=gate,
+                    warnings=(),
+                ),
             )
         retrieval = await asyncio.to_thread(
             self._retrieval_service.search,
@@ -113,18 +123,21 @@ class QueryService:
             evidence_safety_blocked=blocked_evidence and not retrieval.candidates,
         )
         if gate.decision is Decision.NO_ANSWER:
-            return QueryExecutionResult(
-                decision=gate.decision,
-                answer=None,
-                no_answer_reason=gate.reason,
-                sources=(),
-                retrieval=retrieval,
-                provider=None,
-                model=None,
-                llm_ms=0.0,
-                total_ms=(perf_counter() - started) * 1000,
-                answerability=gate,
-                warnings=(),
+            return self._record_and_return(
+                question,
+                QueryExecutionResult(
+                    decision=gate.decision,
+                    answer=None,
+                    no_answer_reason=gate.reason,
+                    sources=(),
+                    retrieval=retrieval,
+                    provider=None,
+                    model=None,
+                    llm_ms=0.0,
+                    total_ms=(perf_counter() - started) * 1000,
+                    answerability=gate,
+                    warnings=(),
+                ),
             )
 
         try:
@@ -141,19 +154,48 @@ class QueryService:
             answer=generated.answer,
             evidence=retrieval.candidates,
         )
-        return QueryExecutionResult(
-            decision=Decision.ANSWERED,
-            answer=generated.answer,
-            no_answer_reason=None,
-            sources=retrieval.candidates,
-            retrieval=retrieval,
-            provider=generated.provider,
-            model=generated.model,
-            llm_ms=generated.latency_ms,
-            total_ms=(perf_counter() - started) * 1000,
-            answerability=gate,
-            warnings=validation.warnings,
+        return self._record_and_return(
+            question,
+            QueryExecutionResult(
+                decision=Decision.ANSWERED,
+                answer=generated.answer,
+                no_answer_reason=None,
+                sources=retrieval.candidates,
+                retrieval=retrieval,
+                provider=generated.provider,
+                model=generated.model,
+                llm_ms=generated.latency_ms,
+                total_ms=(perf_counter() - started) * 1000,
+                answerability=gate,
+                warnings=validation.warnings,
+            ),
         )
+
+    def _record_and_return(
+        self,
+        question: str,
+        result: QueryExecutionResult,
+    ) -> QueryExecutionResult:
+        """Record a privacy-safe trace before returning an application result."""
+
+        self._trace_sink.record(
+            QueryTraceEvent.from_query_result(
+                question=question,
+                decision=result.decision,
+                no_answer_reason=result.no_answer_reason,
+                retrieval=result.retrieval,
+                selected_evidence_count=len(result.sources),
+                top_score=result.answerability.top_score,
+                score_margin=result.answerability.score_margin,
+                coverage_ratio=result.answerability.coverage_ratio,
+                provider=result.provider,
+                model=result.model,
+                warnings=result.warnings,
+                llm_ms=result.llm_ms,
+                total_ms=result.total_ms,
+            )
+        )
+        return result
 
     def _signals(
         self,
