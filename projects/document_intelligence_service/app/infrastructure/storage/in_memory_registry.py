@@ -26,7 +26,7 @@ from ...domain.ingestion import (
 @dataclass(slots=True)
 class _StoredIngestion:
     receipt: IngestionReceipt
-    identity: tuple[str, str]
+    identity: tuple[str, str, str]
     prepared: PreparedIngestion
     accepted_at: datetime
 
@@ -36,9 +36,9 @@ class InMemoryIngestionRegistry:
 
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
-        self._by_identity: dict[tuple[str, str], _StoredIngestion] = {}
+        self._by_identity: dict[tuple[str, str, str], _StoredIngestion] = {}
         self._by_idempotency: dict[str, _StoredIngestion] = {}
-        self._idempotency_identity: dict[str, tuple[str, str]] = {}
+        self._idempotency_identity: dict[str, tuple[str, str, str]] = {}
         self._jobs: dict[str, JobSnapshot] = {}
         self._content_by_job: dict[str, bytes] = {}
         self._stage_events: dict[str, list[StageEvent]] = {}
@@ -51,6 +51,7 @@ class InMemoryIngestionRegistry:
         """Return an existing receipt or atomically create one."""
 
         identity = (
+            prepared.upload.tenant_id,
             prepared.upload.content_hash,
             prepared.pipeline_fingerprint,
         )

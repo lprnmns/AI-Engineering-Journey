@@ -43,6 +43,8 @@ async def create_document(
     background_tasks: BackgroundTasks,
     file: Annotated[UploadFile, File(description="PDF document")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    tenant_id: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
+    acl_tags_header: Annotated[str | None, Header(alias="X-ACL-Tags")] = None,
 ) -> DocumentUploadResponse:
     """Validate and accept a PDF for asynchronous ingestion."""
 
@@ -53,6 +55,12 @@ async def create_document(
         filename=file.filename or "upload.pdf",
         content_type=file.content_type,
         idempotency_key=idempotency_key,
+        tenant_id=tenant_id,
+        acl_tags=tuple(
+            tag.strip()
+            for tag in (acl_tags_header or "").split(",")
+            if tag.strip()
+        ),
     )
     worker = getattr(request.app.state, "ingestion_worker", None)
     if worker is not None:

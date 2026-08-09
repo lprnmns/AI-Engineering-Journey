@@ -47,6 +47,8 @@ class QdrantChunkStore:
         sparse_vectors: Sequence[SparseVector],
         pipeline_fingerprint: str,
         language: str = "unknown",
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> None:
         """Write all version points as inactive/staged data."""
 
@@ -56,6 +58,8 @@ class QdrantChunkStore:
             sparse_vectors=sparse_vectors,
             pipeline_fingerprint=pipeline_fingerprint,
             language=language,
+            tenant_id=tenant_id,
+            acl_tags=acl_tags,
             is_active=False,
         )
 
@@ -110,6 +114,8 @@ class QdrantChunkStore:
             "text_hash",
             "parent_text",
             "pipeline_fingerprint",
+            "tenant_id",
+            "acl_tags",
             "is_active",
         }
         metadata_complete = len(records) == actual_count and all(
@@ -176,6 +182,8 @@ class QdrantChunkStore:
         sparse_vectors: Sequence[SparseVector],
         pipeline_fingerprint: str,
         language: str = "unknown",
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
         is_active: bool = False,
     ) -> None:
         """Validate vector alignment and upsert deterministic points."""
@@ -211,6 +219,8 @@ class QdrantChunkStore:
                         chunk,
                         pipeline_fingerprint=pipeline_fingerprint,
                         language=language,
+                        tenant_id=tenant_id,
+                        acl_tags=acl_tags,
                         is_active=is_active,
                     ),
                 )
@@ -238,8 +248,10 @@ class QdrantChunkStore:
         *,
         pipeline_fingerprint: str,
         language: str,
+        tenant_id: str,
+        acl_tags: Sequence[str],
         is_active: bool,
-    ) -> dict[str, str | int | bool]:
+    ) -> dict[str, str | int | bool | list[str]]:
         """Map source metadata to an indexed Qdrant payload."""
 
         return {
@@ -258,6 +270,8 @@ class QdrantChunkStore:
             "parent_text": chunk.parent_text,
             "pipeline_fingerprint": pipeline_fingerprint,
             "language": language,
+            "tenant_id": tenant_id,
+            "acl_tags": list(acl_tags),
             "is_active": is_active,
         }
 

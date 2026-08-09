@@ -2,11 +2,17 @@
 
 from dataclasses import dataclass, replace
 from collections.abc import Sequence
+import re
 from time import perf_counter
 from typing import cast
 
 from ..domain.entities import RetrievalMode
-from ..domain.retrieval import RetrievedChunk, RetrievalResult
+from ..domain.ingestion import normalize_acl_tags, normalize_tenant_id
+from ..domain.retrieval import (
+    RetrievedChunk,
+    RetrievalDebugCandidate,
+    RetrievalResult,
+)
 from ..domain.vectors import SparseVector
 from .ports import ChunkRetriever, DenseEmbedder, Reranker, SparseEmbedder
 
@@ -61,6 +67,8 @@ class RetrievalService:
         mode: RetrievalMode,
         top_k: int,
         document_ids: Sequence[str] = (),
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> RetrievalResult:
         """Search active evidence with one of the three supported modes."""
 
@@ -69,6 +77,8 @@ class RetrievalService:
             raise ValueError("question must not be empty")
         if top_k <= 0:
             raise ValueError("top_k must be greater than zero")
+        normalized_tenant = normalize_tenant_id(tenant_id)
+        normalized_acl = normalize_acl_tags(tuple(acl_tags))
 
         embedding_started = perf_counter()
         dense_vector: tuple[float, ...] | None = None
@@ -88,13 +98,34 @@ class RetrievalService:
                 query_vector=dense_vector,
                 limit=limit,
                 document_ids=document_ids,
+                tenant_id=normalized_tenant,
+                acl_tags=normalized_acl,
             )
         if sparse_vector is not None:
             sparse_candidates = self._retriever.search_sparse(
                 query_vector=sparse_vector,
                 limit=limit,
                 document_ids=document_ids,
+                tenant_id=normalized_tenant,
+                acl_tags=normalized_acl,
             )
+
+        # The adapter must pre-filter, but the application boundary also
+        # re-checks the returned source metadata before fusion. This protects
+        # against a stale index, a mock adapter, or a future adapter that
+        # accidentally drops one of the authorization predicates.
+        dense_candidates = self._filter_access(
+            dense_candidates,
+            document_ids=document_ids,
+            tenant_id=normalized_tenant,
+            acl_tags=normalized_acl,
+        )
+        sparse_candidates = self._filter_access(
+            sparse_candidates,
+            document_ids=document_ids,
+            tenant_id=normalized_tenant,
+            acl_tags=normalized_acl,
+        )
 
         if mode is RetrievalMode.HYBRID:
             candidates, rrf_count = self._fuse(
@@ -148,6 +179,12 @@ class RetrievalService:
         else:
             candidates = candidates[:top_k]
 
+        debug_candidates = self._build_debug_candidates(
+            normalized_question,
+            candidate_window,
+            candidates,
+        )
+
         return RetrievalResult(
             mode=mode.value,
             candidates=candidates,
@@ -159,7 +196,66 @@ class RetrievalService:
             reranked_candidates=reranked_count,
             rerank_ms=rerank_ms,
             candidate_window=candidate_window,
+            debug_candidates=debug_candidates,
         )
+
+    @staticmethod
+    def _filter_access(
+        candidates: Sequence[RetrievedChunk],
+        *,
+        document_ids: Sequence[str],
+        tenant_id: str,
+        acl_tags: Sequence[str],
+    ) -> tuple[RetrievedChunk, ...]:
+        """Re-check tenant, ACL and document scope on adapter results."""
+
+        requested_documents = {item for item in document_ids if item}
+        allowed_tags = {"public", *acl_tags}
+        return tuple(
+            candidate
+            for candidate in candidates
+            if candidate.tenant_id == tenant_id
+            and (not requested_documents or candidate.document_id in requested_documents)
+            and bool(set(candidate.acl_tags) & allowed_tags)
+        )
+
+    @staticmethod
+    def _build_debug_candidates(
+        question: str,
+        candidate_window: Sequence[RetrievedChunk],
+        final_candidates: Sequence[RetrievedChunk],
+    ) -> tuple[RetrievalDebugCandidate, ...]:
+        """Build score/rank diagnostics without returning raw evidence text."""
+
+        question_terms = {
+            token.casefold()
+            for token in re.findall(r"\w+", question, flags=re.UNICODE)
+            if len(token) >= 3
+        }
+        final_by_source = {item.source_id: item for item in final_candidates}
+        debug: list[RetrievalDebugCandidate] = []
+        for item in candidate_window:
+            final = final_by_source.get(item.source_id)
+            evidence_terms = {
+                token.casefold()
+                for token in re.findall(r"\w+", item.context_text, flags=re.UNICODE)
+                if len(token) >= 3
+            }
+            debug.append(
+                RetrievalDebugCandidate(
+                    source_id=item.source_id,
+                    retrieval_rank=item.rank,
+                    rerank_rank=final.rank if final is not None else None,
+                    dense_rank=item.dense_rank,
+                    sparse_rank=item.sparse_rank,
+                    dense_score=item.dense_score,
+                    sparse_score=item.sparse_score,
+                    fused_score=item.fused_score,
+                    rerank_score=final.rerank_score if final is not None else None,
+                    matched_terms=tuple(sorted(question_terms & evidence_terms)),
+                )
+            )
+        return tuple(debug)
 
     def _candidate_window(self, top_k: int) -> int:
         """Keep a bounded candidate window separate from final top-k."""

@@ -22,6 +22,8 @@ class QdrantSchema:
         ("parent_id", models.PayloadSchemaType.KEYWORD),
         ("source", models.PayloadSchemaType.KEYWORD),
         ("language", models.PayloadSchemaType.KEYWORD),
+        ("tenant_id", models.PayloadSchemaType.KEYWORD),
+        ("acl_tags", models.PayloadSchemaType.KEYWORD),
         ("page_start", models.PayloadSchemaType.INTEGER),
         ("page_end", models.PayloadSchemaType.INTEGER),
         ("is_active", models.PayloadSchemaType.BOOL),

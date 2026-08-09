@@ -87,6 +87,8 @@ class UploadMetadata:
     content_type: str
     size_bytes: int
     content_hash: str
+    tenant_id: str = "default"
+    acl_tags: tuple[str, ...] = ("public",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,24 +197,50 @@ def normalize_idempotency_key(value: str | None) -> str | None:
     return normalized
 
 
-def create_ingestion_receipt(identity: tuple[str, str]) -> IngestionReceipt:
-    """Create deterministic document/version IDs and one retryable job ID."""
+def create_ingestion_receipt(
+    identity: tuple[str, str, str],
+) -> IngestionReceipt:
+    """Create tenant-scoped document/version IDs and one retryable job ID."""
 
-    content_hash, pipeline_fingerprint = identity
+    tenant_id, content_hash, pipeline_fingerprint = identity
     return IngestionReceipt(
-        document_id=f"doc_{content_hash}",
-        version_id=compute_version_id(content_hash, pipeline_fingerprint),
+        document_id=compute_document_id(content_hash, tenant_id),
+        version_id=compute_version_id(
+            content_hash,
+            pipeline_fingerprint,
+            tenant_id=tenant_id,
+        ),
         job_id=f"job_{uuid4().hex}",
         status=DocumentStatus.INDEXING,
     )
 
 
-def compute_version_id(content_hash: str, pipeline_fingerprint: str) -> str:
-    """Return the deterministic version identity used by every adapter."""
+def compute_document_id(content_hash: str, tenant_id: str = "default") -> str:
+    """Return a stable logical-document ID isolated by tenant."""
 
-    version_digest = hashlib.sha256(
-        f"{content_hash}:{pipeline_fingerprint}".encode("ascii")
+    if tenant_id == "default":
+        # Preserve the Week 2 pre-ACL identity for existing default data.
+        return f"doc_{content_hash}"
+    digest = hashlib.sha256(
+        f"{tenant_id}:{content_hash}".encode("utf-8")
     ).hexdigest()
+    return f"doc_{digest}"
+
+
+def compute_version_id(
+    content_hash: str,
+    pipeline_fingerprint: str,
+    *,
+    tenant_id: str = "default",
+) -> str:
+    """Return the deterministic, tenant-scoped version identity."""
+
+    identity_prefix = (
+        f"{content_hash}:{pipeline_fingerprint}"
+        if tenant_id == "default"
+        else f"{tenant_id}:{content_hash}:{pipeline_fingerprint}"
+    )
+    version_digest = hashlib.sha256(identity_prefix.encode("ascii")).hexdigest()
     return f"ver_{version_digest}"
 
 
@@ -240,6 +268,8 @@ def validate_upload_metadata(
     filename: str,
     content_type: str | None,
     limits: IngestionLimits,
+    tenant_id: str | None = None,
+    acl_tags: tuple[str, ...] = (),
 ) -> UploadMetadata:
     """Validate cheap upload properties before parsing or embedding."""
 
@@ -274,4 +304,45 @@ def validate_upload_metadata(
         content_type=normalized_content_type,
         size_bytes=len(content),
         content_hash=compute_content_hash(content),
+        tenant_id=normalize_tenant_id(tenant_id),
+        acl_tags=normalize_acl_tags(acl_tags),
     )
+
+
+def normalize_tenant_id(value: str | None) -> str:
+    """Normalize tenant identity and fail closed on unsafe header values."""
+
+    normalized = (value or "default").strip()
+    if not normalized or len(normalized) > 128 or any(
+        character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+        for character in normalized
+    ):
+        raise ServiceError(
+            code=ErrorCode.INVALID_REQUEST,
+            message="Tenant ID is invalid",
+        )
+    return normalized
+
+
+def normalize_acl_tags(values: tuple[str, ...]) -> tuple[str, ...]:
+    """Normalize bounded ACL tags; an omitted ACL means public content."""
+
+    normalized = tuple(
+        dict.fromkeys(
+            value.strip()
+            for value in values
+            if value.strip()
+        )
+    )
+    if len(normalized) > 50 or any(
+        len(value) > 64 or any(
+            character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+            for character in value
+        )
+        for value in normalized
+    ):
+        raise ServiceError(
+            code=ErrorCode.INVALID_REQUEST,
+            message="ACL tags are invalid",
+        )
+    return normalized or ("public",)

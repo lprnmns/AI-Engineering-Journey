@@ -124,6 +124,8 @@ class SqliteIngestionRegistry:
                     content_type TEXT NOT NULL,
                     size_bytes INTEGER NOT NULL,
                     page_count INTEGER NOT NULL,
+                    tenant_id TEXT NOT NULL DEFAULT 'default',
+                    acl_tags_json TEXT NOT NULL DEFAULT '["public"]',
                     created_at TEXT NOT NULL,
                     content BLOB NOT NULL,
                     document_status TEXT NOT NULL,
@@ -134,11 +136,12 @@ class SqliteIngestionRegistry:
                     point_count INTEGER,
                     error_message TEXT,
                     failed_stage TEXT,
-                    PRIMARY KEY (content_hash, pipeline_fingerprint)
+                    PRIMARY KEY (tenant_id, content_hash, pipeline_fingerprint)
                 );
 
                 CREATE TABLE IF NOT EXISTS idempotency_keys (
                     idempotency_key TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL DEFAULT 'default',
                     content_hash TEXT NOT NULL,
                     pipeline_fingerprint TEXT NOT NULL
                 );
@@ -178,6 +181,8 @@ class SqliteIngestionRegistry:
                     """
                 )
             for column, definition in (
+                ("tenant_id", "TEXT NOT NULL DEFAULT 'default'"),
+                ("acl_tags_json", "TEXT NOT NULL DEFAULT '[\"public\"]'"),
                 (
                     "created_at",
                     "TEXT NOT NULL DEFAULT '1970-01-01T00:00:00+00:00'",
@@ -191,6 +196,84 @@ class SqliteIngestionRegistry:
                     connection.execute(
                         f"ALTER TABLE ingestions ADD COLUMN {column} {definition}"
                     )
+            idempotency_columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(idempotency_keys)")
+            }
+            if "tenant_id" not in idempotency_columns:
+                connection.execute(
+                    "ALTER TABLE idempotency_keys ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"
+                )
+            self._migrate_tenant_scoped_primary_key(connection)
+
+    @staticmethod
+    def _migrate_tenant_scoped_primary_key(connection: sqlite3.Connection) -> None:
+        """Rebuild pre-ACL databases whose identity key was tenant-blind."""
+
+        primary_key_columns = [
+            row["name"]
+            for row in sorted(
+                connection.execute("PRAGMA table_info(ingestions)").fetchall(),
+                key=lambda row: row["pk"],
+            )
+            if row["pk"]
+        ]
+        expected = ["tenant_id", "content_hash", "pipeline_fingerprint"]
+        if primary_key_columns == expected:
+            return
+        if primary_key_columns != ["content_hash", "pipeline_fingerprint"]:
+            raise RuntimeError("unsupported ingestions primary key schema")
+
+        connection.execute(
+            """
+            CREATE TABLE ingestions_v2 (
+                content_hash TEXT NOT NULL,
+                pipeline_fingerprint TEXT NOT NULL,
+                document_id TEXT NOT NULL,
+                version_id TEXT NOT NULL,
+                job_id TEXT NOT NULL UNIQUE,
+                filename TEXT NOT NULL,
+                content_type TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                page_count INTEGER NOT NULL,
+                tenant_id TEXT NOT NULL DEFAULT 'default',
+                acl_tags_json TEXT NOT NULL DEFAULT '["public"]',
+                created_at TEXT NOT NULL,
+                content BLOB NOT NULL,
+                document_status TEXT NOT NULL,
+                status TEXT NOT NULL,
+                progress_percent INTEGER NOT NULL,
+                error_code TEXT,
+                current_stage TEXT,
+                point_count INTEGER,
+                error_message TEXT,
+                failed_stage TEXT,
+                PRIMARY KEY (tenant_id, content_hash, pipeline_fingerprint)
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO ingestions_v2 (
+                content_hash, pipeline_fingerprint, document_id, version_id,
+                job_id, filename, content_type, size_bytes, page_count,
+                tenant_id, acl_tags_json, created_at, content, document_status,
+                status, progress_percent, error_code, current_stage, point_count,
+                error_message, failed_stage
+            )
+            SELECT content_hash, pipeline_fingerprint, document_id, version_id,
+                   job_id, filename, content_type, size_bytes, page_count,
+                   tenant_id, acl_tags_json, created_at, content, document_status,
+                   status, progress_percent, error_code, current_stage, point_count,
+                   error_message, failed_stage
+            FROM ingestions
+            """
+        )
+        connection.execute("DROP TABLE ingestions")
+        connection.execute("ALTER TABLE ingestions_v2 RENAME TO ingestions")
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ingestions_job_id ON ingestions(job_id)"
+        )
 
     def _accept_sync(
         self,
@@ -198,6 +281,7 @@ class SqliteIngestionRegistry:
         idempotency_key: str | None,
     ) -> IngestionReceipt:
         identity = (
+            prepared.upload.tenant_id,
             prepared.upload.content_hash,
             prepared.pipeline_fingerprint,
         )
@@ -206,7 +290,7 @@ class SqliteIngestionRegistry:
             if idempotency_key is not None:
                 key_row = connection.execute(
                     """
-                    SELECT content_hash, pipeline_fingerprint
+                    SELECT tenant_id, content_hash, pipeline_fingerprint
                     FROM idempotency_keys
                     WHERE idempotency_key = ?
                     """,
@@ -214,6 +298,7 @@ class SqliteIngestionRegistry:
                 ).fetchone()
                 if key_row is not None:
                     previous_identity = (
+                        key_row["tenant_id"],
                         key_row["content_hash"],
                         key_row["pipeline_fingerprint"],
                     )
@@ -227,7 +312,7 @@ class SqliteIngestionRegistry:
             existing = connection.execute(
                 """
                 SELECT * FROM ingestions
-                WHERE content_hash = ? AND pipeline_fingerprint = ?
+                WHERE tenant_id = ? AND content_hash = ? AND pipeline_fingerprint = ?
                 """,
                 identity,
             ).fetchone()
@@ -236,8 +321,8 @@ class SqliteIngestionRegistry:
                     connection.execute(
                         """
                         INSERT INTO idempotency_keys
-                            (idempotency_key, content_hash, pipeline_fingerprint)
-                        VALUES (?, ?, ?)
+                            (idempotency_key, tenant_id, content_hash, pipeline_fingerprint)
+                        VALUES (?, ?, ?, ?)
                         """,
                         (idempotency_key, *identity),
                     )
@@ -249,12 +334,13 @@ class SqliteIngestionRegistry:
                 INSERT INTO ingestions (
                     content_hash, pipeline_fingerprint, document_id, version_id,
                     job_id, filename, content_type, size_bytes, page_count,
-                    created_at, content, document_status, status, progress_percent, error_code,
+                    tenant_id, acl_tags_json, created_at, content, document_status, status, progress_percent, error_code,
                     current_stage, point_count, error_message, failed_stage
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    *identity,
+                    prepared.upload.content_hash,
+                    prepared.pipeline_fingerprint,
                     receipt.document_id,
                     receipt.version_id,
                     receipt.job_id,
@@ -262,6 +348,8 @@ class SqliteIngestionRegistry:
                     prepared.upload.content_type,
                     prepared.upload.size_bytes,
                     prepared.pdf.page_count,
+                    prepared.upload.tenant_id,
+                    json.dumps(list(prepared.upload.acl_tags), ensure_ascii=False),
                     datetime.now(timezone.utc).isoformat(),
                     prepared.content,
                     receipt.status.value,
@@ -278,8 +366,8 @@ class SqliteIngestionRegistry:
                 connection.execute(
                     """
                     INSERT INTO idempotency_keys
-                        (idempotency_key, content_hash, pipeline_fingerprint)
-                    VALUES (?, ?, ?)
+                        (idempotency_key, tenant_id, content_hash, pipeline_fingerprint)
+                    VALUES (?, ?, ?, ?)
                     """,
                     (idempotency_key, *identity),
                 )
@@ -313,6 +401,8 @@ class SqliteIngestionRegistry:
                 content_type=row["content_type"],
                 size_bytes=row["size_bytes"],
                 content_hash=row["content_hash"],
+                tenant_id=row["tenant_id"],
+                acl_tags=tuple(json.loads(row["acl_tags_json"])),
             ),
             pdf=PdfInspection(page_count=row["page_count"]),
             pipeline_fingerprint=row["pipeline_fingerprint"],
@@ -513,12 +603,12 @@ class SqliteIngestionRegistry:
     def _receipt_for_identity(
         self,
         connection: sqlite3.Connection,
-        identity: tuple[str, str],
+        identity: tuple[str, str, str],
     ) -> IngestionReceipt:
         row = connection.execute(
             """
             SELECT * FROM ingestions
-            WHERE content_hash = ? AND pipeline_fingerprint = ?
+            WHERE tenant_id = ? AND content_hash = ? AND pipeline_fingerprint = ?
             """,
             identity,
         ).fetchone()

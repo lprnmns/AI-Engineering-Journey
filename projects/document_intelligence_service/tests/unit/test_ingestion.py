@@ -178,6 +178,37 @@ def test_development_registry_keeps_staged_bytes_for_future_worker() -> None:
     assert staged == content
 
 
+def test_same_pdf_can_be_indexed_by_two_tenants_without_identity_collision() -> None:
+    content = make_pdf()
+    preparation = IngestionPreparationService(
+        limits=IngestionLimits(),
+        pipeline_config=PipelineConfig(),
+        pdf_inspector=PypdfInspector(),
+    )
+    tenant_a = preparation.prepare(
+        content=content,
+        filename="shared.pdf",
+        content_type="application/pdf",
+        tenant_id="tenant_a",
+        acl_tags=("private",),
+    )
+    tenant_b = preparation.prepare(
+        content=content,
+        filename="shared.pdf",
+        content_type="application/pdf",
+        tenant_id="tenant_b",
+        acl_tags=("private",),
+    )
+    registry = InMemoryIngestionRegistry()
+
+    receipt_a = asyncio.run(registry.accept(tenant_a, None))
+    receipt_b = asyncio.run(registry.accept(tenant_b, None))
+
+    assert receipt_a.document_id != receipt_b.document_id
+    assert receipt_a.version_id != receipt_b.version_id
+    assert receipt_a.job_id != receipt_b.job_id
+
+
 def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> None:
     content = make_pdf()
     preparation = IngestionPreparationService(

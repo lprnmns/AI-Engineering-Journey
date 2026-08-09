@@ -187,6 +187,47 @@ def test_wired_query_exposes_output_warning_and_canonical_sources() -> None:
     ]
 
 
+def test_query_debug_flag_exposes_ranks_without_raw_evidence() -> None:
+    from projects.document_intelligence_service.app.application.query_service import (
+        QueryService,
+    )
+    from projects.document_intelligence_service.app.domain.answerability import (
+        AnswerabilityPolicy,
+    )
+    from projects.document_intelligence_service.tests.unit.test_query_service import (
+        FakeAnswerGenerator,
+    )
+    from projects.document_intelligence_service.tests.unit.test_retrieval_service import (
+        make_service,
+    )
+
+    app = create_app(
+        health_service=HealthService(()),
+        query_service=QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.45),
+            answer_generator=FakeAnswerGenerator(answer="Kanıta dayalı cevap."),
+        ),
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/query",
+            {"question": "Qdrant ne işe yarar?", "include_debug": True},
+        )
+    )
+
+    assert response.status_code == 200
+    debug = response.json()["debug"]
+    assert [item["source_id"] for item in debug["candidates"]] == [
+        "shared",
+        "dense-top",
+        "sparse-only",
+    ]
+    assert "text" not in debug["candidates"][0]
+
+
 def test_query_keeps_html_like_answer_in_json_transport() -> None:
     """Prove the API does not directly render model text as HTML."""
 

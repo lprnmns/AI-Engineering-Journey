@@ -12,6 +12,7 @@ from ..domain.ingestion import (
     PreparedIngestion,
     StageData,
     StageEvent,
+    compute_document_id,
     compute_version_id,
 )
 from .chunking_service import DocumentChunkingService
@@ -179,6 +180,8 @@ class IngestionWorker:
                 sparse_vectors=sparse_vectors,
                 pipeline_fingerprint=prepared.pipeline_fingerprint,
                 language=self._language,
+                tenant_id=prepared.upload.tenant_id,
+                acl_tags=prepared.upload.acl_tags,
             )
             current = await self._finish_stage(
                 current,
@@ -366,7 +369,10 @@ class IngestionWorker:
 
     @staticmethod
     def _document_id(prepared: PreparedIngestion) -> str:
-        return f"doc_{prepared.upload.content_hash}"
+        return compute_document_id(
+            prepared.upload.content_hash,
+            prepared.upload.tenant_id,
+        )
 
     @staticmethod
     def _version_id(prepared: PreparedIngestion) -> str:
@@ -375,6 +381,7 @@ class IngestionWorker:
         return compute_version_id(
             prepared.upload.content_hash,
             prepared.pipeline_fingerprint,
+            tenant_id=prepared.upload.tenant_id,
         )
 
     async def _set_progress(

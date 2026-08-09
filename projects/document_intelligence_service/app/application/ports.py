@@ -87,6 +87,8 @@ class ChunkVectorStore(Protocol):
         sparse_vectors: Sequence[SparseVector],
         pipeline_fingerprint: str,
         language: str,
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> None:
         """Write a version as inactive points."""
 
@@ -130,6 +132,8 @@ class ChunkRetriever(Protocol):
         query_vector: Sequence[float],
         limit: int,
         document_ids: Sequence[str],
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> tuple[RetrievedChunk, ...]:
         """Return dense candidates from active points only."""
 
@@ -141,6 +145,8 @@ class ChunkRetriever(Protocol):
         query_vector: SparseVector,
         limit: int,
         document_ids: Sequence[str],
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> tuple[RetrievedChunk, ...]:
         """Return sparse candidates from active points only."""
 

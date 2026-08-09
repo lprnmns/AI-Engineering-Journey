@@ -273,3 +273,67 @@ def test_retriever_searches_active_named_dense_and_sparse_vectors() -> None:
     assert len(sparse_hits) == 1
     assert dense_hits[0].source_id == "chunk-1"
     assert sparse_hits[0].page_start == 2
+
+
+def test_retriever_enforces_tenant_and_acl_filters_before_returning_sources() -> None:
+    schema = QdrantSchema(collection_name="acl_retrieval_test", dense_size=2)
+    store = QdrantChunkStore(QdrantClient(":memory:"), schema)
+    sparse = SparseEmbedding(indices=(1,), values=(1.0,))
+    tenant_a_chunk = make_chunk(document_id="tenant-a-doc", version_id="a-v1")
+    tenant_b_chunk = make_chunk(document_id="tenant-b-doc", version_id="b-v1")
+
+    store.stage_version(
+        chunks=[tenant_a_chunk],
+        dense_vectors=[(1.0, 0.0)],
+        sparse_vectors=[sparse],
+        pipeline_fingerprint="pipe-a",
+        tenant_id="tenant_a",
+        acl_tags=("finance",),
+    )
+    verification_a = store.verify_version(
+        document_id="tenant-a-doc",
+        version_id="a-v1",
+        expected_chunk_count=1,
+    )
+    store.activate_version(
+        document_id="tenant-a-doc",
+        version_id="a-v1",
+        verification=verification_a,
+    )
+    store.stage_version(
+        chunks=[tenant_b_chunk],
+        dense_vectors=[(1.0, 0.0)],
+        sparse_vectors=[sparse],
+        pipeline_fingerprint="pipe-b",
+        tenant_id="tenant_b",
+        acl_tags=("finance",),
+    )
+    verification_b = store.verify_version(
+        document_id="tenant-b-doc",
+        version_id="b-v1",
+        expected_chunk_count=1,
+    )
+    store.activate_version(
+        document_id="tenant-b-doc",
+        version_id="b-v1",
+        verification=verification_b,
+    )
+    retriever = QdrantRetriever(store.client, schema)
+
+    tenant_a_hits = retriever.search_dense(
+        query_vector=(1.0, 0.0),
+        limit=5,
+        document_ids=(),
+        tenant_id="tenant_a",
+        acl_tags=("finance",),
+    )
+    tenant_b_without_tag = retriever.search_dense(
+        query_vector=(1.0, 0.0),
+        limit=5,
+        document_ids=(),
+        tenant_id="tenant_b",
+        acl_tags=("hr",),
+    )
+
+    assert [item.document_id for item in tenant_a_hits] == ["tenant-a-doc"]
+    assert tenant_b_without_tag == ()

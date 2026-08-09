@@ -76,6 +76,8 @@ class QueryService:
         mode: RetrievalMode,
         top_k: int,
         document_ids: Sequence[str] = (),
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> QueryExecutionResult:
         """Run the bounded query sequence and skip generation when unsafe."""
 
@@ -110,6 +112,8 @@ class QueryService:
             mode=mode,
             top_k=top_k,
             document_ids=document_ids,
+            tenant_id=tenant_id,
+            acl_tags=acl_tags,
         )
         retrieval, blocked_evidence = _apply_evidence_safety(
             retrieval,

@@ -24,6 +24,8 @@ class RetrievedChunk:
     dense_score: float | None = None
     sparse_score: float | None = None
     parent_text: str | None = None
+    tenant_id: str = "default"
+    acl_tags: tuple[str, ...] = ("public",)
 
     @property
     def context_text(self) -> str:
@@ -46,3 +48,20 @@ class RetrievalResult:
     reranked_candidates: int = 0
     rerank_ms: float = 0.0
     candidate_window: tuple[RetrievedChunk, ...] = ()
+    debug_candidates: tuple["RetrievalDebugCandidate", ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievalDebugCandidate:
+    """Safe rank/score trace for one bounded retrieval candidate."""
+
+    source_id: str
+    retrieval_rank: int | None
+    rerank_rank: int | None
+    dense_rank: int | None
+    sparse_rank: int | None
+    dense_score: float | None
+    sparse_score: float | None
+    fused_score: float | None
+    rerank_score: float | None
+    matched_terms: tuple[str, ...]

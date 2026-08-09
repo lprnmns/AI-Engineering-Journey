@@ -34,6 +34,8 @@ class IngestionPreparationService:
         content: bytes,
         filename: str,
         content_type: str | None,
+        tenant_id: str | None = None,
+        acl_tags: tuple[str, ...] = (),
     ) -> PreparedIngestion:
         """Validate, inspect and calculate stable ingestion identities."""
 
@@ -41,6 +43,8 @@ class IngestionPreparationService:
             content=content,
             filename=filename,
             content_type=content_type,
+            tenant_id=tenant_id,
+            acl_tags=acl_tags,
             limits=self._limits,
         )
         pdf = self._pdf_inspector.inspect(content, self._limits.max_pdf_pages)
@@ -85,6 +89,8 @@ class IngestionService:
         filename: str,
         content_type: str | None,
         idempotency_key: str | None,
+        tenant_id: str | None = None,
+        acl_tags: tuple[str, ...] = (),
     ) -> IngestionReceipt:
         """Prepare an upload and return its stable acceptance receipt."""
 
@@ -96,6 +102,8 @@ class IngestionService:
             content=content,
             filename=filename,
             content_type=content_type,
+            tenant_id=tenant_id,
+            acl_tags=acl_tags,
         )
         return await self._registry.accept(prepared, idempotency_key)
 

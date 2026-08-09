@@ -56,8 +56,10 @@ class FakeRetriever:
         query_vector: Sequence[float],
         limit: int,
         document_ids: Sequence[str],
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> tuple[RetrievedChunk, ...]:
-        del query_vector, limit, document_ids
+        del query_vector, limit, document_ids, tenant_id, acl_tags
         return (candidate("dense-top"), candidate("shared"))
 
     def search_sparse(
@@ -66,8 +68,10 @@ class FakeRetriever:
         query_vector: SparseVector,
         limit: int,
         document_ids: Sequence[str],
+        tenant_id: str = "default",
+        acl_tags: Sequence[str] = ("public",),
     ) -> tuple[RetrievedChunk, ...]:
-        del query_vector, limit, document_ids
+        del query_vector, limit, document_ids, tenant_id, acl_tags
         return (candidate("shared"), candidate("sparse-only"))
 
 
@@ -140,6 +144,13 @@ def test_hybrid_mode_uses_rank_based_rrf_not_raw_score_addition() -> None:
     assert result.candidates[0].dense_rank == 2
     assert result.candidates[0].sparse_rank == 1
     assert result.candidates[0].fused_score is not None
+    assert [item.source_id for item in result.debug_candidates] == [
+        "shared",
+        "dense-top",
+        "sparse-only",
+    ]
+    assert result.debug_candidates[0].dense_rank == 2
+    assert result.debug_candidates[0].sparse_rank == 1
 
 
 def test_optional_reranker_receives_fused_candidates_and_returns_final_window() -> None:

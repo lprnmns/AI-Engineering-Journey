@@ -1,5 +1,7 @@
 """Unit tests for lazy dense and deterministic sparse embedding adapters."""
 
+from pathlib import Path
+
 from projects.document_intelligence_service.app.infrastructure.embeddings.sparse import (
     BM25SparseEncoder,
     HashingSparseEncoder,
@@ -28,7 +30,9 @@ def test_hashing_sparse_encoder_counts_repeated_terms() -> None:
     assert repeated.values[0] > single.values[0]
 
 
-def test_bm25_encoder_fits_exact_vocabulary_and_survives_restart(tmp_path) -> None:
+def test_bm25_encoder_fits_exact_vocabulary_and_survives_restart(
+    tmp_path: Path,
+) -> None:
     state_path = tmp_path / "bm25.json"
     encoder = BM25SparseEncoder(state_path=state_path)
     encoder.fit_documents(
@@ -51,7 +55,7 @@ def test_bm25_encoder_fits_exact_vocabulary_and_survives_restart(tmp_path) -> No
     assert all(value > 0 for value in document.values)
 
 
-def test_bm25_query_does_not_mutate_corpus_state(tmp_path) -> None:
+def test_bm25_query_does_not_mutate_corpus_state(tmp_path: Path) -> None:
     state_path = tmp_path / "bm25.json"
     encoder = BM25SparseEncoder(state_path=state_path)
     encoder.fit_documents(("qdrant belge",))

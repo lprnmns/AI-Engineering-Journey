@@ -58,7 +58,7 @@ def test_search_returns_evidence_without_llm_fields() -> None:
     assert body["latency"]["llm_ms"] == 0
 
 
-def test_search_does_not_silently_ignore_acl_filters() -> None:
+def test_search_accepts_acl_scope_without_disabling_filtering() -> None:
     app = create_app(
         health_service=HealthService(()),
         retrieval_service=make_service(),
@@ -74,5 +74,8 @@ def test_search_does_not_silently_ignore_acl_filters() -> None:
         )
     )
 
-    assert response.status_code == 501
-    assert response.json()["error"]["code"] == "FEATURE_NOT_READY"
+    assert response.status_code == 200
+    # The fixture is public, so a caller with an additional finance scope may
+    # still see it. The request must reach the retrieval service rather than
+    # silently falling back to the old FEATURE_NOT_READY scaffold.
+    assert response.json()["sources"][0]["source_id"] == "shared"

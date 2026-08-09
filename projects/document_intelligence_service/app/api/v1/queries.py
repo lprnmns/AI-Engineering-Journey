@@ -12,6 +12,8 @@ from .contracts import (
     QueryRequest,
     QueryResponse,
     RetrievalInfo,
+    RetrievalDebugCandidateResponse,
+    RetrievalDebugResponse,
     SourceResponse,
 )
 
@@ -32,14 +34,13 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
     query_service = getattr(http_request.app.state, "query_service", None)
     if query_service is None:
         feature_not_ready("Query")
-    if request.tenant_id or request.acl_tags:
-        feature_not_ready("Tenant/ACL-filtered query")
-
     result = await query_service.execute(
         question=request.question,
         mode=request.retrieval_mode,
         top_k=request.top_k,
         document_ids=request.document_ids,
+        tenant_id=request.tenant_id or "default",
+        acl_tags=tuple(request.acl_tags or ["public"]),
     )
     return QueryResponse(
         decision=result.decision,
@@ -83,6 +84,27 @@ async def query(http_request: Request, request: QueryRequest) -> QueryResponse:
             rerank_ms=result.retrieval.rerank_ms,
             llm_ms=result.llm_ms,
             total_ms=result.total_ms,
+        ),
+        debug=(
+            RetrievalDebugResponse(
+                candidates=[
+                    RetrievalDebugCandidateResponse(
+                        source_id=item.source_id,
+                        retrieval_rank=item.retrieval_rank,
+                        rerank_rank=item.rerank_rank,
+                        dense_rank=item.dense_rank,
+                        sparse_rank=item.sparse_rank,
+                        dense_score=item.dense_score,
+                        sparse_score=item.sparse_score,
+                        fused_score=item.fused_score,
+                        rerank_score=item.rerank_score,
+                        matched_terms=list(item.matched_terms),
+                    )
+                    for item in result.retrieval.debug_candidates
+                ]
+            )
+            if request.include_debug
+            else None
         ),
         request_id=get_request_id(),
     )

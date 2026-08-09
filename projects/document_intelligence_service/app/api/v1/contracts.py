@@ -182,6 +182,27 @@ class RetrievalInfo(BaseModel):
     reranked_candidates: int = Field(ge=0)
 
 
+class RetrievalDebugCandidateResponse(BaseModel):
+    """Safe candidate diagnostics shown only when debug is requested."""
+
+    source_id: str
+    retrieval_rank: int | None
+    rerank_rank: int | None
+    dense_rank: int | None
+    sparse_rank: int | None
+    dense_score: float | None
+    sparse_score: float | None
+    fused_score: float | None
+    rerank_score: float | None
+    matched_terms: list[str]
+
+
+class RetrievalDebugResponse(BaseModel):
+    """Bounded retrieval diagnostics for the UI and error analysis."""
+
+    candidates: list[RetrievalDebugCandidateResponse]
+
+
 class LatencyBreakdown(BaseModel):
     """Stage-level latency measurements in milliseconds."""
 
@@ -273,6 +294,7 @@ class QueryResponse(BaseModel):
     model: ModelInfo
     warnings: list[OutputWarningResponse] = Field(default_factory=list)
     latency: LatencyBreakdown
+    debug: RetrievalDebugResponse | None = None
     request_id: str
 
     @model_validator(mode="after")
@@ -306,6 +328,7 @@ class SearchRequest(BaseModel):
     document_ids: list[str] = Field(default_factory=list, max_length=100)
     retrieval_mode: RetrievalMode = RetrievalMode.HYBRID
     top_k: int = Field(default=10, ge=1, le=50)
+    include_debug: bool = False
     tenant_id: str | None = Field(default=None, max_length=128)
     acl_tags: list[str] = Field(default_factory=list, max_length=50)
 
@@ -316,4 +339,5 @@ class SearchResponse(BaseModel):
     sources: list[SourceResponse]
     retrieval: RetrievalInfo
     latency: LatencyBreakdown
+    debug: RetrievalDebugResponse | None = None
     request_id: str
