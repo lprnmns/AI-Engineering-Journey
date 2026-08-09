@@ -153,6 +153,18 @@ class QdrantChunkStore:
             wait=True,
         )
 
+    def delete_document(self, document_id: str) -> None:
+        """Delete staged and active points for one logical document."""
+
+        self.ensure_schema()
+        self._client.delete(
+            collection_name=self.collection_name,
+            points_selector=models.FilterSelector(
+                filter=self._document_filter(document_id)
+            ),
+            wait=True,
+        )
+
     def upsert(
         self,
         *,

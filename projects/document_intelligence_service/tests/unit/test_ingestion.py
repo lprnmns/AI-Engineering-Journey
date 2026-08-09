@@ -2,13 +2,18 @@
 
 import asyncio
 from datetime import datetime, timezone
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
 
-from projects.document_intelligence_service.app.domain.entities import JobStatus, StageStatus
+from projects.document_intelligence_service.app.domain.entities import (
+    DocumentStatus,
+    JobStatus,
+    StageStatus,
+)
 from projects.document_intelligence_service.app.application.ingestion_service import (
     IngestionPreparationService,
 )
@@ -238,3 +243,48 @@ def test_sqlite_registry_survives_a_new_registry_instance(tmp_path: Path) -> Non
     )
     assert restored_content == content
     assert retried == first_receipt
+
+
+def test_sqlite_registry_lists_details_and_deletes_completed_document(
+    tmp_path: Path,
+) -> None:
+    preparation = IngestionPreparationService(
+        limits=IngestionLimits(),
+        pipeline_config=PipelineConfig(),
+        pdf_inspector=PypdfInspector(),
+    )
+    prepared = preparation.prepare(
+        content=make_pdf(),
+        filename="catalog.pdf",
+        content_type="application/pdf",
+    )
+    registry = SqliteIngestionRegistry(tmp_path / "catalog.sqlite3")
+    receipt = asyncio.run(registry.accept(prepared, "catalog-1"))
+    queued = asyncio.run(registry.get_job(receipt.job_id))
+    assert queued is not None
+    asyncio.run(
+        registry.update_job(
+            replace(queued, status=JobStatus.SUCCEEDED, progress_percent=100)
+        )
+    )
+    asyncio.run(
+        registry.set_document_status(
+            document_id=receipt.document_id,
+            version_id=receipt.version_id,
+            status=DocumentStatus.ACTIVE,
+        )
+    )
+
+    page = asyncio.run(registry.list_documents(limit=10, cursor=None))
+    assert len(page.items) == 1
+    assert page.items[0].status is DocumentStatus.ACTIVE
+    assert page.items[0].active_version_id == receipt.version_id
+    assert page.items[0].available_version_ids == (receipt.version_id,)
+    detail = asyncio.run(registry.get_document(receipt.document_id))
+    assert detail == page.items[0]
+
+    asyncio.run(registry.delete_document(receipt.document_id))
+    deleted = asyncio.run(registry.get_document(receipt.document_id))
+    assert deleted is not None
+    assert deleted.status is DocumentStatus.DELETED
+    assert deleted.active_version_id is None

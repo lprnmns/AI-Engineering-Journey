@@ -14,6 +14,7 @@ from .api.v1.queries import router as queries_router
 from .api.v1.search import router as search_router
 from .application.health_service import HealthService
 from .application.chunking_service import DocumentChunkingService
+from .application.document_service import DocumentService
 from .application.ingestion_service import (
     IngestionPreparationService,
     IngestionService,
@@ -69,6 +70,22 @@ def build_ingestion_registry(settings: Settings) -> IngestionRegistry:
     if settings.ingestion_registry_backend == "sqlite":
         return SqliteIngestionRegistry(settings.ingestion_database_path)
     return InMemoryIngestionRegistry()
+
+
+def build_document_service(
+    settings: Settings,
+    *,
+    registry: IngestionRegistry | None = None,
+) -> DocumentService:
+    """Wire document metadata and vector cleanup to the same registry."""
+
+    return DocumentService(
+        registry=registry if registry is not None else build_ingestion_registry(settings),
+        vector_store=QdrantChunkStore(
+            QdrantClient(url=str(settings.qdrant_url)),
+            QdrantSchema(),
+        ),
+    )
 
 
 def build_pipeline_config(settings: Settings) -> PipelineConfig:
@@ -186,6 +203,7 @@ def create_app(
     health_service: HealthService | None = None,
     ingestion_service: IngestionService | None = None,
     ingestion_worker: IngestionWorker | None = None,
+    document_service: DocumentService | None = None,
     retrieval_service: RetrievalService | None = None,
     query_service: QueryService | None = None,
 ) -> FastAPI:
@@ -194,6 +212,7 @@ def create_app(
     resolved_settings = settings or Settings()
     resolved_health_service = health_service or build_health_service(resolved_settings)
     resolved_ingestion_worker = ingestion_worker
+    resolved_document_service = document_service
     resolved_retrieval_service = retrieval_service
     resolved_query_service = query_service
     if ingestion_service is None:
@@ -202,6 +221,11 @@ def create_app(
             resolved_settings,
             registry=registry,
         )
+        if resolved_document_service is None:
+            resolved_document_service = build_document_service(
+                resolved_settings,
+                registry=registry,
+            )
         if (
             resolved_ingestion_worker is None
             and resolved_settings.ingestion_registry_backend == "sqlite"
@@ -225,6 +249,10 @@ def create_app(
             )
     else:
         resolved_ingestion_service = ingestion_service
+        if resolved_document_service is None:
+            resolved_document_service = DocumentService(
+                registry=ingestion_service.registry,
+            )
         if (
             resolved_query_service is None
             and resolved_retrieval_service is not None
@@ -239,6 +267,7 @@ def create_app(
         application.state.health_service = resolved_health_service
         application.state.ingestion_service = resolved_ingestion_service
         application.state.ingestion_worker = resolved_ingestion_worker
+        application.state.document_service = resolved_document_service
         application.state.retrieval_service = resolved_retrieval_service
         application.state.query_service = resolved_query_service
         resolved_health_service.mark_started()
@@ -258,6 +287,7 @@ def create_app(
     application.state.health_service = resolved_health_service
     application.state.ingestion_service = resolved_ingestion_service
     application.state.ingestion_worker = resolved_ingestion_worker
+    application.state.document_service = resolved_document_service
     application.state.retrieval_service = resolved_retrieval_service
     application.state.query_service = resolved_query_service
     application.include_router(health_router, prefix="/v1")

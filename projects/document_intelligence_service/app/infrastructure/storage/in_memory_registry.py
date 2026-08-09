@@ -5,11 +5,15 @@ replaced by durable document/job persistence before production deployment.
 """
 
 import asyncio
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 
 from ...domain.entities import DocumentStatus, JobStatus, StageStatus
 from ...domain.errors import ErrorCode, ServiceError
 from ...domain.ingestion import (
+    DocumentPage,
+    DocumentSnapshot,
     IngestionReceipt,
     JobSnapshot,
     PreparedIngestion,
@@ -24,6 +28,7 @@ class _StoredIngestion:
     receipt: IngestionReceipt
     identity: tuple[str, str]
     prepared: PreparedIngestion
+    accepted_at: datetime
 
 
 class InMemoryIngestionRegistry:
@@ -74,6 +79,7 @@ class InMemoryIngestionRegistry:
                 receipt=receipt,
                 identity=identity,
                 prepared=prepared,
+                accepted_at=datetime.now(timezone.utc),
             )
             self._by_identity[identity] = stored
             if normalized_key is not None:
@@ -111,6 +117,62 @@ class InMemoryIngestionRegistry:
                 if stored.receipt.job_id == job_id:
                     return stored.prepared
         return None
+
+    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+        """Return stable cursor pagination over logical documents."""
+
+        if limit <= 0 or limit > 100:
+            raise ValueError("document limit must be between 1 and 100")
+        offset = _parse_cursor(cursor)
+        async with self._lock:
+            snapshots = _snapshots(self._by_identity.values())
+        page = snapshots[offset : offset + limit]
+        next_cursor = str(offset + limit) if offset + limit < len(snapshots) else None
+        return DocumentPage(items=tuple(page), next_cursor=next_cursor)
+
+    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+        """Return one logical document and all known versions."""
+
+        async with self._lock:
+            records = tuple(
+                stored
+                for stored in self._by_identity.values()
+                if stored.receipt.document_id == document_id
+            )
+            if not records:
+                return None
+            return _snapshot(records)
+
+    async def delete_document(self, document_id: str) -> None:
+        """Mark all versions deleted after rejecting active ingestion jobs."""
+
+        async with self._lock:
+            records = [
+                stored
+                for stored in self._by_identity.values()
+                if stored.receipt.document_id == document_id
+            ]
+            if not records:
+                raise ServiceError(
+                    code=ErrorCode.DOCUMENT_NOT_FOUND,
+                    message="Document was not found",
+                )
+            if any(
+                self._jobs[stored.receipt.job_id].status
+                in (JobStatus.QUEUED, JobStatus.RUNNING)
+                for stored in records
+            ):
+                raise ServiceError(
+                    code=ErrorCode.DOCUMENT_BUSY,
+                    message="Document has an ingestion job in progress",
+                )
+            for stored in records:
+                stored.receipt = IngestionReceipt(
+                    document_id=stored.receipt.document_id,
+                    version_id=stored.receipt.version_id,
+                    job_id=stored.receipt.job_id,
+                    status=DocumentStatus.DELETED,
+                )
 
     async def update_job(self, snapshot: JobSnapshot) -> None:
         """Replace one job snapshot under the same registry lock."""
@@ -173,3 +235,64 @@ class InMemoryIngestionRegistry:
                     )
                     return
         raise KeyError(f"unknown document version: {document_id}/{version_id}")
+
+
+def _parse_cursor(cursor: str | None) -> int:
+    """Parse the intentionally opaque offset cursor used by this adapter."""
+
+    if cursor is None:
+        return 0
+    if not cursor.isdigit():
+        raise ServiceError(
+            code=ErrorCode.INVALID_REQUEST,
+            message="Document cursor is invalid",
+        )
+    return int(cursor)
+
+
+def _snapshots(
+    records: Iterable[_StoredIngestion],
+) -> list[DocumentSnapshot]:
+    """Group stored versions into stable logical-document read models."""
+
+    grouped: dict[str, list[_StoredIngestion]] = {}
+    for record in records:
+        grouped.setdefault(record.receipt.document_id, []).append(record)
+    snapshots = [_snapshot(items) for items in grouped.values()]
+    return sorted(
+        snapshots,
+        key=lambda item: (item.created_at, item.document_id),
+        reverse=True,
+    )
+
+
+def _snapshot(
+    records: list[_StoredIngestion] | tuple[_StoredIngestion, ...],
+) -> DocumentSnapshot:
+    """Build one public document read model from its stored versions."""
+
+    ordered = sorted(records, key=lambda item: item.accepted_at)
+    statuses = {item.receipt.status for item in ordered}
+    if DocumentStatus.ACTIVE in statuses:
+        status = DocumentStatus.ACTIVE
+    elif DocumentStatus.INDEXING in statuses:
+        status = DocumentStatus.INDEXING
+    elif DocumentStatus.FAILED in statuses:
+        status = DocumentStatus.FAILED
+    else:
+        status = DocumentStatus.DELETED
+    active_versions = [
+        item for item in ordered if item.receipt.status is DocumentStatus.ACTIVE
+    ]
+    latest = ordered[-1]
+    return DocumentSnapshot(
+        document_id=latest.receipt.document_id,
+        title=latest.prepared.upload.filename,
+        content_hash=latest.prepared.upload.content_hash,
+        active_version_id=(
+            active_versions[-1].receipt.version_id if active_versions else None
+        ),
+        status=status,
+        created_at=ordered[0].accepted_at,
+        available_version_ids=tuple(item.receipt.version_id for item in ordered),
+    )

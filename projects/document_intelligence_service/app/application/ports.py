@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from ..domain.entities import DocumentStatus
 from ..domain.health import DependencyHealth
 from ..domain.ingestion import (
+    DocumentPage,
+    DocumentSnapshot,
     IngestionReceipt,
     JobSnapshot,
     PdfInspection,
@@ -112,6 +114,11 @@ class ChunkVectorStore(Protocol):
 
         ...
 
+    def delete_document(self, document_id: str) -> None:
+        """Delete all vector points belonging to a logical document."""
+
+        ...
+
 
 class ChunkRetriever(Protocol):
     """Port for active-version dense and sparse evidence search."""
@@ -192,6 +199,21 @@ class IngestionRegistry(Protocol):
 
     async def get_staged_ingestion(self, job_id: str) -> PreparedIngestion | None:
         """Return the complete staged ingestion identity for a worker."""
+
+        ...
+
+    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+        """Return a bounded page of logical documents."""
+
+        ...
+
+    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+        """Return one logical document read model, if known."""
+
+        ...
+
+    async def delete_document(self, document_id: str) -> None:
+        """Mark all versions deleted unless an ingestion is still running."""
 
         ...
 

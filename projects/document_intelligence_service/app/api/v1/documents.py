@@ -16,12 +16,13 @@ from fastapi import (
 
 from ..errors import openapi_error_responses
 from ...application.ingestion_service import IngestionService
+from ...domain.ingestion import DocumentSnapshot
 from ...observability.request_id import get_request_id
-from ._not_ready import feature_not_ready
 from .contracts import (
     DeleteDocumentResponse,
     DocumentDetailResponse,
     DocumentListResponse,
+    DocumentSummary,
     DocumentUploadResponse,
 )
 
@@ -34,7 +35,6 @@ router = APIRouter(prefix="/documents", tags=["documents"])
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         status.HTTP_202_ACCEPTED: {"model": DocumentUploadResponse},
-        status.HTTP_501_NOT_IMPLEMENTED: {"description": "Scaffold only"},
         **openapi_error_responses(),
     },
 )
@@ -72,13 +72,17 @@ async def create_document(
     responses={**openapi_error_responses()},
 )
 async def list_documents(
+    request: Request,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: Annotated[str | None, Query(max_length=256)] = None,
 ) -> DocumentListResponse:
     """List documents with bounded cursor pagination."""
 
-    del limit, cursor
-    feature_not_ready("Document listing")
+    page = await request.app.state.document_service.list_documents(limit, cursor)
+    return DocumentListResponse(
+        items=[_summary(document) for document in page.items],
+        next_cursor=page.next_cursor,
+    )
 
 
 @router.get(
@@ -87,12 +91,16 @@ async def list_documents(
     responses={**openapi_error_responses()},
 )
 async def get_document(
+    request: Request,
     document_id: Annotated[str, Path(min_length=1, max_length=128)],
 ) -> DocumentDetailResponse:
     """Return one document and its available versions."""
 
-    del document_id
-    feature_not_ready("Document detail")
+    document = await request.app.state.document_service.get_document(document_id)
+    return DocumentDetailResponse(
+        **_summary(document).model_dump(),
+        available_version_ids=list(document.available_version_ids),
+    )
 
 
 @router.delete(
@@ -101,9 +109,26 @@ async def get_document(
     responses={**openapi_error_responses()},
 )
 async def delete_document(
+    request: Request,
     document_id: Annotated[str, Path(min_length=1, max_length=128)],
 ) -> DeleteDocumentResponse:
     """Delete a document unless an active ingestion job makes it busy."""
 
-    del document_id
-    feature_not_ready("Document deletion")
+    await request.app.state.document_service.delete_document(document_id)
+    return DeleteDocumentResponse(
+        document_id=document_id,
+        request_id=get_request_id(),
+    )
+
+
+def _summary(document: DocumentSnapshot) -> DocumentSummary:
+    """Map the domain read model without exposing adapter details."""
+
+    return DocumentSummary(
+        document_id=document.document_id,
+        title=document.title,
+        content_hash=document.content_hash,
+        active_version_id=document.active_version_id,
+        status=document.status,
+        created_at=document.created_at,
+    )

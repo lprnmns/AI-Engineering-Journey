@@ -1,7 +1,7 @@
 """Restart-safe SQLite adapter for ingestion identities, jobs and staged PDFs."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sqlite3
@@ -9,6 +9,8 @@ import sqlite3
 from ...domain.entities import DocumentStatus, JobStatus, StageStatus
 from ...domain.errors import ErrorCode, ServiceError
 from ...domain.ingestion import (
+    DocumentPage,
+    DocumentSnapshot,
     IngestionReceipt,
     JobSnapshot,
     PdfInspection,
@@ -63,6 +65,23 @@ class SqliteIngestionRegistry:
 
         return await asyncio.to_thread(self._get_staged_sync, job_id)
 
+    async def list_documents(self, limit: int, cursor: str | None) -> DocumentPage:
+        """Return stable cursor pagination over logical documents."""
+
+        if limit <= 0 or limit > 100:
+            raise ValueError("document limit must be between 1 and 100")
+        return await asyncio.to_thread(self._list_documents_sync, limit, cursor)
+
+    async def get_document(self, document_id: str) -> DocumentSnapshot | None:
+        """Return one logical document and all known versions."""
+
+        return await asyncio.to_thread(self._get_document_sync, document_id)
+
+    async def delete_document(self, document_id: str) -> None:
+        """Mark all versions deleted unless an ingestion is still running."""
+
+        await asyncio.to_thread(self._delete_document_sync, document_id)
+
     async def update_job(self, snapshot: JobSnapshot) -> None:
         """Persist one worker progress transition."""
 
@@ -105,6 +124,7 @@ class SqliteIngestionRegistry:
                     content_type TEXT NOT NULL,
                     size_bytes INTEGER NOT NULL,
                     page_count INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
                     content BLOB NOT NULL,
                     document_status TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -158,6 +178,10 @@ class SqliteIngestionRegistry:
                     """
                 )
             for column, definition in (
+                (
+                    "created_at",
+                    "TEXT NOT NULL DEFAULT '1970-01-01T00:00:00+00:00'",
+                ),
                 ("current_stage", "TEXT"),
                 ("point_count", "INTEGER"),
                 ("error_message", "TEXT"),
@@ -225,9 +249,9 @@ class SqliteIngestionRegistry:
                 INSERT INTO ingestions (
                     content_hash, pipeline_fingerprint, document_id, version_id,
                     job_id, filename, content_type, size_bytes, page_count,
-                    content, document_status, status, progress_percent, error_code,
+                    created_at, content, document_status, status, progress_percent, error_code,
                     current_stage, point_count, error_message, failed_stage
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     *identity,
@@ -238,6 +262,7 @@ class SqliteIngestionRegistry:
                     prepared.upload.content_type,
                     prepared.upload.size_bytes,
                     prepared.pdf.page_count,
+                    datetime.now(timezone.utc).isoformat(),
                     prepared.content,
                     receipt.status.value,
                     JobStatus.QUEUED.value,
@@ -292,6 +317,68 @@ class SqliteIngestionRegistry:
             pdf=PdfInspection(page_count=row["page_count"]),
             pipeline_fingerprint=row["pipeline_fingerprint"],
         )
+
+    def _list_documents_sync(
+        self,
+        limit: int,
+        cursor: str | None,
+    ) -> DocumentPage:
+        offset = _parse_cursor(cursor)
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM ingestions
+                ORDER BY created_at ASC, document_id ASC, version_id ASC
+                """
+            ).fetchall()
+        grouped: dict[str, list[sqlite3.Row]] = {}
+        for row in rows:
+            grouped.setdefault(row["document_id"], []).append(row)
+        snapshots = sorted(
+            (_snapshot_from_rows(items) for items in grouped.values()),
+            key=lambda item: (item.created_at, item.document_id),
+            reverse=True,
+        )
+        page = snapshots[offset : offset + limit]
+        next_cursor = str(offset + limit) if offset + limit < len(snapshots) else None
+        return DocumentPage(items=tuple(page), next_cursor=next_cursor)
+
+    def _get_document_sync(self, document_id: str) -> DocumentSnapshot | None:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM ingestions
+                WHERE document_id = ?
+                ORDER BY created_at ASC, version_id ASC
+                """,
+                (document_id,),
+            ).fetchall()
+        return _snapshot_from_rows(rows) if rows else None
+
+    def _delete_document_sync(self, document_id: str) -> None:
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            rows = connection.execute(
+                "SELECT status FROM ingestions WHERE document_id = ?",
+                (document_id,),
+            ).fetchall()
+            if not rows:
+                raise ServiceError(
+                    code=ErrorCode.DOCUMENT_NOT_FOUND,
+                    message="Document was not found",
+                )
+            if any(
+                JobStatus(row["status"]) in (JobStatus.QUEUED, JobStatus.RUNNING)
+                for row in rows
+            ):
+                raise ServiceError(
+                    code=ErrorCode.DOCUMENT_BUSY,
+                    message="Document has an ingestion job in progress",
+                )
+            connection.execute(
+                "UPDATE ingestions SET document_status = ? WHERE document_id = ?",
+                (DocumentStatus.DELETED.value, document_id),
+            )
 
     def _update_job_sync(self, snapshot: JobSnapshot) -> None:
         with self._connect() as connection:
@@ -475,3 +562,50 @@ class SqliteIngestionRegistry:
         )
         connection.row_factory = sqlite3.Row
         return connection
+
+
+def _parse_cursor(cursor: str | None) -> int:
+    """Parse the intentionally opaque offset cursor used by this adapter."""
+
+    if cursor is None:
+        return 0
+    if not cursor.isdigit():
+        raise ServiceError(
+            code=ErrorCode.INVALID_REQUEST,
+            message="Document cursor is invalid",
+        )
+    return int(cursor)
+
+
+def _snapshot_from_rows(rows: list[sqlite3.Row]) -> DocumentSnapshot:
+    """Build one public document read model from its stored versions."""
+
+    ordered = sorted(
+        rows,
+        key=lambda row: (row["created_at"], row["version_id"]),
+    )
+    statuses = {DocumentStatus(row["document_status"]) for row in ordered}
+    if DocumentStatus.ACTIVE in statuses:
+        status = DocumentStatus.ACTIVE
+    elif DocumentStatus.INDEXING in statuses:
+        status = DocumentStatus.INDEXING
+    elif DocumentStatus.FAILED in statuses:
+        status = DocumentStatus.FAILED
+    else:
+        status = DocumentStatus.DELETED
+    active_versions = [
+        row for row in ordered
+        if DocumentStatus(row["document_status"]) is DocumentStatus.ACTIVE
+    ]
+    latest = ordered[-1]
+    return DocumentSnapshot(
+        document_id=latest["document_id"],
+        title=latest["filename"],
+        content_hash=latest["content_hash"],
+        active_version_id=(
+            active_versions[-1]["version_id"] if active_versions else None
+        ),
+        status=status,
+        created_at=datetime.fromisoformat(ordered[0]["created_at"]),
+        available_version_ids=tuple(row["version_id"] for row in ordered),
+    )

@@ -72,6 +72,12 @@ class IngestionService:
 
         return self._max_upload_bytes
 
+    @property
+    def registry(self) -> IngestionRegistry:
+        """Expose the application port for composition of document reads."""
+
+        return self._registry
+
     async def accept_receipt(
         self,
         *,

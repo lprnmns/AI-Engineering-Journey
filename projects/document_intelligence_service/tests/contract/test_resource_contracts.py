@@ -300,3 +300,63 @@ def test_reusing_idempotency_key_for_different_content_returns_409() -> None:
             "request_id": "upload-contract-1",
         }
     }
+
+
+def test_document_catalog_lists_details_and_rejects_busy_delete() -> None:
+    app = create_app(health_service=HealthService(()))
+
+    upload = asyncio.run(post_multipart(app, "/v1/documents", pdf_bytes()))
+    payload = upload.json()
+
+    listing = asyncio.run(get(app, "/v1/documents"))
+    assert listing.status_code == 200
+    assert listing.json()["next_cursor"] is None
+    assert listing.json()["items"] == [
+        {
+            "document_id": payload["document_id"],
+            "title": "guide.pdf",
+            "content_hash": payload["document_id"][4:],
+            "active_version_id": None,
+            "status": "indexing",
+            "created_at": listing.json()["items"][0]["created_at"],
+        }
+    ]
+
+    detail = asyncio.run(get(app, f"/v1/documents/{payload['document_id']}"))
+    assert detail.status_code == 200
+    assert detail.json()["available_version_ids"] == [payload["version_id"]]
+
+    deletion = asyncio.run(
+        request_with_method(app, "DELETE", f"/v1/documents/{payload['document_id']}")
+    )
+    assert deletion.status_code == 409
+    assert deletion.json()["error"]["code"] == "DOCUMENT_BUSY"
+
+
+def test_document_catalog_returns_safe_not_found_and_cursor_errors() -> None:
+    app = create_app(health_service=HealthService(()))
+
+    missing = asyncio.run(get(app, "/v1/documents/doc_missing"))
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
+
+    invalid_cursor = asyncio.run(get(app, "/v1/documents?cursor=not-a-cursor"))
+    assert invalid_cursor.status_code == 400
+    assert invalid_cursor.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+async def request_with_method(
+    app: FastAPI,
+    method: str,
+    path: str,
+) -> httpx.Response:
+    """Call a non-GET resource route through the ASGI lifespan."""
+
+    transport = httpx.ASGITransport(app=app)
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+            headers={"X-Request-ID": "delete-contract-1"},
+        ) as client:
+            return await client.request(method, path)

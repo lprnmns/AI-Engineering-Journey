@@ -108,6 +108,27 @@ class PreparedIngestion:
 
 
 @dataclass(frozen=True, slots=True)
+class DocumentSnapshot:
+    """Read model for one logical document and its indexed versions."""
+
+    document_id: str
+    title: str
+    content_hash: str
+    active_version_id: str | None
+    status: DocumentStatus
+    created_at: datetime
+    available_version_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentPage:
+    """Bounded, cursor-based page of document snapshots."""
+
+    items: tuple[DocumentSnapshot, ...]
+    next_cursor: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class VersionVerification:
     """Evidence that a staged vector version is complete and safe to activate."""
 
