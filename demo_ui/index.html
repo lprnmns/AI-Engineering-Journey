@@ -5,75 +5,183 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Document Intelligence Demo</title>
     <style>
-      :root { color-scheme: light; font-family: system-ui, sans-serif; }
-      body { max-width: 980px; margin: 2rem auto; padding: 0 1rem; color: #202124; }
-      h1 { margin-bottom: .25rem; }
-      .muted { color: #5f6368; }
-      section { border: 1px solid #dadce0; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --border: #dadce0;
+        --muted: #5f6368;
+        --blue: #1a73e8;
+        --green: #188038;
+        --yellow: #f9ab00;
+        --red: #d93025;
+      }
+      body { max-width: 1120px; margin: 1.5rem auto; padding: 0 1rem; color: #202124; }
+      h1 { margin-bottom: .2rem; }
+      h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
+      h3 { font-size: .95rem; margin: .9rem 0 .4rem; }
+      .muted { color: var(--muted); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1rem; }
+      section { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
       button { cursor: pointer; padding: .55rem .8rem; margin: .25rem .25rem .25rem 0; }
-      textarea { width: 100%; min-height: 7rem; box-sizing: border-box; padding: .6rem; }
-      pre { white-space: pre-wrap; background: #f8f9fa; padding: .8rem; border-radius: 6px; }
-      .source { border-left: 3px solid #1a73e8; padding: .5rem .75rem; margin: .5rem 0; background: #f8fbff; }
+      button:disabled { cursor: wait; opacity: .6; }
+      input, select, textarea { font: inherit; box-sizing: border-box; }
+      input[type="text"], input[type="file"], select { width: 100%; padding: .5rem; border: 1px solid #bdc1c6; border-radius: 4px; }
+      textarea { width: 100%; min-height: 7rem; padding: .6rem; border: 1px solid #bdc1c6; border-radius: 4px; }
+      label { display: block; margin: .55rem 0 .25rem; font-weight: 600; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f8f9fa; padding: .8rem; border-radius: 6px; max-height: 24rem; overflow: auto; }
+      .hint { font-size: .86rem; color: var(--muted); margin: .35rem 0; }
+      .row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+      .row > * { flex: 1 1 180px; }
+      .row > button, .row > input[type="checkbox"] { flex: 0 0 auto; }
+      .pill { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: .15rem .5rem; font-size: .78rem; margin: .1rem .15rem .1rem 0; }
+      .ok { color: var(--green); }
+      .warn { color: #9a6700; }
+      .bad { color: var(--red); }
       .timeline { display: grid; gap: .45rem; margin-top: .75rem; }
-      .stage { border: 1px solid #dadce0; border-left: 4px solid #9aa0a6; padding: .55rem .7rem; border-radius: 5px; }
-      .stage.succeeded { border-left-color: #188038; }
-      .stage.running { border-left-color: #f9ab00; }
-      .stage.failed { border-left-color: #d93025; }
+      .stage { border: 1px solid var(--border); border-left: 4px solid #9aa0a6; padding: .55rem .7rem; border-radius: 5px; }
+      .stage.succeeded { border-left-color: var(--green); }
+      .stage.running { border-left-color: var(--yellow); }
+      .stage.failed { border-left-color: var(--red); }
       .stage-head { display: flex; justify-content: space-between; gap: .75rem; }
-      .stage-meta { color: #5f6368; font-size: .9rem; }
-      .stage-data { margin: .35rem 0 0; font-size: .82rem; }
-      label { display: block; margin: .5rem 0 .25rem; font-weight: 600; }
+      .stage-meta { color: var(--muted); font-size: .9rem; }
+      .stage-data { margin: .35rem 0 0; font-size: .82rem; overflow-wrap: anywhere; }
+      .document { border: 1px solid var(--border); border-radius: 6px; padding: .55rem; margin: .45rem 0; }
+      .document.selected { border-color: var(--blue); background: #f8fbff; }
+      .document-title { font-weight: 600; }
+      .document-meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+      .source { border-left: 3px solid var(--blue); padding: .55rem .75rem; margin: .5rem 0; background: #f8fbff; }
+      .source-meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+      .metric { border: 1px solid var(--border); border-radius: 6px; padding: .5rem; margin: .35rem 0; font-size: .85rem; }
+      .metric strong { display: block; }
       #status { min-height: 1.5rem; }
     </style>
   </head>
   <body>
     <h1>Document Intelligence Demo</h1>
-    <p class="muted">Upload → job/version → retrieval veya grounded answer → canonical sources</p>
+    <p class="muted">PDF → kabul → job/version → stage trace → filtreli retrieval → evidence veya no-answer</p>
 
     <section>
-      <h2>1. Health</h2>
-      <button id="health-button" type="button">Health kontrolü</button>
-      <pre id="health-output">Henüz kontrol edilmedi.</pre>
+      <h2>Ortak istek bağlamı</h2>
+      <div class="grid">
+        <div>
+          <label for="tenant-id">Tenant ID</label>
+          <input id="tenant-id" type="text" value="default" maxlength="128">
+          <p class="hint">Ingestion ve query aynı tenant filtresini kullanır.</p>
+        </div>
+        <div>
+          <label for="acl-tags">ACL etiketleri</label>
+          <input id="acl-tags" type="text" value="public" placeholder="public, hr">
+          <p class="hint">Virgülle ayır. API bunu pre-filter için normalize eder.</p>
+        </div>
+      </div>
     </section>
 
+    <div class="grid">
+      <section>
+        <h2>1. Health ve operasyon</h2>
+        <button id="health-button" type="button">Health kontrolü</button>
+        <button id="metrics-button" type="button">Metrics yenile</button>
+        <pre id="health-output">Henüz kontrol edilmedi.</pre>
+        <div id="metrics-output" class="hint">Henüz metrics alınmadı.</div>
+      </section>
+
+      <section>
+        <h2>2. Doküman kataloğu</h2>
+        <button id="documents-button" type="button">Dokümanları getir</button>
+        <p class="hint">Seçilen dokümanlar query için document_ids filtresine gider.</p>
+        <div id="documents-output" class="muted">Henüz doküman listesi alınmadı.</div>
+      </section>
+    </div>
+
     <section>
-      <h2>2. PDF upload</h2>
+      <h2>3. PDF upload ve ingestion timeline</h2>
       <input id="file-input" type="file" accept="application/pdf">
-      <button id="upload-button" type="button">PDF kabul et ve indeksle</button>
+      <div class="row">
+        <input id="idempotency-key" type="text" placeholder="Idempotency-Key (boşsa otomatik)" maxlength="256">
+        <button id="upload-button" type="button">PDF kabul et ve indeksle</button>
+      </div>
+      <p class="hint">Aynı içerik + aynı pipeline fingerprint tekrarında mevcut document/version kimliği dönmelidir.</p>
       <pre id="upload-output">Dosya seçilmedi.</pre>
+      <div id="job-meta" class="hint"></div>
       <div id="timeline" class="timeline" aria-live="polite"></div>
     </section>
 
     <section>
-      <h2>3. Soru</h2>
-      <label for="mode">Akış</label>
-      <select id="mode">
-        <option value="query">Answerability + LLM answer</option>
-        <option value="search">Evidence-only search</option>
-      </select>
+      <h2>4. Soru ve evidence</h2>
+      <div class="grid">
+        <div>
+          <label for="mode">Akış</label>
+          <select id="mode">
+            <option value="query">Answerability + LLM answer</option>
+            <option value="search">Evidence-only search (LLM yok)</option>
+          </select>
+        </div>
+        <div>
+          <label for="retrieval-mode">Retrieval modu</label>
+          <select id="retrieval-mode">
+            <option value="hybrid">hybrid</option>
+            <option value="dense">dense</option>
+            <option value="bm25">bm25</option>
+          </select>
+        </div>
+      </div>
       <label for="question">Soru</label>
       <textarea id="question">Yerel model karşılaştırmasında hangi değerler ölçülmelidir?</textarea>
       <button id="ask-button" type="button">Çalıştır</button>
       <pre id="answer-output">Henüz soru gönderilmedi.</pre>
-      <div id="sources"></div>
+      <div id="query-summary"></div>
+      <h3>Canonical sources / evidence</h3>
+      <div id="sources" class="hint">Henüz kaynak yok.</div>
+      <h3>Retrieval debug candidate trace</h3>
+      <pre id="debug-output">Debug sonucu burada görünür.</pre>
     </section>
 
     <p id="status" class="muted" aria-live="polite"></p>
 
     <script>
       const status = document.getElementById("status");
+      const tenantInput = document.getElementById("tenant-id");
+      const aclInput = document.getElementById("acl-tags");
       const healthOutput = document.getElementById("health-output");
+      const metricsOutput = document.getElementById("metrics-output");
+      const documentsOutput = document.getElementById("documents-output");
       const uploadOutput = document.getElementById("upload-output");
+      const jobMeta = document.getElementById("job-meta");
       const answerOutput = document.getElementById("answer-output");
+      const querySummary = document.getElementById("query-summary");
       const sources = document.getElementById("sources");
+      const debugOutput = document.getElementById("debug-output");
       const timeline = document.getElementById("timeline");
+      let selectedDocumentIds = new Set();
 
-      function setStatus(message) {
+      function setStatus(message, className = "muted") {
+        status.className = className;
         status.textContent = message;
       }
 
+      function tenantId() {
+        return tenantInput.value.trim() || "default";
+      }
+
+      function aclTags() {
+        return aclInput.value.split(",").map((tag) => tag.trim()).filter(Boolean);
+      }
+
+      function commonHeaders() {
+        return { "X-Tenant-ID": tenantId() };
+      }
+
+      function queryContext() {
+        return {
+          tenant_id: tenantId(),
+          acl_tags: aclTags(),
+          document_ids: Array.from(selectedDocumentIds),
+        };
+      }
+
       async function request(path, options = {}) {
-        const response = await fetch(`/api${path}`, options);
+        const headers = { ...commonHeaders(), ...(options.headers || {}) };
+        const response = await fetch(`/api${path}`, { ...options, headers });
         let body;
         try {
           body = await response.json();
@@ -81,13 +189,17 @@
           throw new Error(`JSON olmayan response: HTTP ${response.status}`);
         }
         if (!response.ok) {
-          throw new Error(body.error?.message || `HTTP ${response.status}`);
+          throw new Error(body.error?.message || body.detail || `HTTP ${response.status}`);
         }
         return body;
       }
 
       function wait(milliseconds) {
         return new Promise((resolve) => setTimeout(resolve, milliseconds));
+      }
+
+      function safeNumber(value) {
+        return typeof value === "number" && Number.isFinite(value) ? value.toFixed(1) : "—";
       }
 
       function renderTimeline(job) {
@@ -102,42 +214,149 @@
           name.textContent = stage.name;
           const state = document.createElement("span");
           state.className = "stage-meta";
-          state.textContent = `${stage.status} — ${stage.duration_ms == null ? "..." : `${stage.duration_ms.toFixed(1)} ms`}`;
+          state.textContent = `${stage.status} — ${stage.duration_ms == null ? "çalışıyor" : `${safeNumber(stage.duration_ms)} ms`}`;
           head.append(name, state);
           const detail = document.createElement("div");
           detail.className = "stage-data";
-          const input = JSON.stringify(stage.inputs || {});
-          const output = JSON.stringify(stage.outputs || {});
-          detail.textContent = `girdi: ${input} | çıktı: ${output}${stage.decision ? ` | karar: ${stage.decision}` : ""}${stage.error_message ? ` | hata: ${stage.error_message}` : ""}`;
+          detail.textContent = `girdi: ${JSON.stringify(stage.inputs || {})} | çıktı: ${JSON.stringify(stage.outputs || {})}${stage.decision ? ` | karar: ${stage.decision}` : ""}${stage.error_code ? ` | ${stage.error_code}` : ""}${stage.error_message ? ` — ${stage.error_message}` : ""}`;
           wrapper.append(head, detail);
           timeline.append(wrapper);
         }
       }
 
+      function renderJobMeta(job) {
+        jobMeta.replaceChildren();
+        const values = [
+          `job: ${job.job_id}`,
+          `document: ${job.document_id}`,
+          `durum: ${job.status}`,
+          `ilerleme: ${job.progress_percent}%`,
+          `aşama: ${job.current_stage || "—"}`,
+          `attempt: ${job.attempt_count}/${job.max_attempts}`,
+          `sayfa: ${job.page_count ?? "—"}`,
+          `point: ${job.point_count ?? "—"}`,
+        ];
+        jobMeta.textContent = values.join(" | ");
+      }
+
       async function pollJob(jobId) {
-        for (let attempt = 0; attempt < 60; attempt += 1) {
+        for (let attempt = 0; attempt < 180; attempt += 1) {
           const job = await request(`/v1/jobs/${encodeURIComponent(jobId)}`);
           uploadOutput.textContent = JSON.stringify(job, null, 2);
+          renderJobMeta(job);
           renderTimeline(job);
           if (job.status === "succeeded" || job.status === "failed") return job;
           await wait(1000);
         }
-        throw new Error("Job 60 saniye içinde terminal duruma geçmedi.");
+        throw new Error("Job 180 saniye içinde terminal duruma geçmedi.");
+      }
+
+      function renderDocuments(items) {
+        documentsOutput.replaceChildren();
+        if (!items.length) {
+          documentsOutput.textContent = "Bu tenant için doküman yok.";
+          return;
+        }
+        for (const item of items) {
+          const wrapper = document.createElement("div");
+          wrapper.className = "document";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = selectedDocumentIds.has(item.document_id);
+          checkbox.setAttribute("aria-label", `${item.title} seç`);
+          checkbox.addEventListener("change", () => {
+            if (checkbox.checked) selectedDocumentIds.add(item.document_id);
+            else selectedDocumentIds.delete(item.document_id);
+            wrapper.classList.toggle("selected", checkbox.checked);
+          });
+          const title = document.createElement("span");
+          title.className = "document-title";
+          title.textContent = ` ${item.title || item.document_id}`;
+          const meta = document.createElement("div");
+          meta.className = "document-meta";
+          meta.textContent = `${item.document_id} | ${item.status} | tenant=${item.tenant_id} | active=${item.active_version_id || "—"}`;
+          wrapper.append(checkbox, title, meta);
+          wrapper.classList.toggle("selected", checkbox.checked);
+          documentsOutput.append(wrapper);
+        }
       }
 
       function renderSources(items) {
         sources.replaceChildren();
-        for (const item of items || []) {
+        if (!items || !items.length) {
+          sources.textContent = "Kaynak seçilmedi (no-answer olabilir veya evidence-only sonuç boş).";
+          return;
+        }
+        for (const item of items) {
           const wrapper = document.createElement("div");
           wrapper.className = "source";
           const title = document.createElement("strong");
-          title.textContent = `${item.title || "Kaynak"} — sayfa ${item.page || "?"}`;
-          const detail = document.createElement("div");
-          detail.textContent = `${item.document_id} / ${item.version_id}`;
-          const snippet = document.createElement("p");
-          snippet.textContent = item.snippet;
-          wrapper.append(title, detail, snippet);
+          title.textContent = `${item.title || "Kaynak"} — sayfa ${item.page_start || item.page || "?"}-${item.page_end || item.page || "?"}`;
+          const meta = document.createElement("div");
+          meta.className = "source-meta";
+          meta.textContent = `document=${item.document_id} | version=${item.version_id} | chunk=${item.chunk_id} | parent=${item.parent_id} | score=${safeNumber(item.score)} | dense=${safeNumber(item.dense_score)} | sparse=${safeNumber(item.sparse_score)} | rerank=${safeNumber(item.rerank_score)}`;
+          const excerpt = document.createElement("p");
+          excerpt.textContent = item.excerpt || item.snippet || "";
+          wrapper.append(title, meta, excerpt);
           sources.append(wrapper);
+        }
+      }
+
+      function renderQuerySummary(body) {
+        querySummary.replaceChildren();
+        const info = body.latency || {};
+        const retrieval = body.retrieval || {};
+        const values = [
+          `karar: ${body.decision || "search"}`,
+          `retrieval: ${retrieval.mode || "—"}`,
+          `adaylar: dense=${retrieval.dense_candidates ?? "—"}, sparse=${retrieval.sparse_candidates ?? "—"}, RRF=${retrieval.rrf_candidates ?? "—"}, rerank=${retrieval.reranked_candidates ?? "—"}`,
+          `latency ms: embed=${safeNumber(info.embedding_ms)}, search=${safeNumber(info.search_ms)}, rerank=${safeNumber(info.rerank_ms)}, llm=${safeNumber(info.llm_ms)}, total=${safeNumber(info.total_ms)}`,
+          `model: ${body.model?.provider || "—"}/${body.model?.model || "—"}`,
+          `request: ${body.request_id || "—"}`,
+        ];
+        for (const value of values) {
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = value;
+          querySummary.append(pill);
+        }
+        if (body.no_answer) {
+          const message = document.createElement("p");
+          message.className = "warn";
+          message.textContent = `No-answer: ${body.no_answer.reason_code} — ${body.no_answer.message}`;
+          querySummary.append(message);
+        }
+        if (body.warnings?.length) {
+          const warning = document.createElement("p");
+          warning.className = "warn";
+          warning.textContent = `Uyarılar: ${body.warnings.map((item) => item.code).join(", ")}`;
+          querySummary.append(warning);
+        }
+      }
+
+      function renderMetrics(body) {
+        metricsOutput.replaceChildren();
+        const counters = body.metrics?.counters || [];
+        const histograms = body.metrics?.histograms || [];
+        if (!counters.length && !histograms.length) {
+          metricsOutput.textContent = "Henüz metrik örneği yok.";
+          return;
+        }
+        for (const item of counters) {
+          const box = document.createElement("div");
+          box.className = "metric";
+          const title = document.createElement("strong");
+          title.textContent = `${item.name} = ${item.value}`;
+          box.append(title, document.createTextNode(JSON.stringify(item.labels || {})));
+          metricsOutput.append(box);
+        }
+        for (const item of histograms) {
+          const box = document.createElement("div");
+          box.className = "metric";
+          const title = document.createElement("strong");
+          title.textContent = `${item.name} — count=${item.count}, p50=${safeNumber(item.p50_ms)} ms, p95=${safeNumber(item.p95_ms)} ms, last=${safeNumber(item.last_ms)} ms`;
+          box.append(title, document.createTextNode(JSON.stringify(item.labels || {})));
+          metricsOutput.append(box);
         }
       }
 
@@ -145,60 +364,100 @@
         setStatus("Health kontrol ediliyor...");
         const results = {};
         for (const endpoint of ["live", "startup", "ready"]) {
-          const response = await fetch(`/api/v1/health/${endpoint}`);
-          results[endpoint] = { http_status: response.status, body: await response.json() };
+          try {
+            const response = await fetch(`/api/v1/health/${endpoint}`);
+            results[endpoint] = { http_status: response.status, body: await response.json() };
+          } catch (error) {
+            results[endpoint] = { error: error.message };
+          }
         }
         healthOutput.textContent = JSON.stringify(results, null, 2);
         setStatus("Health sonucu hazır.");
       });
 
+      document.getElementById("metrics-button").addEventListener("click", async () => {
+        try {
+          renderMetrics(await request("/v1/metrics"));
+          setStatus("Metrics sonucu hazır.");
+        } catch (error) {
+          metricsOutput.textContent = error.message;
+          setStatus("Metrics alınamadı.", "bad");
+        }
+      });
+
+      document.getElementById("documents-button").addEventListener("click", async () => {
+        try {
+          const body = await request("/v1/documents?limit=100");
+          renderDocuments(body.items || []);
+          setStatus(`${body.items?.length || 0} doküman listelendi.`);
+        } catch (error) {
+          documentsOutput.textContent = error.message;
+          setStatus("Dokümanlar alınamadı.", "bad");
+        }
+      });
+
       document.getElementById("upload-button").addEventListener("click", async () => {
         const file = document.getElementById("file-input").files[0];
         if (!file) {
-          setStatus("Önce bir PDF seç.");
+          setStatus("Önce bir PDF seç.", "bad");
           return;
         }
         setStatus("Upload kabul ediliyor...");
         const form = new FormData();
         form.append("file", file, file.name);
+        const idempotency = document.getElementById("idempotency-key").value.trim() || `ui-${file.name}-${file.size}`;
         try {
           const receipt = await request("/v1/documents", {
             method: "POST",
-            headers: { "Idempotency-Key": `ui-${Date.now()}` },
+            headers: {
+              "Idempotency-Key": idempotency,
+              "X-ACL-Tags": aclTags().join(","),
+            },
             body: form,
           });
           uploadOutput.textContent = JSON.stringify(receipt, null, 2);
-          setStatus("Upload kabul edildi; job izleniyor...");
+          setStatus("Upload kabul edildi; job timeline izleniyor...");
           const finalJob = await pollJob(receipt.job_id);
-          setStatus(`Job terminal durumu: ${finalJob.status}`);
+          setStatus(`Job terminal durumu: ${finalJob.status}`, finalJob.status === "succeeded" ? "ok" : "bad");
+          document.getElementById("documents-button").click();
         } catch (error) {
           uploadOutput.textContent = error.message;
-          setStatus("Upload başarısız.");
+          setStatus("Upload başarısız.", "bad");
         }
       });
 
       document.getElementById("ask-button").addEventListener("click", async () => {
         const question = document.getElementById("question").value.trim();
-        const mode = document.getElementById("mode").value;
+        const route = document.getElementById("mode").value === "search" ? "/v1/search" : "/v1/queries";
+        const retrievalMode = document.getElementById("retrieval-mode").value;
         if (!question) {
-          setStatus("Soru boş olamaz.");
+          setStatus("Soru boş olamaz.", "bad");
           return;
         }
         setStatus("Soru çalıştırılıyor...");
         sources.replaceChildren();
+        querySummary.replaceChildren();
         try {
-          const path = mode === "search" ? "/v1/search" : "/v1/query";
-          const body = await request(path, {
+          const body = await request(route, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question, retrieval_mode: "hybrid", top_k: 5, include_debug: true }),
+            body: JSON.stringify({
+              question,
+              retrieval_mode: retrievalMode,
+              top_k: 5,
+              include_debug: true,
+              ...queryContext(),
+            }),
           });
-          answerOutput.textContent = JSON.stringify(body, null, 2);
+          answerOutput.textContent = body.answer || body.no_answer?.message || "LLM cevabı yok; evidence sonucu aşağıda.";
+          renderQuerySummary(body);
           renderSources(body.sources);
-          setStatus("Soru tamamlandı.");
+          debugOutput.textContent = JSON.stringify(body.debug || { candidates: [] }, null, 2);
+          setStatus(body.decision === "no_answer" ? "No-answer kararı verildi; LLM atlandı." : "Soru tamamlandı.", body.decision === "no_answer" ? "warn" : "ok");
         } catch (error) {
           answerOutput.textContent = error.message;
-          setStatus("Soru başarısız.");
+          debugOutput.textContent = "";
+          setStatus("Soru başarısız.", "bad");
         }
       });
     </script>
