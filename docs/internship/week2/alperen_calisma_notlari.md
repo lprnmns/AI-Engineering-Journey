@@ -812,3 +812,65 @@ Model yalnız gate'i geçen evidence ile bounded prompt üzerinden çağrıldı 
 ### Mentora kısa anlatım
 
 > `/v1/search` retrieval debug endpointi, `/v1/query` ise karar + üretim endpointi. Query'de önce dense/sparse/RRF evidence'i alıp domain answerability gate'ten geçiriyorum. “Stajyer maaşı” gibi corpus dışı soruda karar `LOW_RELEVANCE`, kaynak listesi boş ve `llm_ms=0`; yani model gereksiz yere çağrılmıyor. Desteklenen soruda gate geçiyor, bounded evidence prompt'u ile host'taki `gemma3:4b` çağrılıyor ve canonical source'lar retrieval'dan dönüyor. İlk local ölçümde LLM yaklaşık 63 saniye sürdü; bu yüzden token/context bütçesi ve cold/warm benchmarkı sonraki acceptance gate.
+
+## 20. Section-aware ingestion düzeltmesi
+
+### Önceki durum
+
+İlk gerçek ingestion smoke'unda mentor PDF'i tek bir document-level parent altında işlendi. Bu parent'ın altına 27 child chunk yazıldı. Sistem teknik olarak çalışıyordu; fakat retrieval bir section sınırını aşan veya farklı konuların aynı parent içinde birleştiği bağlamları seçebiliyordu. Bu nedenle PDF'in bilinen yapısını ingestion aşamasında kaybetmemek gerekiyordu.
+
+### Yeni yaklaşım
+
+Section marker davranışını kodun içine sabit gömmek yerine açık bir profil yaptım:
+
+```text
+section_marker_profile=none
+  → bilinmeyen/genel PDF'ler
+  → güvenli document-level parent davranışı
+
+section_marker_profile=mentor_program_v1
+  → mentor PDF ailesinin bilinen başlıkları
+  → purpose, model_fundamentals, embedding, rag,
+    local_model, corporate_problem, deliverables
+  → section-level parent'lar
+```
+
+Profil `PipelineConfig` fingerprint'inin parçası. Aynı PDF byte'ı markersız ve section-aware işlense bile iki index aynı pipeline version kabul edilmiyor. Böylece eski, daha zayıf index'in yeni section-aware index'in yerine yanlışlıkla active kalması engelleniyor.
+
+### Gerçek smoke sonucu
+
+Mentor PDF'i `mentor_program_v1` profiliyle yeniden işlendi:
+
+```text
+job_status: succeeded
+progress: 100
+parent_count: 7
+active_points: 26
+active_version: ver_fd69f03d0a6c65a686e6b8c9f210487489cb12772e5a79d8771e835849796c
+sections: purpose, model_fundamentals, embedding, rag,
+          local_model, corporate_problem, deliverables
+```
+
+Reranker açık retrieval smoke'unda 26 dense aday, 13 sparse aday ve 26 RRF adayı oluştu; final bounded sonuçta `local_model` section'ı en üst kaynağa çıktı. Bu, section bilgisinin yalnızca metadata olarak saklanmadığını, retrieval kararını etkileyebildiğini gösteriyor.
+
+### Context bütçesi ile candidate window ayrımı
+
+Retrieval tarafında recall kaybetmemek için daha geniş bir aday penceresi tutulabilir; fakat LLM'e gönderilen evidence daha küçük ve kontrollü olmalıdır:
+
+```text
+dense/sparse adayları
+  → RRF candidate window
+  → opsiyonel reranker
+  → final evidence top-2/top-5
+  → bounded LLM context
+```
+
+Gerçek CPU smoke'unda top-5 evidence ile Ollama generation timeout'a girdi; top-2 evidence ile doğru cevap üretilebildi. Bu yüzden “retrieval'da daha çok aday” ile “LLM prompt'una daha çok metin” aynı karar değildir. Birincisi recall için, ikincisi cevap üretim maliyeti ve dikkat bütçesi için yönetilir.
+
+### Sınırlama ve sonraki ölçüm
+
+Section marker profili bu mentor PDF'i için bilinçli ve güvenilir bir adapter'dır; her PDF'e uygulanacak genel başlık çıkarma çözümü değildir. Yeni doküman ailelerinde marker profili doğrulanmadan kullanılmamalıdır. Sıradaki evaluation benchmark'ta section-aware ve document-level ingestion aynı golden sorular üzerinde Recall@k, MRR, nDCG, no-answer hata oranları ve p50/p95 latency ile karşılaştırılacaktır.
+
+### Mentora kısa anlatım
+
+> İlk ingestion'da mentor PDF'i tek parent ve 27 child point olarak indeksleniyordu. Bilinen başlıkları `mentor_program_v1` marker profiline taşıdım; şimdi 7 section parent ve 26 active point oluşuyor. Profil pipeline fingerprint'e girdiği için eski markersız index ile yeni index karışmıyor. Reranker `local_model` section'ını seçebiliyor. Ayrıca retrieval candidate window ile LLM context window'u ayırdım; top-5 CPU'da timeout olurken top-2 bounded context ile smoke tamamlandı. Bundan sonra bu iyileştirmeyi golden benchmark ile sayısal olarak doğrulayacağım.

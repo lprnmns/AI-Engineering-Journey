@@ -24,6 +24,8 @@ flowchart LR
 
 Query orkestrasyonu `RetrievalService` sonucunu doğrudan Ollama'a aktarmıyor. `QueryService` önce domain `AnswerabilityPolicy` ile evidence boşluğu, ham relevance sinyali, margin ve coverage bilgisini değerlendiriyor; rejection kararında LLM atlanıyor. Bu ayrım sayesinde “kanıt yok” ile “model servisi bozuk” farklı response/metric olarak izleniyor.
 
+Ingestion marker profili de runtime ayarıdır: genel PDF'ler `none` ile document-level parent olarak kalır; bilinen mentor PDF ailesi `mentor_program_v1` ile 7 section parent'a ayrılır. Profil pipeline fingerprint'e dahil olduğu için markersız ve section-aware index aynı version kabul edilmez.
+
 Domain katmanı FastAPI, Pydantic, Qdrant veya Ollama import etmez.
 
 ## Hedef çalışma topolojisi

@@ -3,7 +3,7 @@
 from ..domain.entities import JobStatus
 from ..domain.entities import DocumentStatus
 from ..domain.errors import ErrorCode, ServiceError
-from ..domain.chunks import ChildChunk
+from ..domain.chunks import ChildChunk, SectionMarker
 from ..domain.ingestion import JobSnapshot, PreparedIngestion, compute_version_id
 from .chunking_service import DocumentChunkingService
 from .ports import (
@@ -26,6 +26,7 @@ class IngestionWorker:
         sparse_embedder: SparseEmbedder,
         vector_store: ChunkVectorStore,
         language: str = "tr",
+        section_markers: tuple[SectionMarker, ...] = (),
     ) -> None:
         self._registry = registry
         self._chunker = chunker
@@ -33,6 +34,7 @@ class IngestionWorker:
         self._sparse_embedder = sparse_embedder
         self._vector_store = vector_store
         self._language = language
+        self._section_markers = section_markers
 
     async def run_job(self, job_id: str) -> JobSnapshot:
         """Process one job and persist a terminal success/failure snapshot."""
@@ -109,6 +111,7 @@ class IngestionWorker:
             document_id=self._document_id(prepared),
             version_id=self._version_id(prepared),
             source=prepared.upload.filename,
+            markers=self._section_markers,
         )
         if not chunks:
             raise ServiceError(

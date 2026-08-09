@@ -32,6 +32,7 @@ class PipelineConfig:
     chunker_version: str = "1"
     chunk_size_sentences: int = 3
     chunk_overlap_sentences: int = 1
+    section_marker_profile: str = "none"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     sparse_encoder: str = "hashing_tf_v1"
     sparse_encoder_version: str = "1"
@@ -49,6 +50,7 @@ class PipelineConfig:
             "chunker_version": self.chunker_version,
             "chunk_size_sentences": str(self.chunk_size_sentences),
             "chunk_overlap_sentences": str(self.chunk_overlap_sentences),
+            "section_marker_profile": self.section_marker_profile,
             "embedding_model": self.embedding_model,
             "sparse_encoder": self.sparse_encoder,
             "sparse_encoder_version": self.sparse_encoder_version,

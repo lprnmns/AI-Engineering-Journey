@@ -17,6 +17,8 @@ Local durable worker composition'ını açmak için:
 ```bash
 export DIS_INGESTION_REGISTRY_BACKEND=sqlite
 export DIS_INGESTION_DATABASE_PATH=data/ingestions.sqlite3
+# Generic PDFs: none; mentor PDF family: mentor_program_v1.
+export DIS_SECTION_MARKER_PROFILE=mentor_program_v1
 # Baseline için false; ölçümlü reranker deneyi için true.
 export DIS_RERANKER_ENABLED=false
 export DIS_LLM_MODEL=gemma3:4b

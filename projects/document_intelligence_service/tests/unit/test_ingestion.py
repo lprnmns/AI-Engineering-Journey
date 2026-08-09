@@ -58,6 +58,13 @@ def test_pipeline_fingerprint_changes_when_chunker_changes() -> None:
     assert compute_pipeline_fingerprint(base) != compute_pipeline_fingerprint(changed)
 
 
+def test_pipeline_fingerprint_changes_when_section_profile_changes() -> None:
+    base = PipelineConfig(section_marker_profile="none")
+    mentor = PipelineConfig(section_marker_profile="mentor_program_v1")
+
+    assert compute_pipeline_fingerprint(base) != compute_pipeline_fingerprint(mentor)
+
+
 def test_upload_metadata_validates_pdf_and_sanitizes_filename() -> None:
     metadata = validate_upload_metadata(
         content=make_pdf(),

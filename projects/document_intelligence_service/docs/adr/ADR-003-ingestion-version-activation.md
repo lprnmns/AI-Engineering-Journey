@@ -21,3 +21,6 @@ Content hash + pipeline fingerprint document/version identity için kullanılaca
 
 Retention süresi ve eski version silme politikası tenant hacmi ve yasal saklama ihtiyacına göre netleştirilecek.
 
+## Section marker profili
+
+Bilinen doküman aileleri için section marker profili pipeline fingerprint'in parçasıdır. `none` genel PDF'lerde güvenli document-level parent davranışını korur; mentor programı PDF'i için `mentor_program_v1` seçildiğinde aynı byte içeriği farklı section-aware version olarak stage → verify → activate edilir. Profil bilinmeyen bir değerse configuration aşamasında açıkça hata verir.

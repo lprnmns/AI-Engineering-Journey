@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(default=200, gt=0)
     ingestion_registry_backend: Literal["memory", "sqlite"] = "memory"
     ingestion_database_path: str = "data/ingestions.sqlite3"
+    section_marker_profile: Literal["none", "mentor_program_v1"] = "none"
     reranker_enabled: bool = False
     llm_model: str = "gemma3:4b"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=300)

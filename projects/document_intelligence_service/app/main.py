@@ -30,6 +30,7 @@ from .infrastructure.embeddings.dense import SentenceTransformerEmbedder
 from .infrastructure.embeddings.sparse import HashingSparseEncoder
 from .infrastructure.parsing.pdf_inspector import PypdfInspector
 from .infrastructure.parsing.pdf_text import PypdfTextExtractor
+from .infrastructure.parsing.section_markers import get_section_markers
 from .infrastructure.qdrant.chunk_store import QdrantChunkStore
 from .infrastructure.qdrant.retriever import QdrantRetriever
 from .infrastructure.reranking.cross_encoder import CrossEncoderReranker
@@ -70,6 +71,12 @@ def build_ingestion_registry(settings: Settings) -> IngestionRegistry:
     return InMemoryIngestionRegistry()
 
 
+def build_pipeline_config(settings: Settings) -> PipelineConfig:
+    """Build one shared fingerprint configuration for ingestion stages."""
+
+    return PipelineConfig(section_marker_profile=settings.section_marker_profile)
+
+
 def build_ingestion_service(
     settings: Settings,
     *,
@@ -77,7 +84,7 @@ def build_ingestion_service(
 ) -> IngestionService:
     """Wire the preparation use case to a selectable persistence adapter."""
 
-    pipeline_config = PipelineConfig()
+    pipeline_config = build_pipeline_config(settings)
     preparation = IngestionPreparationService(
         limits=IngestionLimits(
             max_upload_bytes=settings.max_upload_bytes,
@@ -102,7 +109,7 @@ def build_ingestion_worker(
 ) -> IngestionWorker:
     """Wire the lazy embedding, parser and Qdrant worker adapters."""
 
-    pipeline_config = PipelineConfig()
+    pipeline_config = build_pipeline_config(settings)
     schema = QdrantSchema()
     return IngestionWorker(
         registry=registry,
@@ -119,13 +126,14 @@ def build_ingestion_worker(
             QdrantClient(url=str(settings.qdrant_url)),
             schema,
         ),
+        section_markers=get_section_markers(settings.section_marker_profile),
     )
 
 
 def build_retrieval_service(settings: Settings) -> RetrievalService:
     """Wire lazy query embedders to the active-version Qdrant retriever."""
 
-    pipeline_config = PipelineConfig()
+    pipeline_config = build_pipeline_config(settings)
     schema = QdrantSchema()
     return RetrievalService(
         dense_embedder=SentenceTransformerEmbedder(
