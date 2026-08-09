@@ -1,5 +1,11 @@
 """Unit tests for the pre-generation answerability policy."""
 
+import pytest
+
+from projects.document_intelligence_service.app.application.query_service import (
+    assess_answerability,
+    build_answerability_signals,
+)
 from projects.document_intelligence_service.app.domain.answerability import (
     AnswerabilityPolicy,
     AnswerabilitySignals,
@@ -7,6 +13,10 @@ from projects.document_intelligence_service.app.domain.answerability import (
 from projects.document_intelligence_service.app.domain.entities import (
     Decision,
     NoAnswerReason,
+)
+from projects.document_intelligence_service.app.domain.retrieval import (
+    RetrievedChunk,
+    RetrievalResult,
 )
 
 
@@ -67,3 +77,65 @@ def test_relevant_evidence_is_answerable() -> None:
 
     assert result.decision is Decision.ANSWERED
     assert result.reason is None
+
+
+def test_hybrid_margin_uses_comparable_scores_not_rrf_order() -> None:
+    """Dense gate signals must not inherit the hybrid RRF presentation order."""
+
+    first_in_rrf_order = RetrievedChunk(
+        source_id="sparse-first",
+        document_id="doc-1",
+        version_id="ver-1",
+        parent_id="parent-1",
+        title="Guide",
+        text="Yerel model ölçüm değerleri.",
+        page_start=1,
+        page_end=1,
+        score=0.03,
+        rank=1,
+        fused_score=0.03,
+        dense_score=0.456,
+        sparse_score=3.1,
+    )
+    second_in_rrf_order = RetrievedChunk(
+        source_id="dense-first",
+        document_id="doc-1",
+        version_id="ver-1",
+        parent_id="parent-1",
+        title="Guide",
+        text="Yerel model karşılaştırması.",
+        page_start=1,
+        page_end=1,
+        score=0.02,
+        rank=2,
+        fused_score=0.02,
+        dense_score=0.488,
+        sparse_score=2.7,
+    )
+    retrieval = RetrievalResult(
+        mode="hybrid",
+        candidates=(first_in_rrf_order, second_in_rrf_order),
+        dense_candidates=2,
+        sparse_candidates=2,
+        rrf_candidates=2,
+        embedding_ms=1.0,
+        search_ms=1.0,
+    )
+
+    result, score_kind = build_answerability_signals(
+        "Yerel model karşılaştırması",
+        retrieval,
+    )
+
+    assert score_kind == "dense"
+    assert result.top_score == pytest.approx(0.488)
+    assert result.score_margin == pytest.approx(0.032)
+    decision = assess_answerability(
+        question="Yerel model karşılaştırması",
+        retrieval=retrieval,
+        answerability=AnswerabilityPolicy(
+            min_dense_score=0.456,
+            min_margin=0.0,
+        ),
+    )
+    assert decision.decision is Decision.ANSWERED

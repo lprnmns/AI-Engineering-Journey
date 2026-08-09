@@ -198,8 +198,17 @@ def build_answerability_signals(
         QueryService._score_for(candidate, score_kind)
         for candidate in retrieval.candidates
     )
-    top_score = scores[0] if scores else None
-    margin = scores[0] - scores[1] if len(scores) > 1 else None
+    # Hybrid candidates are ordered by RRF, not by the score used by the
+    # answerability policy. Sort the comparable score values before deriving
+    # top-score and margin; otherwise a valid dense result can look like a
+    # negative-margin near miss merely because sparse ranking placed first.
+    ranked_scores = tuple(sorted(scores, reverse=True))
+    top_score = ranked_scores[0] if ranked_scores else None
+    margin = (
+        ranked_scores[0] - ranked_scores[1]
+        if len(ranked_scores) > 1
+        else None
+    )
     return (
         AnswerabilitySignals(
             evidence_count=len(retrieval.candidates),
