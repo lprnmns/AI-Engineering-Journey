@@ -107,7 +107,7 @@ no-answer false positive: 0 / 30 = 0.0%
 no-answer false negative: 3 / 14 = 21.4%
   → corpus dışı vakalar cevaplanabilir sanıldı
 
-gate total p50/p95: 36.3 ms / 47.3 ms
+gate total p50/p95: 50.2 ms / 79.5 ms
 LLM çağrısı: 0
 ```
 
