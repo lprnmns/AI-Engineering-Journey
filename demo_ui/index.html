@@ -53,6 +53,22 @@
       .source-meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
       .metric { border: 1px solid var(--border); border-radius: 6px; padding: .5rem; margin: .35rem 0; font-size: .85rem; }
       .metric strong { display: block; }
+      .query-progress { border: 1px solid var(--border); border-radius: 6px; padding: .7rem; margin: .75rem 0; background: #f8fbff; }
+      .query-progress-head { display: flex; justify-content: space-between; gap: .75rem; }
+      .progress-track { height: .65rem; background: #e8eaed; border-radius: 999px; overflow: hidden; margin-top: .55rem; }
+      .progress-bar { height: 100%; width: 0; background: var(--blue); transition: width .35s ease; }
+      .progress-bar.done { background: var(--green); }
+      .progress-bar.failed { background: var(--red); }
+      .pipeline { margin-top: .85rem; }
+      .pipeline-stages { display: grid; gap: .45rem; }
+      .pipeline-stage { border: 1px solid var(--border); border-left: 4px solid #9aa0a6; padding: .55rem .7rem; border-radius: 5px; }
+      .pipeline-stage.succeeded, .pipeline-stage.passed { border-left-color: var(--green); }
+      .pipeline-stage.skipped { border-left-color: #9aa0a6; }
+      .pipeline-stage.no-answer, .pipeline-stage.blocked { border-left-color: var(--yellow); }
+      .pipeline-stage.failed { border-left-color: var(--red); }
+      .pipeline-stage-head { display: flex; justify-content: space-between; gap: .75rem; font-weight: 600; }
+      .pipeline-stage-duration { color: var(--muted); font-size: .86rem; white-space: nowrap; }
+      .pipeline-stage-detail { color: var(--muted); font-size: .82rem; margin-top: .25rem; overflow-wrap: anywhere; }
       #status { min-height: 1.5rem; }
     </style>
   </head>
@@ -128,8 +144,24 @@
       <label for="question">Soru</label>
       <textarea id="question">Yerel model karşılaştırmasında hangi değerler ölçülmelidir?</textarea>
       <button id="ask-button" type="button">Çalıştır</button>
+      <div id="query-progress" class="query-progress" hidden>
+        <div class="query-progress-head">
+          <strong>Sorgu pipeline çalışıyor</strong>
+          <span id="query-progress-label" class="stage-meta">Başlatılıyor...</span>
+        </div>
+        <div class="progress-track" aria-label="Sorgu ilerlemesi">
+          <div id="query-progress-bar" class="progress-bar"></div>
+        </div>
+        <p class="hint">Bu bar istek sürerken bekleme durumunu gösterir. Aşağıdaki trace, response geldikten sonra gerçek ölçülen süreleri gösterir.</p>
+      </div>
       <pre id="answer-output">Henüz soru gönderilmedi.</pre>
       <div id="query-summary"></div>
+      <div id="query-pipeline" class="pipeline">
+        <h3>Query pipeline trace</h3>
+        <div id="query-pipeline-stages" class="pipeline-stages">
+          <div class="muted">Henüz sorgu çalıştırılmadı.</div>
+        </div>
+      </div>
       <h3>Canonical sources / evidence</h3>
       <div id="sources" class="hint">Henüz kaynak yok.</div>
       <h3>Retrieval debug candidate trace</h3>
@@ -152,7 +184,21 @@
       const sources = document.getElementById("sources");
       const debugOutput = document.getElementById("debug-output");
       const timeline = document.getElementById("timeline");
+      const queryProgress = document.getElementById("query-progress");
+      const queryProgressBar = document.getElementById("query-progress-bar");
+      const queryProgressLabel = document.getElementById("query-progress-label");
+      const queryPipelineStages = document.getElementById("query-pipeline-stages");
       let selectedDocumentIds = new Set();
+      let queryProgressTimer = null;
+      let queryProgressStep = 0;
+
+      const queryProgressPlan = [
+        "Prompt safety kontrol ediliyor...",
+        "Dense embedding ve sparse sorgu hazırlanıyor...",
+        "Qdrant araması ve RRF birleştirmesi yapılıyor...",
+        "Answerability gate değerlendiriliyor...",
+        "Gerekirse Ollama cevap üretiyor...",
+      ];
 
       function setStatus(message, className = "muted") {
         status.className = className;
@@ -200,6 +246,114 @@
 
       function safeNumber(value) {
         return typeof value === "number" && Number.isFinite(value) ? value.toFixed(1) : "—";
+      }
+
+      function formatDuration(value) {
+        if (typeof value !== "number" || !Number.isFinite(value)) return "ölçülmedi";
+        return `${safeNumber(value)} ms (${(value / 1000).toFixed(2)} s)`;
+      }
+
+      function startQueryProgress() {
+        if (queryProgressTimer) clearInterval(queryProgressTimer);
+        queryProgress.hidden = false;
+        queryProgressBar.className = "progress-bar";
+        queryProgressBar.style.width = "6%";
+        queryProgressStep = 0;
+        queryProgressLabel.textContent = queryProgressPlan[queryProgressStep];
+        queryProgressTimer = setInterval(() => {
+          queryProgressStep = Math.min(queryProgressStep + 1, queryProgressPlan.length - 1);
+          const percent = Math.min(88, 6 + queryProgressStep * 18);
+          queryProgressBar.style.width = `${percent}%`;
+          queryProgressLabel.textContent = queryProgressPlan[queryProgressStep];
+        }, 900);
+      }
+
+      function finishQueryProgress(body) {
+        if (queryProgressTimer) clearInterval(queryProgressTimer);
+        queryProgressTimer = null;
+        queryProgressBar.className = "progress-bar done";
+        queryProgressBar.style.width = "100%";
+        queryProgressLabel.textContent = `Tamamlandı — toplam ${formatDuration(body.latency?.total_ms)}`;
+      }
+
+      function failQueryProgress(message) {
+        if (queryProgressTimer) clearInterval(queryProgressTimer);
+        queryProgressTimer = null;
+        queryProgressBar.className = "progress-bar failed";
+        queryProgressBar.style.width = "100%";
+        queryProgressLabel.textContent = `Hata — ${message}`;
+      }
+
+      function renderQueryPipeline(body) {
+        queryPipelineStages.replaceChildren();
+        const info = body.latency || {};
+        const retrieval = body.retrieval || {};
+        const noAnswer = body.no_answer;
+        const isSearch = !body.decision;
+        const decision = body.decision || "evidence-only";
+        const promptBlocked = noAnswer?.reason_code === "SECURITY_POLICY";
+        const gateStatus = isSearch ? "skipped" : noAnswer ? "no-answer" : "passed";
+        const stages = [
+          {
+            name: "Prompt / evidence safety",
+            status: promptBlocked ? "blocked" : "succeeded",
+            duration: null,
+            detail: promptBlocked ? "SECURITY_POLICY — retrieval/generation kesildi." : "Sorgu ve evidence güvenlik sınırı geçildi.",
+          },
+          {
+            name: "Embedding",
+            status: "succeeded",
+            duration: info.embedding_ms,
+            detail: "Dense query embedding + sparse query encoding.",
+          },
+          {
+            name: "Search + RRF",
+            status: "succeeded",
+            duration: info.search_ms,
+            detail: `dense=${retrieval.dense_candidates ?? "—"}, sparse=${retrieval.sparse_candidates ?? "—"}, RRF=${retrieval.rrf_candidates ?? "—"} aday`,
+          },
+          {
+            name: "Reranker",
+            status: Number(info.rerank_ms) > 0 ? "succeeded" : "skipped",
+            duration: info.rerank_ms,
+            detail: Number(info.rerank_ms) > 0 ? `${retrieval.reranked_candidates ?? 0} final aday yeniden sıralandı.` : "Varsayılan kapalı veya bu akışta atlandı.",
+          },
+          {
+            name: "Answerability gate",
+            status: gateStatus,
+            duration: null,
+            detail: isSearch ? "Evidence-only akışında answerability/LLM adımı yok." : `Karar: ${decision}${noAnswer ? ` — ${noAnswer.reason_code}` : ""}`,
+          },
+          {
+            name: "LLM / Ollama",
+            status: Number(info.llm_ms) > 0 ? "succeeded" : "skipped",
+            duration: info.llm_ms,
+            detail: Number(info.llm_ms) > 0 ? `${body.model?.provider || "—"}/${body.model?.model || "—"}` : "No-answer veya evidence-only nedeniyle çağrılmadı.",
+          },
+          {
+            name: "Response",
+            status: "succeeded",
+            duration: info.total_ms,
+            detail: `HTTP response hazırlandı — ${decision}`,
+          },
+        ];
+        for (const stage of stages) {
+          const wrapper = document.createElement("div");
+          wrapper.className = `pipeline-stage ${stage.status}`;
+          const head = document.createElement("div");
+          head.className = "pipeline-stage-head";
+          const name = document.createElement("span");
+          name.textContent = stage.name;
+          const duration = document.createElement("span");
+          duration.className = "pipeline-stage-duration";
+          duration.textContent = `${stage.status} — ${formatDuration(stage.duration)}`;
+          head.append(name, duration);
+          const detail = document.createElement("div");
+          detail.className = "pipeline-stage-detail";
+          detail.textContent = stage.detail;
+          wrapper.append(head, detail);
+          queryPipelineStages.append(wrapper);
+        }
       }
 
       function shortTime(value) {
@@ -443,6 +597,12 @@
         setStatus("Soru çalıştırılıyor...");
         sources.replaceChildren();
         querySummary.replaceChildren();
+        queryPipelineStages.replaceChildren();
+        const running = document.createElement("div");
+        running.className = "muted";
+        running.textContent = "Pipeline çalışıyor: safety → embedding → search/RRF → gate → LLM...";
+        queryPipelineStages.append(running);
+        startQueryProgress();
         try {
           const body = await request(route, {
             method: "POST",
@@ -457,12 +617,15 @@
           });
           answerOutput.textContent = body.answer || body.no_answer?.message || "LLM cevabı yok; evidence sonucu aşağıda.";
           renderQuerySummary(body);
+          renderQueryPipeline(body);
           renderSources(body.sources);
           debugOutput.textContent = JSON.stringify(body.debug || { candidates: [] }, null, 2);
+          finishQueryProgress(body);
           setStatus(body.decision === "no_answer" ? "No-answer kararı verildi; LLM atlandı." : "Soru tamamlandı.", body.decision === "no_answer" ? "warn" : "ok");
         } catch (error) {
           answerOutput.textContent = error.message;
           debugOutput.textContent = "";
+          failQueryProgress(error.message);
           setStatus("Soru başarısız.", "bad");
         }
       });
