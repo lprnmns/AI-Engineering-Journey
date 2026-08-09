@@ -1,5 +1,5 @@
 {
-  "gate_git_sha": "0deefb3726ca9d27168450998d5699799e7bdee8",
+  "gate_git_sha": "57867ba761b79c2b6cf445f3e22fda2ae165a61c",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
   "gate_results": "projects/document_intelligence_service/eval/results/hybrid_answerability_gate.json",
@@ -7,22 +7,22 @@
   "test_split_used": false,
   "calibration": {
     "score_kind": "dense",
-    "threshold": 0.45634224,
-    "rounded_threshold": 0.456,
+    "threshold": 0.37884022,
+    "rounded_threshold": 0.379,
     "false_negative_cost": 3.0,
     "validation_case_count": 11,
     "candidate_threshold_count": 12,
-    "objective": 1.0,
+    "objective": 3.0,
     "metrics": {
       "case_count": 11,
       "expected_answerable": 7,
       "expected_no_answer": 4,
-      "predicted_answerable": 6,
-      "predicted_no_answer": 5,
-      "no_answer_false_positive_count": 1,
-      "no_answer_false_negative_count": 0,
-      "no_answer_false_positive_rate": 0.14285714285714285,
-      "no_answer_false_negative_rate": 0.0
+      "predicted_answerable": 8,
+      "predicted_no_answer": 3,
+      "no_answer_false_positive_count": 0,
+      "no_answer_false_negative_count": 1,
+      "no_answer_false_positive_rate": 0.0,
+      "no_answer_false_negative_rate": 0.25
     }
   }
 }

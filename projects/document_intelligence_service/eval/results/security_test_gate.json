@@ -1,5 +1,5 @@
 {
-  "gate_git_sha": "0deefb3726ca9d27168450998d5699799e7bdee8",
+  "gate_git_sha": "57867ba761b79c2b6cf445f3e22fda2ae165a61c",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
   "evaluated_split": "test",

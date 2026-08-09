@@ -2,7 +2,10 @@
 
 ## Status
 
-Bu dosya benchmark protokolünün ilk sürümüdür. Golden vaka sözleşmesi ve offline metric runner hazırdır; gerçek Qdrant ablation sayıları henüz bu rapora yazılmamıştır.
+Bu dosya benchmark protokolünün ilk sürümüdür. Golden vaka sözleşmesi, offline
+metric runner ve gerçek Qdrant ablation sonuçları aşağıda kayıtlıdır. Output
+validation için ayrıca sınırlı gerçek Gemma smoke'u bulunur; bu, geniş LLM kalite
+benchmarkı olarak yorumlanmamalıdır.
 
 ## Dataset
 
@@ -46,7 +49,8 @@ Section'a ait duplicate child chunk'lar tek gold hedef sayılır. Bu, overlap ne
 Golden contract validation: passed
 Metric/runner unit tests: passed
 Mypy for evaluation slice: clean
-Real Qdrant benchmark: pending
+Real Qdrant retrieval ablation: recorded
+Real Gemma output-validation smoke: recorded (1 bounded query)
 ```
 
 İlk protokol tamamlandı; retrieval strategy kararı aşağıdaki aynı corpus snapshot, aynı query sırası ve aynı warm-up protokolüyle alınmıştır. Yeni corpus veya model değişiminde bu sonuçlar otomatik olarak genellenmeyecektir.
@@ -90,24 +94,24 @@ Hybrid retrieval ile, Ollama çağırmadan aynı 44 vaka üzerinde gate çalış
 ```text
 expected answerable: 30
 expected no-answer: 14
-predicted answerable: 24
-predicted no-answer: 20
+predicted answerable: 35
+predicted no-answer: 9
 ```
 
 Bu provisional eşiklerde:
 
 ```text
-no-answer false positive: 8 / 30 = 26.7%
+no-answer false positive: 0 / 30 = 0.0%
   → answerable vaka gereksiz reddedildi
 
-no-answer false negative: 2 / 14 = 14.3%
-  → corpus dışı injection vakası cevaplanabilir sanıldı
+no-answer false negative: 5 / 14 = 35.7%
+  → corpus dışı vakalar cevaplanabilir sanıldı
 
-gate total p50/p95: 46.3 ms / 73.8 ms
+gate total p50/p95: 43.4 ms / 63.3 ms
 LLM çağrısı: 0
 ```
 
-Sonuç, önceki `0.45` dense threshold'un evrensel olmadığını gösteriyor. Validation-only calibration, false negative maliyeti `3.0` ile `0.456` önerdi. Özellikle iki injection false negative, yalnız similarity eşiğinin prompt güvenliğini tek başına çözmediğini gösteriyor.
+Bu sonuç validation'dan seçilen `0.379` threshold'un frozen test'te genellenmediğini gösteriyor: answerable vakalar gereksiz reddedilmedi, fakat corpus dışı vakaların 5'i cevaplanabilir göründü. Test split'e bakarak threshold'u geriye dönük ayarlamıyorum; bu hata, daha güçlü provenance/injection ve output policy katmanlarına ihtiyaç olduğunu gösteren raporlanmış bir sınırdır.
 
 ## Validation-only threshold calibration
 
@@ -117,13 +121,23 @@ calibration split: validation only
 validation cases: 11 (7 answerable, 4 no-answer)
 test split used: false
 false-negative cost: 3.0
-selected threshold: 0.45634224
-rounded runtime threshold: 0.456
-validation false-positive: 1 / 7 = 14.3%
-validation false-negative: 0 / 4 = 0%
+selected threshold: 0.37884022
+rounded runtime threshold: 0.379
+validation false-positive: 0 / 7 = 0.0%
+validation false-negative: 1 / 4 = 25.0%
 ```
 
 Bu sonuç küçük validation split nedeniyle güçlü genelleme kanıtı değildir; threshold yalnız aynı embedding, corpus ve pipeline snapshot'ı için uygulanmıştır. Calibration çıktısı [hybrid_threshold_calibration.json](../eval/results/hybrid_threshold_calibration.json) dosyasındadır.
+
+### Skor sırası düzeltmesi
+
+Gerçek query smoke'unda RRF sırasındaki ilk candidate'ın dense skoru `0.456`,
+ikinci candidate'ın dense skoru `0.488` olmasına rağmen eski margin hesabı
+`0.456 - 0.488` yapıyordu. RRF sırası dense skor sırası olmadığı için valid bir
+soru negatif margin ile reddedilebiliyordu. `5036c5c` commit'inde top-score ve
+margin, seçilen score kind içindeki karşılaştırılabilir skorlar sıralanarak
+hesaplandı. Benchmark ve calibration bu düzeltmeden sonra `57867ba` ile yeniden
+üretildi.
 
 ## Security gate regression — test split
 
@@ -139,6 +153,30 @@ LLM çağrısı: 0
 ```
 
 Bu bir “model güvenli” sonucu değildir; tam tersine mevcut uygulama gate'inin iki direct/system-prompt injection hazırlık vakasını kaçırdığını gösteren kırmızı sonuçtur. `AnswerabilityPolicy` yalnız evidence score ve coverage ile çalıştığı için, sorunun talimat kısmını güvenilir kabul edip etmemeyi tek başına çözemez. Sonraki savunma katmanı structured prompt, output fact/evidence validation ve gerektiğinde güvenli handoff olmalıdır. Ham rapor [security_test_gate.json](../eval/results/security_test_gate.json) dosyasındadır.
+
+## Real local Gemma output-validation smoke — 2026-08-09
+
+Gerçek Ollama `gemma3:4b` çağrısı, aynı Qdrant snapshot'ı ve bounded `top_k=2`,
+`max_output_tokens=64` ayarlarıyla çalıştırıldı:
+
+```text
+decision: answered
+model: ollama / gemma3:4b
+answer: Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi ve mühendislik yorumu ölçülmelidir.
+warnings: []
+canonical sources: 2
+embedding: 14607.8 ms
+LLM: 35406.6 ms
+total: 50042.6 ms
+```
+
+Bu gerçek model cevabında numeric validator warning üretmedi; bu tek soru için
+grounding sinyalinin olumlu olduğunu gösterir, genel hallucination oranını
+kanıtlamaz. Tekrar üretilebilir ham çıktı
+[local_gemma_output_validation_smoke.json](../eval/results/local_gemma_output_validation_smoke.json)
+dosyasındadır. LLM yaklaşık 35 saniye sürdüğü için 32 GB RAM/CPU ortamında
+geniş gerçek-model evaluation koşusu yerine önce bounded smoke ve sonra seçilmiş
+test slice'ları kullanılmalıdır.
 
 ## Output/evidence validation slice — 2026-08-09
 
@@ -193,6 +231,7 @@ uydurduğu bir source ID API response'una güvenilir kaynak olarak giremez.
 Domain, QueryService ve API contract seviyelerinde desteklenen sayı,
 unsupported number, injection-style unsupported claim, canonical source ve
 no-answer/LLM-skip davranışları test edildi. Hedefli testler ve mypy temizdir.
-Bu sonuç fake answer generator ile akış/sözleşme kanıtıdır; gerçek `gemma3:4b`
-cevaplarının numeric warning oranı sonraki gerçek query evaluation koşusunda
-ölçülecektir.
+Fake generator testlerine ek olarak bir gerçek `gemma3:4b` smoke'u da çalıştırıldı;
+tek cevapta warning oranı `0/1` gözlendi. Bu geniş bir grounding oranı değildir;
+gerçek modelin numeric warning precision/recall dağılımı seçilmiş query slice'ları
+üzerinde ayrıca ölçülmelidir.

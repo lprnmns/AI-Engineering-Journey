@@ -1,5 +1,5 @@
 {
-  "git_sha": "0deefb3726ca9d27168450998d5699799e7bdee8",
+  "git_sha": "57867ba761b79c2b6cf445f3e22fda2ae165a61c",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "mode": "hybrid",
   "reranker_enabled": false,
@@ -11,7 +11,7 @@
   ],
   "llm_called": false,
   "answerability_policy": {
-    "min_dense_score": 0.456,
+    "min_dense_score": 0.379,
     "min_sparse_score": 0.1,
     "min_rerank_score": -5.0,
     "min_margin": 0.0,
@@ -24,29 +24,29 @@
       "case_count": 44,
       "expected_answerable": 30,
       "expected_no_answer": 14,
-      "predicted_answerable": 24,
-      "predicted_no_answer": 20,
-      "no_answer_false_positive_count": 8,
-      "no_answer_false_negative_count": 2,
-      "no_answer_false_positive_rate": 0.26666666666666666,
-      "no_answer_false_negative_rate": 0.14285714285714285
+      "predicted_answerable": 35,
+      "predicted_no_answer": 9,
+      "no_answer_false_positive_count": 0,
+      "no_answer_false_negative_count": 5,
+      "no_answer_false_positive_rate": 0.0,
+      "no_answer_false_negative_rate": 0.35714285714285715
     },
     "total_latency": {
       "sample_count": 44,
-      "p50_ms": 46.27054202137515,
-      "p95_ms": 73.77081867307425,
-      "min_ms": 36.03025106713176,
-      "max_ms": 124.28280292078853
+      "p50_ms": 43.38444350287318,
+      "p95_ms": 63.33831421798096,
+      "min_ms": 34.41287996247411,
+      "max_ms": 74.98314103577286
     },
     "observations": [
       {
         "case_id": "direct_01",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.6472224,
-        "score_margin": -0.061374660000000025,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.70859706,
+        "score_margin": 0.061374660000000025,
         "coverage_ratio": 0.8,
-        "total_ms": 74.10418603103608
+        "total_ms": 45.26010900735855
       },
       {
         "case_id": "direct_02",
@@ -55,16 +55,16 @@
         "top_score": 0.6155805,
         "score_margin": 0.16232251999999997,
         "coverage_ratio": 0.75,
-        "total_ms": 124.28280292078853
+        "total_ms": 50.429012975655496
       },
       {
         "case_id": "direct_03",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.5469365,
-        "score_margin": -0.006574599999999986,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5648595,
+        "score_margin": 0.011348399999999925,
         "coverage_ratio": 0.5,
-        "total_ms": 43.911922024562955
+        "total_ms": 53.01439494360238
       },
       {
         "case_id": "direct_04",
@@ -73,7 +73,7 @@
         "top_score": 0.46780327,
         "score_margin": 0.07576033999999998,
         "coverage_ratio": 0.375,
-        "total_ms": 46.435822965577245
+        "total_ms": 57.69036803394556
       },
       {
         "case_id": "direct_05",
@@ -82,7 +82,7 @@
         "top_score": 0.70898294,
         "score_margin": 0.13643538999999993,
         "coverage_ratio": 0.625,
-        "total_ms": 43.08146296534687
+        "total_ms": 63.772888970561326
       },
       {
         "case_id": "direct_06",
@@ -91,34 +91,34 @@
         "top_score": 0.60193753,
         "score_margin": 0.04291713000000008,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 37.03362797386944
+        "total_ms": 67.2685120953247
       },
       {
         "case_id": "direct_07",
         "decision": "answered",
         "reason": null,
         "top_score": 0.52205443,
-        "score_margin": 0.12628950999999994,
+        "score_margin": 0.03887658999999993,
         "coverage_ratio": 0.5555555555555556,
-        "total_ms": 41.24254104681313
+        "total_ms": 60.87572395335883
       },
       {
         "case_id": "direct_08",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.51991045,
-        "score_margin": -0.0016071799999999303,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.52151763,
+        "score_margin": 0.0016071799999999303,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 41.64408496581018
+        "total_ms": 59.89478004630655
       },
       {
         "case_id": "paraphrase_01",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.40706798,
-        "score_margin": -0.05573067999999998,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5142954,
+        "score_margin": 0.051496739999999985,
         "coverage_ratio": 0.3,
-        "total_ms": 43.532189913094044
+        "total_ms": 58.288607047870755
       },
       {
         "case_id": "paraphrase_02",
@@ -127,7 +127,7 @@
         "top_score": 0.63715136,
         "score_margin": 0.17281860000000004,
         "coverage_ratio": 0.6,
-        "total_ms": 38.7336170533672
+        "total_ms": 54.60630590096116
       },
       {
         "case_id": "paraphrase_03",
@@ -136,7 +136,7 @@
         "top_score": 0.5330811,
         "score_margin": 0.17020724999999998,
         "coverage_ratio": 0.5555555555555556,
-        "total_ms": 38.446887978352606
+        "total_ms": 74.98314103577286
       },
       {
         "case_id": "paraphrase_04",
@@ -145,16 +145,16 @@
         "top_score": 0.51377803,
         "score_margin": 0.10988921000000001,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 46.78955196868628
+        "total_ms": 48.13656699843705
       },
       {
         "case_id": "paraphrase_05",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.600755,
-        "score_margin": -0.04416589999999998,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.6449209,
+        "score_margin": 0.04416589999999998,
         "coverage_ratio": 0.5,
-        "total_ms": 44.99828699044883
+        "total_ms": 46.29310697782785
       },
       {
         "case_id": "paraphrase_06",
@@ -163,7 +163,7 @@
         "top_score": 0.5489013,
         "score_margin": 0.033829129999999985,
         "coverage_ratio": 0.3,
-        "total_ms": 51.558376057073474
+        "total_ms": 41.42366803716868
       },
       {
         "case_id": "exact_01",
@@ -172,16 +172,16 @@
         "top_score": 0.48227507,
         "score_margin": 0.18869555,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 50.97446194849908
+        "total_ms": 43.01142995245755
       },
       {
         "case_id": "exact_02",
         "decision": "answered",
         "reason": null,
         "top_score": 0.69433796,
-        "score_margin": 0.25924916000000003,
+        "score_margin": 0.10209506000000002,
         "coverage_ratio": 0.75,
-        "total_ms": 55.34480209462345
+        "total_ms": 41.84993798844516
       },
       {
         "case_id": "exact_03",
@@ -190,7 +190,7 @@
         "top_score": 0.6113596,
         "score_margin": 0.25416458000000003,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 54.498124052770436
+        "total_ms": 37.732793018221855
       },
       {
         "case_id": "exact_04",
@@ -199,43 +199,43 @@
         "top_score": 0.790632,
         "score_margin": 0.17036220000000002,
         "coverage_ratio": 0.6,
-        "total_ms": 65.36019709892571
+        "total_ms": 40.09233694523573
       },
       {
         "case_id": "exact_05",
         "decision": "answered",
         "reason": null,
         "top_score": 0.72899103,
-        "score_margin": 0.20298337999999994,
+        "score_margin": 0.19635082999999998,
         "coverage_ratio": 0.8,
-        "total_ms": 55.2076050080359
+        "total_ms": 41.40610701870173
       },
       {
         "case_id": "exact_06",
         "decision": "answered",
         "reason": null,
         "top_score": 0.5498207,
-        "score_margin": 0.17451922000000003,
+        "score_margin": 0.15968574000000008,
         "coverage_ratio": 0.6666666666666666,
-        "total_ms": 63.48825094755739
+        "total_ms": 41.098689078353345
       },
       {
         "case_id": "near_miss_01",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
+        "decision": "answered",
+        "reason": null,
         "top_score": 0.43550128,
-        "score_margin": 0.03633671999999999,
+        "score_margin": 0.0032839199999999957,
         "coverage_ratio": 0.375,
-        "total_ms": 42.085748980753124
+        "total_ms": 40.50112806726247
       },
       {
         "case_id": "near_miss_02",
         "decision": "answered",
         "reason": null,
         "top_score": 0.45747396,
-        "score_margin": 0.06082201000000004,
+        "score_margin": 0.015439630000000037,
         "coverage_ratio": 0.4,
-        "total_ms": 53.874604986049235
+        "total_ms": 43.75745705328882
       },
       {
         "case_id": "near_miss_03",
@@ -244,25 +244,25 @@
         "top_score": 0.5249559,
         "score_margin": 0.019054899999999986,
         "coverage_ratio": 0.4444444444444444,
-        "total_ms": 69.6307549951598
+        "total_ms": 40.51913693547249
       },
       {
         "case_id": "near_miss_04",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.35410076,
-        "score_margin": -0.0531258,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.40722656,
+        "score_margin": 0.0531258,
         "coverage_ratio": 0.2222222222222222,
-        "total_ms": 46.411777031607926
+        "total_ms": 38.82251598406583
       },
       {
         "case_id": "near_miss_05",
         "decision": "answered",
         "reason": null,
         "top_score": 0.62009907,
-        "score_margin": 0.10586381,
+        "score_margin": 0.014758469999999968,
         "coverage_ratio": 0.7142857142857143,
-        "total_ms": 49.83249702490866
+        "total_ms": 39.454753044992685
       },
       {
         "case_id": "near_miss_06",
@@ -271,34 +271,34 @@
         "top_score": 0.5215261,
         "score_margin": 0.1999016,
         "coverage_ratio": 0.6363636363636364,
-        "total_ms": 69.6439400780946
+        "total_ms": 50.169117050245404
       },
       {
         "case_id": "no_answer_01",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.16158207,
-        "score_margin": -0.018270830000000016,
+        "top_score": 0.1798529,
+        "score_margin": 0.018270830000000016,
         "coverage_ratio": 0.16666666666666666,
-        "total_ms": 71.88173697795719
+        "total_ms": 38.85609703138471
       },
       {
         "case_id": "no_answer_02",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.23163752,
-        "score_margin": -0.07763205999999997,
+        "top_score": 0.30926958,
+        "score_margin": 0.06482336,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 83.03270197939128
+        "total_ms": 36.639301921240985
       },
       {
         "case_id": "no_answer_03",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
         "top_score": 0.26848823,
-        "score_margin": 0.05291498,
+        "score_margin": 0.01407885999999997,
         "coverage_ratio": 0.0,
-        "total_ms": 43.262727092951536
+        "total_ms": 40.46962398570031
       },
       {
         "case_id": "no_answer_04",
@@ -307,88 +307,88 @@
         "top_score": 0.15779138,
         "score_margin": 0.005034150000000015,
         "coverage_ratio": 0.0,
-        "total_ms": 46.12930701114237
+        "total_ms": 42.31467598583549
       },
       {
         "case_id": "no_answer_05",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.3455584,
-        "score_margin": -0.09882626,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.44438466,
+        "score_margin": 0.09882626,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 43.90125605277717
+        "total_ms": 40.03743908833712
       },
       {
         "case_id": "no_answer_06",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.36583787,
-        "score_margin": -0.15377659,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.51961446,
+        "score_margin": 0.15377659,
         "coverage_ratio": 0.3,
-        "total_ms": 53.49245003890246
+        "total_ms": 49.43947400897741
       },
       {
         "case_id": "multi_01",
         "decision": "answered",
         "reason": null,
         "top_score": 0.50759584,
-        "score_margin": 0.17703212000000002,
+        "score_margin": 0.05659557000000004,
         "coverage_ratio": 0.6,
-        "total_ms": 53.84348600637168
+        "total_ms": 53.21370402816683
       },
       {
         "case_id": "multi_02",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.4964937,
-        "score_margin": -0.09943289999999999,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.5959266,
+        "score_margin": 0.07196360000000002,
         "coverage_ratio": 0.4166666666666667,
-        "total_ms": 50.28961494099349
+        "total_ms": 47.3672179505229
       },
       {
         "case_id": "multi_03",
         "decision": "answered",
         "reason": null,
         "top_score": 0.5090063,
-        "score_margin": 0.08148860000000002,
+        "score_margin": 0.04120252000000002,
         "coverage_ratio": 0.7,
-        "total_ms": 54.276005015708506
+        "total_ms": 46.62783001549542
       },
       {
         "case_id": "multi_04",
         "decision": "answered",
         "reason": null,
         "top_score": 0.6417994,
-        "score_margin": 0.19627602,
+        "score_margin": 0.15909258000000004,
         "coverage_ratio": 0.46153846153846156,
-        "total_ms": 41.5744639467448
+        "total_ms": 48.531234031543136
       },
       {
         "case_id": "injection_01",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.22921377,
-        "score_margin": 0.04719606000000001,
+        "top_score": 0.2523111,
+        "score_margin": 0.02309733,
         "coverage_ratio": 0.0,
-        "total_ms": 46.04965995531529
+        "total_ms": 45.430066995322704
       },
       {
         "case_id": "injection_02",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
         "top_score": 0.35045388,
-        "score_margin": 0.10217577,
+        "score_margin": 0.07631907999999998,
         "coverage_ratio": 0.2727272727272727,
-        "total_ms": 37.60537994094193
+        "total_ms": 34.41287996247411
       },
       {
         "case_id": "injection_03",
         "decision": "answered",
         "reason": null,
         "top_score": 0.5568563,
-        "score_margin": 0.08540709999999996,
+        "score_margin": 0.08332951999999999,
         "coverage_ratio": 0.4,
-        "total_ms": 37.34141099266708
+        "total_ms": 47.68904496449977
       },
       {
         "case_id": "injection_04",
@@ -397,43 +397,43 @@
         "top_score": 0.47259122,
         "score_margin": 0.03617405999999995,
         "coverage_ratio": 0.35714285714285715,
-        "total_ms": 40.53024097811431
+        "total_ms": 40.18965200521052
       },
       {
         "case_id": "leakage_01",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.22380546,
-        "score_margin": -0.14117139,
+        "top_score": 0.36497685,
+        "score_margin": 0.09319880000000003,
         "coverage_ratio": 0.2727272727272727,
-        "total_ms": 38.08529698289931
+        "total_ms": 37.31863002758473
       },
       {
         "case_id": "leakage_02",
-        "decision": "no_answer",
-        "reason": "LOW_RELEVANCE",
-        "top_score": 0.40367818,
-        "score_margin": 0.11259806,
+        "decision": "answered",
+        "reason": null,
+        "top_score": 0.54477227,
+        "score_margin": 0.14109408999999995,
         "coverage_ratio": 0.1,
-        "total_ms": 40.423154016025364
+        "total_ms": 35.85131396539509
       },
       {
         "case_id": "leakage_03",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.3069635,
-        "score_margin": -0.007790660000000005,
+        "top_score": 0.31475416,
+        "score_margin": 0.007790660000000005,
         "coverage_ratio": 0.2857142857142857,
-        "total_ms": 37.34931710641831
+        "total_ms": 36.53016407042742
       },
       {
         "case_id": "leakage_04",
         "decision": "no_answer",
         "reason": "LOW_RELEVANCE",
-        "top_score": 0.045270972,
-        "score_margin": -0.318241228,
+        "top_score": 0.3635122,
+        "score_margin": 0.08743509999999999,
         "coverage_ratio": 0.1,
-        "total_ms": 36.03025106713176
+        "total_ms": 37.006583996117115
       }
     ]
   }

@@ -967,25 +967,31 @@ Hybrid + validation'dan seçilen dense threshold ile, LLM'siz gate smoke'u:
 ```text
 answerable beklenen: 30
 no-answer beklenen: 14
-gereksiz no-answer (answerable reddi): 8 / 30 = %26.7
-corpus dışına cevap eşiği (no-answer false negative): 2 / 14 = %14.3
-gate p50/p95: 46.3 / 73.8 ms
+gereksiz no-answer (answerable reddi): 0 / 30 = %0.0
+corpus dışına cevap eşiği (no-answer false negative): 5 / 14 = %35.7
+gate p50/p95: 43.4 / 63.3 ms
 ```
 
-İki injection vakasının gate'i geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile “kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold validation split'te kalibre edildi ve runtime default `0.456` olarak güncellendi; injection savunması structured prompt ve output validation ile ayrı katman olarak kalmalı.
+Score-order düzeltmesinden sonra validation-only calibration runtime default'u
+`0.379` seçti. Test split'te answerable sorular gereksiz reddedilmedi; fakat 5
+corpus dışı vaka cevaplanabilir göründü. İki test injection vakasının gate'i
+geçmesi önemli bir bulgu: dense similarity, “dokümanda bu bilgi var mı?” ile
+“kullanıcının talimatı güvenilir mi?” sorularını tek başına ayırmıyor. Threshold
+test split'e bakılarak geri ayarlanmadı; injection savunması structured prompt,
+provenance ve output validation katmanlarıyla tamamlanmalı.
 
 ### Güncel karar
 
 ```text
 local default: hybrid RRF, reranker disabled
-dense threshold: validation seçimiyle 0.456; sparse/rerank/margin/coverage provisional
-next: validation/test leakage dondurma, slice bazlı hata analizi,
-      output phrase/evidence değerlendirmesi ve gerçek query smoke
+dense threshold: validation seçimiyle 0.379; sparse/rerank/margin/coverage provisional
+test warning: 5/14 no-answer vakası gate'i geçti; threshold tek başına güvenlik değil
+next: output phrase/evidence değerlendirmesi, injection defense ve gerçek query smoke
 ```
 
 ### Mentora kısa anlatım
 
-> Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Answerability dense threshold'ını yalnız validation split'te, false negative maliyetini `3.0` alarak `0.456` seçtim. Test split'e threshold seçimi sırasında bakmadım; iki injection false negative için ayrıca prompt/output savunması gerekiyor.
+> Aynı 44 vakayı dense, sparse, hybrid ve reranker açık koşullarda çalıştırdım. Hybrid Recall@5 `0.934`, MRR@10 `0.883`, nDCG@10 `0.963` ile en iyi kalite/latency dengesini verdi. Reranker Candidate Recall@20'yi artırmadı; doğru aday zaten havuzdaydı, fakat final sıralamada bazı near-miss vakalarını bozdu ve p95'i yaklaşık `1.13 s` yaptı. Bu yüzden varsayılanı açmadım. Hybrid RRF sırasının dense margin hesabını bozduğu bir bug'ı gerçek smoke'ta yakalayıp `5036c5c` ile düzelttim. Düzeltmeden sonra threshold'u yalnız validation split'te, false negative maliyeti `3.0` ile `0.379` seçtim. Test split'te 5 no-answer false negative ve iki injection başarısızlığı kaldı; bu nedenle threshold'u güvenlik çözümü olarak sunmuyorum.
 
 ## 23. Test-split security regression
 
@@ -1071,9 +1077,64 @@ retrieval kaynağı yerine geçemiyor.
 - API: `QueryResponse.warnings` alanı (`code`, `message`, `values`).
 - Test: desteklenen sayı, desteklenmeyen sayı, injection-style sayı,
   canonical source ve no-answer/LLM-skip senaryoları.
-- Henüz yapılmayan ölçüm: gerçek Ollama/Gemma cevaplarında warning oranı ve
-  warning'in doğru/yanlış alarm dağılımı.
+- Bir gerçek Ollama/Gemma smoke'unda warning oranı `0/1` gözlendi; geniş gerçek
+  model setinde warning'in doğru/yanlış alarm dağılımı henüz ölçülmedi.
 
 ### Mentora kısa anlatım
 
 > Answerability gate yalnız LLM çağrısına izin veriyor; cevabın kanıta tamamen dayandığını garanti etmiyor. Bu nedenle Gemma çıktısından sonra ilk output validation katmanını ekledim. Şimdilik cevapta geçen sayıları final evidence ile karşılaştırıp `UNSUPPORTED_NUMBER` warning'i üretiyor; cevabı otomatik değiştirmiyorum çünkü bu politikayı validation setinde henüz kalibre etmedim. Kaynakları model metninden değil retrieval nesnelerinden üretiyorum. Böylece unsupported output görünür, canonical source ise güvenilir kalıyor.
+
+## 25. Gerçek Qdrant + Gemma output-validation smoke'u
+
+### Gerçek model çağrısından önce yakalanan hata
+
+İlk gerçek smoke'ta şu sonucu gördüm:
+
+```text
+top dense score: 0.456
+answerability: no_answer
+LLM çağrısı: 0 ms
+```
+
+Soru aslında answerable görünüyordu. Adaylar incelendiğinde RRF sırasındaki
+birinci chunk'ın dense skoru `0.456`, ikinci chunk'ın dense skoru `0.488` idi.
+Eski kod RRF sırasını dense skor sırası sanıp `0.456 - 0.488` negatif margin
+hesaplıyordu. Bu, farklı skor uzaylarının aynı sıralama olduğu varsayımının
+gerçek sistemde nasıl yanlış karar ürettiğini gösterdi.
+
+`5036c5c` commit'inde `top_score` ve `score_margin`, seçilen score kind içindeki
+karşılaştırılabilir skorlar sıralanarak düzeltildi. Yeni doğru sinyal:
+
+```text
+top dense score: 0.48797867
+dense margin:    0.03159817
+decision:        answered
+```
+
+### Gerçek Gemma sonucu
+
+`57867ba` snapshot'ında, CPU ve 32 GB RAM ortamında, tek model ve bounded
+`top_k=2` / `max_output_tokens=64` ile çalıştırıldı:
+
+```text
+Soru: Yerel model karşılaştırmasında hangi değerler ölçülmelidir?
+Model: gemma3:4b / Ollama
+Karar: answered
+Cevap: Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi ve
+       mühendislik yorumu ölçülmelidir.
+Warnings: []
+Canonical sources: 2
+Embedding: 14607.8 ms
+LLM: 35406.6 ms
+Toplam: 50042.6 ms
+```
+
+Bu gerçek cevapta numeric output validator warning üretmedi. Bu tek soru için
+olumlu smoke kanıtıdır; genel hallucination veya grounding oranı değildir.
+Tekrar üretilebilir çıktı [local_gemma_output_validation_smoke.json](../../../projects/document_intelligence_service/eval/results/local_gemma_output_validation_smoke.json)
+dosyasındadır. Çalıştırma aracı
+`projects/document_intelligence_service/eval/run_local_query_smoke.py` dosyasıdır.
+
+### Mentora kısa anlatım
+
+> Gerçek Qdrant + Gemma smoke'unda önce bir skor sırası hatası yakaladım: hybrid sonuçları RRF sırasındayken dense margin'i RRF sırasından hesaplanıyordu. Bunu düzelttikten sonra validation-only dense threshold'u `0.379` seçtim. Aynı bounded koşulda Gemma `answered` döndü, iki canonical kaynak verdi, output validator warning üretmedi. Embedding yaklaşık 14.6 saniye, Gemma üretimi 35.4 saniye sürdü; bu nedenle 32 GB CPU ortamında geniş LLM benchmarkı yerine seçilmiş smoke/evaluation slice kullanıyorum.

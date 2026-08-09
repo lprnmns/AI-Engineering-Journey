@@ -1,6 +1,6 @@
 {
   "retrieval_git_sha": "928e60868ab8cb67f8859acd297c394e7ff938fd",
-  "gate_git_sha": "0deefb3726ca9d27168450998d5699799e7bdee8",
+  "gate_git_sha": "57867ba761b79c2b6cf445f3e22fda2ae165a61c",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "cases": 44,
   "answerable_retrieval_cases": 30,
@@ -61,14 +61,14 @@
   "hybrid_answerability_gate": {
     "expected_answerable": 30,
     "expected_no_answer": 14,
-    "predicted_answerable": 24,
-    "predicted_no_answer": 20,
-    "no_answer_false_positive_count": 8,
-    "no_answer_false_negative_count": 2,
-    "no_answer_false_positive_rate": 0.26666666666666666,
-    "no_answer_false_negative_rate": 0.14285714285714285,
-    "total_p50_ms": 46.27054202137515,
-    "total_p95_ms": 73.77081867307425
+    "predicted_answerable": 35,
+    "predicted_no_answer": 9,
+    "no_answer_false_positive_count": 0,
+    "no_answer_false_negative_count": 5,
+    "no_answer_false_positive_rate": 0.0,
+    "no_answer_false_negative_rate": 0.35714285714285715,
+    "total_p50_ms": 43.38444350287318,
+    "total_p95_ms": 63.33831421798096
   },
   "security_test_gate": {
     "test_case_count": 4,
