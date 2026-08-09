@@ -187,6 +187,48 @@ def test_wired_query_exposes_output_warning_and_canonical_sources() -> None:
     ]
 
 
+def test_query_keeps_html_like_answer_in_json_transport() -> None:
+    """Prove the API does not directly render model text as HTML."""
+
+    from projects.document_intelligence_service.app.application.query_service import (
+        QueryService,
+    )
+    from projects.document_intelligence_service.app.domain.answerability import (
+        AnswerabilityPolicy,
+    )
+    from projects.document_intelligence_service.tests.unit.test_query_service import (
+        FakeAnswerGenerator,
+    )
+    from projects.document_intelligence_service.tests.unit.test_retrieval_service import (
+        make_service,
+    )
+
+    app = create_app(
+        health_service=HealthService(()),
+        query_service=QueryService(
+            retrieval_service=make_service(),
+            answerability=AnswerabilityPolicy(min_dense_score=0.45),
+            answer_generator=FakeAnswerGenerator(
+                answer="<script>alert('exfiltrate')</script> **cevap**"
+            ),
+        ),
+    )
+
+    response = asyncio.run(
+        post_json(
+            app,
+            "/v1/query",
+            {"question": "Qdrant ne işe yarar?"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["answer"] == (
+        "<script>alert('exfiltrate')</script> **cevap**"
+    )
+
+
 def test_invalid_query_uses_common_validation_envelope() -> None:
     app = create_app(health_service=HealthService(()))
 

@@ -1383,3 +1383,60 @@ getiren bir şifreleme değildir, yalnız aynı girdiyi korele etmek için kulla
 ### Mentora kısa anlatım
 
 > Query trace event'i ekledim. Ham soru veya evidence loglamadan request ID, soru hash'i, karar/reason, aday sayıları, answerability sinyalleri, warning kodları ve embedding–search–rerank–LLM latency'lerini JSON olarak kaydediyorum. Böylece yanlış cevap veya yavaşlıkta hangi katmanın sorumlu olduğunu ölçebiliyorum; privacy için raw prompt'u loglamıyorum.
+
+## 30. Security attack matrix: ne gerçekten hazır?
+
+Mentor programında geçen güvenlik başlıklarını tek bir saldırı matrisi içinde
+mevcut kod, test ve ölçüm artifact'leriyle eşleştirdim. Matrisi üretirken her
+kanıt dosyasının repository içinde gerçekten bulunmasını da kontrol eden bir
+runner kullandım:
+
+- Ham veri: [`security_attack_matrix_v1.json`](../../../data/evaluations/security_attack_matrix_v1.json)
+- Rapor: [`security_attack_matrix_v1.md`](../../../projects/document_intelligence_service/docs/security_attack_matrix_v1.md)
+
+```text
+control count: 8
+pass: 3
+partial: 4
+not_ready: 1
+missing evidence path: 0
+release-ready: false
+```
+
+### Sonuçların anlamı
+
+- `Direct prompt injection` ve `system-prompt extraction`: Dar ve bilinen
+  kalıplar için `PromptSafetyPolicy` retrieval'dan önce çalışıyor; saldırı
+  `SECURITY_POLICY` no-answer oluyor ve LLM çağrılmıyor.
+- `Indirect injection`: `EvidenceSafetyPolicy` zararlı chunk'ı context'e
+  sokmadan çıkarıyor. Smoke'ta 3/3 saldırı engellendi, benign evidence 1/1
+  korundu. Bu sonuç gerçek LLM'in tüm saldırılara dayanıklı olduğunu kanıtlamaz.
+- `Cross-document leakage / ACL`: tamamlanmış değil. `tenant_id` veya `acl_tags`
+  geldiğinde endpoint şu an bilinçli olarak `501 FEATURE_NOT_READY` döndürüyor.
+  Bu fail-closed ara davranıştır; gerçek tenant/ACL filtresi yoktur.
+- `HTML/Markdown exfiltration`: API cevabı JSON'dur ve doğrudan HTML render
+  etmez; fakat sanitizer, URL/image allowlist ve UI escape politikası henüz
+  eklenmedi. Bu nedenle `partial`.
+- `RAG poisoning`: content hash, pipeline fingerprint ve stage → verify →
+  activate akışı yarım/bozuk version'ın active olmasını engelliyor. Kaynak
+  provenance allowlist'i, quarantine ve poisoning detector henüz yok.
+- `DoS upload`: byte, MIME, `%PDF` magic-byte ve sayfa limitleri testli.
+  Rate limit, concurrent job quota, parser timeout ve queue backpressure
+  production seviyesinde değil.
+
+### Fail-open ve fail-closed farkı
+
+Bir güvenlik özelliği hazır değilken istekleri normal akışa bırakmak `fail-open`
+olur ve veri sızıntısı riski taşır. ACL için yaptığımız mevcut davranış
+`fail-closed`: filtre uygulayamadığı isteği başarıyla cevaplamıyor, açıkça
+`FEATURE_NOT_READY` veriyor. Bu üretime hazır olduğumuz anlamına gelmez; yalnız
+eksik özelliğin sessizce yok sayılmadığını gösterir.
+
+### Mentora kısa anlatım
+
+> Güvenlik iddiasını tek bir prompt'a bırakmadım; sekiz tehdit sınıfını attack
+> matrix'te kod ve test kanıtlarıyla ayırdım. Direct ve indirect injection için
+> pre-LLM policy'lerim var. ACL henüz bağlı değil; tenant/ACL isteğini 501 ile
+> fail-closed kesiyorum. HTML çıktısında JSON transport var ama sanitizer yok.
+> Upload ve version activation kontrolleri mevcut, rate limit ve provenance
+> gibi production katmanları sonraki iş olarak açıkça listelendi.
