@@ -161,10 +161,9 @@ class RetrievalService:
         )
 
     def _candidate_window(self, top_k: int) -> int:
-        """Keep a larger bounded window when reranking is enabled."""
+        """Keep a bounded candidate window separate from final top-k."""
 
-        rerank_window = self._fusion_limit if self._reranker is not None else top_k
-        return min(max(top_k, rerank_window), 50)
+        return min(max(top_k, self._fusion_limit), 50)
 
     def _one_dense_vector(self, question: str) -> tuple[float, ...]:
         vectors = self._dense_embedder.embed_documents((question,))
