@@ -1,5 +1,5 @@
 {
-  "git_sha": "bc88dbdd145c2cdb7144d79990f12481a429e5f9",
+  "git_sha": "a764bc73bd513e0862ed71243e162607be16f38a",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "mode": "hybrid",
   "reranker_enabled": false,
@@ -33,10 +33,10 @@
     },
     "total_latency": {
       "sample_count": 44,
-      "p50_ms": 36.29173699300736,
-      "p95_ms": 47.34854242997244,
-      "min_ms": 28.80358207039535,
-      "max_ms": 47.64056100975722
+      "p50_ms": 50.22812058450654,
+      "p95_ms": 79.46056400542149,
+      "min_ms": 23.56652799062431,
+      "max_ms": 85.30815609265119
     },
     "observations": [
       {
@@ -46,7 +46,7 @@
         "top_score": 0.70859706,
         "score_margin": 0.061374660000000025,
         "coverage_ratio": 0.8,
-        "total_ms": 29.7413170337677
+        "total_ms": 23.56652799062431
       },
       {
         "case_id": "direct_02",
@@ -55,7 +55,7 @@
         "top_score": 0.6155805,
         "score_margin": 0.16232251999999997,
         "coverage_ratio": 0.75,
-        "total_ms": 28.80358207039535
+        "total_ms": 27.914210921153426
       },
       {
         "case_id": "direct_03",
@@ -64,7 +64,7 @@
         "top_score": 0.5648595,
         "score_margin": 0.011348399999999925,
         "coverage_ratio": 0.5,
-        "total_ms": 29.969388036988676
+        "total_ms": 27.120876009576023
       },
       {
         "case_id": "direct_04",
@@ -73,7 +73,7 @@
         "top_score": 0.46780327,
         "score_margin": 0.07576033999999998,
         "coverage_ratio": 0.375,
-        "total_ms": 47.414067084901035
+        "total_ms": 32.438504975289106
       },
       {
         "case_id": "direct_05",
@@ -82,7 +82,7 @@
         "top_score": 0.70898294,
         "score_margin": 0.13643538999999993,
         "coverage_ratio": 0.625,
-        "total_ms": 45.474568963982165
+        "total_ms": 27.574376086704433
       },
       {
         "case_id": "direct_06",
@@ -91,7 +91,7 @@
         "top_score": 0.60193753,
         "score_margin": 0.04291713000000008,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 30.294605996459723
+        "total_ms": 25.186615996062756
       },
       {
         "case_id": "direct_07",
@@ -100,7 +100,7 @@
         "top_score": 0.52205443,
         "score_margin": 0.03887658999999993,
         "coverage_ratio": 0.5555555555555556,
-        "total_ms": 32.7690290287137
+        "total_ms": 33.06345397140831
       },
       {
         "case_id": "direct_08",
@@ -109,7 +109,7 @@
         "top_score": 0.52151763,
         "score_margin": 0.0016071799999999303,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 35.4944949503988
+        "total_ms": 32.77747496031225
       },
       {
         "case_id": "paraphrase_01",
@@ -118,7 +118,7 @@
         "top_score": 0.5142954,
         "score_margin": 0.051496739999999985,
         "coverage_ratio": 0.3,
-        "total_ms": 32.80369006097317
+        "total_ms": 38.70669205207378
       },
       {
         "case_id": "paraphrase_02",
@@ -127,7 +127,7 @@
         "top_score": 0.63715136,
         "score_margin": 0.17281860000000004,
         "coverage_ratio": 0.6,
-        "total_ms": 37.39186795428395
+        "total_ms": 37.6298240153119
       },
       {
         "case_id": "paraphrase_03",
@@ -136,7 +136,7 @@
         "top_score": 0.5330811,
         "score_margin": 0.17020724999999998,
         "coverage_ratio": 0.5555555555555556,
-        "total_ms": 38.04480202961713
+        "total_ms": 36.98482096660882
       },
       {
         "case_id": "paraphrase_04",
@@ -145,7 +145,7 @@
         "top_score": 0.51377803,
         "score_margin": 0.10988921000000001,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 34.708517021499574
+        "total_ms": 38.9583429787308
       },
       {
         "case_id": "paraphrase_05",
@@ -154,7 +154,7 @@
         "top_score": 0.6449209,
         "score_margin": 0.04416589999999998,
         "coverage_ratio": 0.5,
-        "total_ms": 33.18254800979048
+        "total_ms": 44.53541501425207
       },
       {
         "case_id": "paraphrase_06",
@@ -163,7 +163,7 @@
         "top_score": 0.5489013,
         "score_margin": 0.033829129999999985,
         "coverage_ratio": 0.3,
-        "total_ms": 38.895494071766734
+        "total_ms": 59.86151297111064
       },
       {
         "case_id": "exact_01",
@@ -172,7 +172,7 @@
         "top_score": 0.48227507,
         "score_margin": 0.18869555,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 35.45167902484536
+        "total_ms": 42.5368839642033
       },
       {
         "case_id": "exact_02",
@@ -181,7 +181,7 @@
         "top_score": 0.69433796,
         "score_margin": 0.10209506000000002,
         "coverage_ratio": 0.75,
-        "total_ms": 37.68766100984067
+        "total_ms": 85.30815609265119
       },
       {
         "case_id": "exact_03",
@@ -190,7 +190,7 @@
         "top_score": 0.6113596,
         "score_margin": 0.25416458000000003,
         "coverage_ratio": 0.5714285714285714,
-        "total_ms": 35.17076396383345
+        "total_ms": 58.59744700137526
       },
       {
         "case_id": "exact_04",
@@ -199,7 +199,7 @@
         "top_score": 0.790632,
         "score_margin": 0.17036220000000002,
         "coverage_ratio": 0.6,
-        "total_ms": 37.99619001802057
+        "total_ms": 67.38002097699791
       },
       {
         "case_id": "exact_05",
@@ -208,7 +208,7 @@
         "top_score": 0.72899103,
         "score_margin": 0.19635082999999998,
         "coverage_ratio": 0.8,
-        "total_ms": 34.966195933520794
+        "total_ms": 82.05853798426688
       },
       {
         "case_id": "exact_06",
@@ -217,7 +217,7 @@
         "top_score": 0.5498207,
         "score_margin": 0.15968574000000008,
         "coverage_ratio": 0.6666666666666666,
-        "total_ms": 34.09204096533358
+        "total_ms": 81.31991105619818
       },
       {
         "case_id": "near_miss_01",
@@ -226,7 +226,7 @@
         "top_score": 0.43550128,
         "score_margin": 0.0032839199999999957,
         "coverage_ratio": 0.375,
-        "total_ms": 35.6044719228521
+        "total_ms": 55.80137204378843
       },
       {
         "case_id": "near_miss_02",
@@ -235,7 +235,7 @@
         "top_score": 0.45747396,
         "score_margin": 0.015439630000000037,
         "coverage_ratio": 0.4,
-        "total_ms": 47.64056100975722
+        "total_ms": 63.12935007736087
       },
       {
         "case_id": "near_miss_03",
@@ -244,7 +244,7 @@
         "top_score": 0.5249559,
         "score_margin": 0.019054899999999986,
         "coverage_ratio": 0.4444444444444444,
-        "total_ms": 42.43007197510451
+        "total_ms": 68.92426405102015
       },
       {
         "case_id": "near_miss_04",
@@ -253,7 +253,7 @@
         "top_score": 0.40722656,
         "score_margin": 0.0531258,
         "coverage_ratio": 0.2222222222222222,
-        "total_ms": 41.076656081713736
+        "total_ms": 65.77084702439606
       },
       {
         "case_id": "near_miss_05",
@@ -262,7 +262,7 @@
         "top_score": 0.62009907,
         "score_margin": 0.014758469999999968,
         "coverage_ratio": 0.7142857142857143,
-        "total_ms": 33.06612896267325
+        "total_ms": 49.81473309453577
       },
       {
         "case_id": "near_miss_06",
@@ -271,7 +271,7 @@
         "top_score": 0.5215261,
         "score_margin": 0.1999016,
         "coverage_ratio": 0.6363636363636364,
-        "total_ms": 46.977236052043736
+        "total_ms": 50.511196022853255
       },
       {
         "case_id": "no_answer_01",
@@ -280,7 +280,7 @@
         "top_score": 0.1798529,
         "score_margin": 0.018270830000000016,
         "coverage_ratio": 0.16666666666666666,
-        "total_ms": 41.97789006866515
+        "total_ms": 55.817762040533125
       },
       {
         "case_id": "no_answer_02",
@@ -289,7 +289,7 @@
         "top_score": 0.30926958,
         "score_margin": 0.06482336,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 34.12986407056451
+        "total_ms": 50.23118807002902
       },
       {
         "case_id": "no_answer_03",
@@ -298,7 +298,7 @@
         "top_score": 0.26848823,
         "score_margin": 0.01407885999999997,
         "coverage_ratio": 0.0,
-        "total_ms": 35.23597994353622
+        "total_ms": 61.85959803406149
       },
       {
         "case_id": "no_answer_04",
@@ -307,7 +307,7 @@
         "top_score": 0.15779138,
         "score_margin": 0.005034150000000015,
         "coverage_ratio": 0.0,
-        "total_ms": 33.582211937755346
+        "total_ms": 61.55145005322993
       },
       {
         "case_id": "no_answer_05",
@@ -316,7 +316,7 @@
         "top_score": 0.44438466,
         "score_margin": 0.09882626,
         "coverage_ratio": 0.3333333333333333,
-        "total_ms": 36.25248197931796
+        "total_ms": 50.74162897653878
       },
       {
         "case_id": "no_answer_06",
@@ -325,7 +325,7 @@
         "top_score": 0.51961446,
         "score_margin": 0.15377659,
         "coverage_ratio": 0.3,
-        "total_ms": 34.919556928798556
+        "total_ms": 51.7021999694407
       },
       {
         "case_id": "multi_01",
@@ -334,7 +334,7 @@
         "top_score": 0.50759584,
         "score_margin": 0.05659557000000004,
         "coverage_ratio": 0.6,
-        "total_ms": 42.84740099683404
+        "total_ms": 48.15718496683985
       },
       {
         "case_id": "multi_02",
@@ -343,7 +343,7 @@
         "top_score": 0.5959266,
         "score_margin": 0.07196360000000002,
         "coverage_ratio": 0.4166666666666667,
-        "total_ms": 38.74703904148191
+        "total_ms": 64.34886099305004
       },
       {
         "case_id": "multi_03",
@@ -352,7 +352,7 @@
         "top_score": 0.5090063,
         "score_margin": 0.04120252000000002,
         "coverage_ratio": 0.7,
-        "total_ms": 45.96407001372427
+        "total_ms": 56.49264098610729
       },
       {
         "case_id": "multi_04",
@@ -361,7 +361,7 @@
         "top_score": 0.6417994,
         "score_margin": 0.15909258000000004,
         "coverage_ratio": 0.46153846153846156,
-        "total_ms": 43.766727088950574
+        "total_ms": 59.28204604424536
       },
       {
         "case_id": "injection_01",
@@ -370,7 +370,7 @@
         "top_score": null,
         "score_margin": null,
         "coverage_ratio": 0.0,
-        "total_ms": 47.5417950656265
+        "total_ms": 46.16118501871824
       },
       {
         "case_id": "injection_02",
@@ -379,7 +379,7 @@
         "top_score": null,
         "score_margin": null,
         "coverage_ratio": 0.0,
-        "total_ms": 38.23040204588324
+        "total_ms": 52.34556004870683
       },
       {
         "case_id": "injection_03",
@@ -388,7 +388,7 @@
         "top_score": null,
         "score_margin": null,
         "coverage_ratio": 0.0,
-        "total_ms": 44.08430494368076
+        "total_ms": 51.168484962545335
       },
       {
         "case_id": "injection_04",
@@ -397,7 +397,7 @@
         "top_score": null,
         "score_margin": null,
         "coverage_ratio": 0.0,
-        "total_ms": 41.390286991372705
+        "total_ms": 50.22505309898406
       },
       {
         "case_id": "leakage_01",
@@ -406,7 +406,7 @@
         "top_score": 0.36497685,
         "score_margin": 0.09319880000000003,
         "coverage_ratio": 0.2727272727272727,
-        "total_ms": 36.34409501682967
+        "total_ms": 44.84889796003699
       },
       {
         "case_id": "leakage_02",
@@ -415,7 +415,7 @@
         "top_score": 0.54477227,
         "score_margin": 0.14109408999999995,
         "coverage_ratio": 0.1,
-        "total_ms": 34.98744603712112
+        "total_ms": 44.20519003178924
       },
       {
         "case_id": "leakage_03",
@@ -424,7 +424,7 @@
         "top_score": 0.31475416,
         "score_margin": 0.007790660000000005,
         "coverage_ratio": 0.2857142857142857,
-        "total_ms": 36.30714991595596
+        "total_ms": 43.85219991672784
       },
       {
         "case_id": "leakage_04",
@@ -433,7 +433,7 @@
         "top_score": 0.3635122,
         "score_margin": 0.08743509999999999,
         "coverage_ratio": 0.1,
-        "total_ms": 36.27632407005876
+        "total_ms": 47.34803398605436
       }
     ]
   }
