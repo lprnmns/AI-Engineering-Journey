@@ -139,10 +139,10 @@
     {
       "id": "SEC-05",
       "threat": "HTML/Markdown exfiltration and unsafe rendering",
-      "status": "partial",
+      "status": "pass",
       "entry_point": "Generated answer ve source snippet → API/UI",
-      "control": "API cevabı JSON sözleşmesi olarak döndürüyor; doğrudan text/html render etmiyor.",
-      "observed_result": "Transport seviyesinde response application/json; ancak answer/snippet için HTML sanitizer, URL allowlist veya UI escape politikası henüz yok.",
+      "control": "API cevabı JSON sözleşmesi olarak döndürüyor; demo UI answer ve source alanlarını yalnız textContent ile gösteriyor, HTML/Markdown/link/image yorumlamıyor.",
+      "observed_result": "Response application/json; demo UI replaceChildren/textContent kullanıyor ve innerHTML, Markdown renderer, link veya image sink'i içermiyor. Bu nedenle HTML, URL ve image payload'ları local UI'da inert text olarak kalıyor.",
       "evidence": [
         {
           "path": "projects/document_intelligence_service/app/api/v1/contracts.py",
@@ -153,13 +153,18 @@
           "path": "projects/document_intelligence_service/tests/contract/test_resource_contracts.py",
           "kind": "test",
           "claim": "HTML benzeri cevap API'de HTML olarak render edilmiyor"
+        },
+        {
+          "path": "demo_ui/index.html",
+          "kind": "static-review",
+          "claim": "Answer, evidence, trace ve metadata textContent/replaceChildren ile güvenli gösteriliyor"
         }
       ],
       "known_limitations": [
-        "JSON taşımak HTML sanitization yapmak değildir.",
-        "UI veya başka client metni innerHTML/Markdown renderer ile işlerse yeni saldırı yüzeyi oluşur."
+        "Bu kontrol yalnız repository içindeki demo UI için geçerlidir; başka client kendi HTML/Markdown sink'ini açarsa ayrıca sanitize etmelidir.",
+        "Rich text özelliği bilerek kapalıdır; ileride açılırsa URL/image scheme allowlist ve sanitizer yeniden test edilmelidir."
       ],
-      "next_action": "Rich text'i varsayılan kapatmak; client-side escape, server-side output policy ve URL/image scheme allowlist testlerini eklemek."
+      "next_action": "Rich text ileride açılırsa external client'lar için server-side output policy ve URL/image scheme allowlist testlerini eklemek."
     },
     {
       "id": "SEC-06",

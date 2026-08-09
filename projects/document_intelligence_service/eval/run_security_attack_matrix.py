@@ -86,7 +86,8 @@ def build_report(matrix: dict[str, Any], *, repo_root: Path = REPO_ROOT) -> dict
                 "missing_evidence_path_count": len(missing_paths),
                 "missing_evidence_paths": sorted(set(missing_paths)),
                 "release_ready": not missing_paths
-                and status_counts["not_ready"] == 0,
+                and status_counts["not_ready"] == 0
+                and status_counts["partial"] == 0,
             },
         }
     )

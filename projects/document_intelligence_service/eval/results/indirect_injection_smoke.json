@@ -1,5 +1,5 @@
 {
-  "git_sha": "9b9b35384988c2f99ecde144c84e35bc4d5a5f88",
+  "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
   "cases": "data/evaluations/indirect_injection_cases_v1.json",
   "llm_called": false,
   "control": "EvidenceSafetyPolicy before evidence enters the LLM prompt",

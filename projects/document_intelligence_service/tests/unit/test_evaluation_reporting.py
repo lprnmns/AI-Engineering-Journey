@@ -79,7 +79,9 @@ def test_manifest_records_dataset_host_and_pipeline_identity(tmp_path: Path) -> 
     assert manifest["qdrant_point_count"] == 3
     assert manifest["warmup_count"] == 1
     assert manifest["pipeline"] == {"chunker": "section_aware_v1"}
-    assert manifest["run_id"].startswith("eval_hybrid_baseline_")
+    run_id = manifest["run_id"]
+    assert isinstance(run_id, str)
+    assert run_id.startswith("eval_hybrid_baseline_")
     assert manifest["retrieval"] == {
         "mode": "hybrid",
         "candidate_k": 30,

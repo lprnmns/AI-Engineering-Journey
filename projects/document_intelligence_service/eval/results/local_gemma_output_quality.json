@@ -1,10 +1,10 @@
 {
-  "git_sha": "df6e7fc40a3d0c064a95e9d58551a79f3c2a581e",
+  "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
   "response_file": "projects/document_intelligence_service/eval/results/local_gemma_output_validation_smoke.json",
   "cases_file": "data/evaluations/mentor_program_pdf_rag_cases_v2.json",
   "case_id": "local_model_measurement",
   "question": "Yerel model karşılaştırmasında hangi değerler ölçülmelidir?",
-  "answer": "Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi ve mühendislik yorumu ölçülmelidir.",
+  "answer": "Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi, mühendislik yorumu ve bağımsız ilerleme değerleri ölçülmelidir.",
   "decision": "answered",
   "phrase_coverage": {
     "expected_phrases": [

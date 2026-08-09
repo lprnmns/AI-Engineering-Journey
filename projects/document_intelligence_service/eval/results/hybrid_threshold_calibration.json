@@ -1,5 +1,5 @@
 {
-  "gate_git_sha": "a764bc73bd513e0862ed71243e162607be16f38a",
+  "gate_git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
   "gate_results": "projects/document_intelligence_service/eval/results/hybrid_answerability_gate.json",
@@ -7,8 +7,8 @@
   "test_split_used": false,
   "calibration": {
     "score_kind": "dense",
-    "threshold": 0.337857395,
-    "rounded_threshold": 0.338,
+    "threshold": 0.33081796500000005,
+    "rounded_threshold": 0.331,
     "false_negative_cost": 3.0,
     "validation_case_count": 9,
     "candidate_threshold_count": 10,

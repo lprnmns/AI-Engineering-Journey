@@ -157,10 +157,10 @@
     {
       "id": "SEC-05",
       "threat": "HTML/Markdown exfiltration and unsafe rendering",
-      "status": "partial",
+      "status": "pass",
       "entry_point": "Generated answer ve source snippet → API/UI",
-      "control": "API cevabı JSON sözleşmesi olarak döndürüyor; doğrudan text/html render etmiyor.",
-      "observed_result": "Transport seviyesinde response application/json; ancak answer/snippet için HTML sanitizer, URL allowlist veya UI escape politikası henüz yok.",
+      "control": "API cevabı JSON sözleşmesi olarak döndürüyor; demo UI answer ve source alanlarını yalnız textContent ile gösteriyor, HTML/Markdown/link/image yorumlamıyor.",
+      "observed_result": "Response application/json; demo UI replaceChildren/textContent kullanıyor ve innerHTML, Markdown renderer, link veya image sink'i içermiyor. Bu nedenle HTML, URL ve image payload'ları local UI'da inert text olarak kalıyor.",
       "evidence": [
         {
           "path": "projects/document_intelligence_service/app/api/v1/contracts.py",
@@ -173,13 +173,19 @@
           "kind": "test",
           "claim": "HTML benzeri cevap API'de HTML olarak render edilmiyor",
           "exists": true
+        },
+        {
+          "path": "demo_ui/index.html",
+          "kind": "static-review",
+          "claim": "Answer, evidence, trace ve metadata textContent/replaceChildren ile güvenli gösteriliyor",
+          "exists": true
         }
       ],
       "known_limitations": [
-        "JSON taşımak HTML sanitization yapmak değildir.",
-        "UI veya başka client metni innerHTML/Markdown renderer ile işlerse yeni saldırı yüzeyi oluşur."
+        "Bu kontrol yalnız repository içindeki demo UI için geçerlidir; başka client kendi HTML/Markdown sink'ini açarsa ayrıca sanitize etmelidir.",
+        "Rich text özelliği bilerek kapalıdır; ileride açılırsa URL/image scheme allowlist ve sanitizer yeniden test edilmelidir."
       ],
-      "next_action": "Rich text'i varsayılan kapatmak; client-side escape, server-side output policy ve URL/image scheme allowlist testlerini eklemek.",
+      "next_action": "Rich text ileride açılırsa external client'lar için server-side output policy ve URL/image scheme allowlist testlerini eklemek.",
       "evidence_complete": true
     },
     {
@@ -303,18 +309,18 @@
       "evidence_complete": true
     }
   ],
-  "generated_on": "2026-08-09",
-  "git_sha": "ff65936cc3fc2c8addd402abf1115861fe0ccdc7",
+  "generated_on": "2026-08-10",
+  "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
   "summary": {
     "control_count": 8,
     "status_counts": {
       "not_ready": 0,
-      "partial": 4,
-      "pass": 4
+      "partial": 3,
+      "pass": 5
     },
-    "evidence_path_count": 28,
+    "evidence_path_count": 29,
     "missing_evidence_path_count": 0,
     "missing_evidence_paths": [],
-    "release_ready": true
+    "release_ready": false
   }
 }

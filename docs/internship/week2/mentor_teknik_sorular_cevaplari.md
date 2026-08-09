@@ -32,7 +32,7 @@ olup final sırada gerideyse reranker/fusion katmanı incelenir.
 ## 4. Reranker hangi sorguları bozdu?
 
 Temiz raporda reranker hybrid Recall@5'i `0.923`ten `0.912`ye, MRR@10'u
-`0.878`den `0.833`e düşürdü ve p95'i yaklaşık `41.8 ms`ten `1448.4 ms`e
+`0.878`den `0.833`e düşürdü ve güncel koşuda p95'i yaklaşık `37.3 ms`ten `1402.1 ms`e
 çıkardı. Candidate Recall@20 değişmedi; buna rağmen 8 pozitif ve 12 negatif
 per-case flip gözlendi. `near_miss` ve multi-evidence sıralamaları riskli
 örneklerdir.

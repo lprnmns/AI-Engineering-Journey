@@ -1,0 +1,740 @@
+{
+  "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+  "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
+  "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
+  "benchmark": "projects/document_intelligence_service/eval/results/hybrid_baseline.json",
+  "benchmark_git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+  "retrieval_mode": "hybrid",
+  "llm_called": false,
+  "coverage": {
+    "case_count": 30,
+    "fully_covered_count": 25,
+    "fully_covered_rate": 0.8333333333333334,
+    "mean_coverage_ratio": 0.9433333333333334,
+    "rows": [
+      {
+        "case_id": "direct_01",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "mühendislik",
+          "kavramları ezberlemek"
+        ],
+        "matched_phrases": [
+          "mühendislik"
+        ],
+        "missing_phrases": [
+          "kavramları ezberlemek"
+        ],
+        "coverage_ratio": 0.5,
+        "passed": false,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:008",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:007",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004"
+        ]
+      },
+      {
+        "case_id": "direct_02",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "token"
+        ],
+        "matched_phrases": [
+          "token"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005"
+        ]
+      },
+      {
+        "case_id": "direct_03",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "cosine similarity"
+        ],
+        "matched_phrases": [
+          "cosine similarity"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005"
+        ]
+      },
+      {
+        "case_id": "direct_04",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "chunking",
+          "embedding",
+          "retrieval",
+          "reranking"
+        ],
+        "matched_phrases": [
+          "chunking",
+          "embedding",
+          "retrieval",
+          "reranking"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001"
+        ]
+      },
+      {
+        "case_id": "direct_05",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "ilk cevap süresi",
+          "toplam süre",
+          "bellek"
+        ],
+        "matched_phrases": [
+          "ilk cevap süresi",
+          "toplam süre",
+          "bellek"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004"
+        ]
+      },
+      {
+        "case_id": "direct_06",
+        "category": "direct_fact",
+        "split": "development",
+        "expected_phrases": [
+          "kullanıcı kim",
+          "hangi veriyi",
+          "mevcut durumda"
+        ],
+        "matched_phrases": [
+          "kullanıcı kim",
+          "hangi veriyi",
+          "mevcut durumda"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001"
+        ]
+      },
+      {
+        "case_id": "direct_07",
+        "category": "direct_fact",
+        "split": "validation",
+        "expected_phrases": [
+          "15 dakikalık"
+        ],
+        "matched_phrases": [
+          "15 dakikalık"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001"
+        ]
+      },
+      {
+        "case_id": "direct_08",
+        "category": "direct_fact",
+        "split": "test",
+        "expected_phrases": [
+          "ne yaptığını",
+          "hangi varsayımla",
+          "nerede bozulabileceğini"
+        ],
+        "matched_phrases": [
+          "ne yaptığını",
+          "hangi varsayımla",
+          "nerede bozulabileceğini"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:004"
+        ]
+      },
+      {
+        "case_id": "paraphrase_01",
+        "category": "paraphrase",
+        "split": "development",
+        "expected_phrases": [
+          "uygulama",
+          "ölç",
+          "yorum"
+        ],
+        "matched_phrases": [
+          "uygulama",
+          "ölç",
+          "yorum"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005"
+        ]
+      },
+      {
+        "case_id": "paraphrase_02",
+        "category": "paraphrase",
+        "split": "development",
+        "expected_phrases": [
+          "attention",
+          "token",
+          "context"
+        ],
+        "matched_phrases": [
+          "attention",
+          "token",
+          "context"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003"
+        ]
+      },
+      {
+        "case_id": "paraphrase_03",
+        "category": "paraphrase",
+        "split": "validation",
+        "expected_phrases": [
+          "vektör",
+          "anlam"
+        ],
+        "matched_phrases": [
+          "vektör",
+          "anlam"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002"
+        ]
+      },
+      {
+        "case_id": "paraphrase_04",
+        "category": "paraphrase",
+        "split": "validation",
+        "expected_phrases": [
+          "PDF",
+          "retrieval",
+          "cevap"
+        ],
+        "matched_phrases": [
+          "PDF",
+          "retrieval",
+          "cevap"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003"
+        ]
+      },
+      {
+        "case_id": "paraphrase_05",
+        "category": "paraphrase",
+        "split": "test",
+        "expected_phrases": [
+          "Türkçe",
+          "kod",
+          "doğruluk"
+        ],
+        "matched_phrases": [
+          "Türkçe",
+          "kod"
+        ],
+        "missing_phrases": [
+          "doğruluk"
+        ],
+        "coverage_ratio": 0.6666666666666666,
+        "passed": false,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002"
+        ]
+      },
+      {
+        "case_id": "paraphrase_06",
+        "category": "paraphrase",
+        "split": "test",
+        "expected_phrases": [
+          "kullanıcı",
+          "veri",
+          "fayda"
+        ],
+        "matched_phrases": [
+          "kullanıcı",
+          "veri",
+          "fayda"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002"
+        ]
+      },
+      {
+        "case_id": "exact_01",
+        "category": "exact_term",
+        "split": "development",
+        "expected_phrases": [
+          "attention"
+        ],
+        "matched_phrases": [
+          "attention"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003"
+        ]
+      },
+      {
+        "case_id": "exact_02",
+        "category": "exact_term",
+        "split": "development",
+        "expected_phrases": [
+          "on cümle"
+        ],
+        "matched_phrases": [
+          "on cümle"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001"
+        ]
+      },
+      {
+        "case_id": "exact_03",
+        "category": "exact_term",
+        "split": "development",
+        "expected_phrases": [
+          "chunking",
+          "reranking"
+        ],
+        "matched_phrases": [
+          "chunking",
+          "reranking"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006"
+        ]
+      },
+      {
+        "case_id": "exact_04",
+        "category": "exact_term",
+        "split": "validation",
+        "expected_phrases": [
+          "ChromaDB",
+          "Qdrant",
+          "Milvus",
+          "Pinecone"
+        ],
+        "matched_phrases": [
+          "ChromaDB",
+          "Qdrant",
+          "Milvus",
+          "Pinecone"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001"
+        ]
+      },
+      {
+        "case_id": "exact_05",
+        "category": "exact_term",
+        "split": "test",
+        "expected_phrases": [
+          "iki",
+          "açık kaynak model"
+        ],
+        "matched_phrases": [
+          "iki",
+          "açık kaynak model"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002"
+        ]
+      },
+      {
+        "case_id": "exact_06",
+        "category": "exact_term",
+        "split": "test",
+        "expected_phrases": [
+          "kurumsal problem"
+        ],
+        "matched_phrases": [
+          "kurumsal problem"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003"
+        ]
+      },
+      {
+        "case_id": "near_miss_01",
+        "category": "near_miss",
+        "split": "development",
+        "expected_phrases": [
+          "yorum",
+          "neden"
+        ],
+        "matched_phrases": [
+          "yorum",
+          "neden"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:009",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:002:child:002"
+        ]
+      },
+      {
+        "case_id": "near_miss_02",
+        "category": "near_miss",
+        "split": "development",
+        "expected_phrases": [
+          "mimari diyagramı",
+          "PDF parçala kodu"
+        ],
+        "matched_phrases": [
+          "mimari diyagramı",
+          "PDF parçala kodu"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006"
+        ]
+      },
+      {
+        "case_id": "near_miss_03",
+        "category": "near_miss",
+        "split": "validation",
+        "expected_phrases": [
+          "doğruluk",
+          "tutarlılık",
+          "gereksiz bilgi"
+        ],
+        "matched_phrases": [
+          "doğruluk",
+          "tutarlılık",
+          "gereksiz bilgi"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:006",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:001:child:002"
+        ]
+      },
+      {
+        "case_id": "near_miss_04",
+        "category": "near_miss",
+        "split": "validation",
+        "expected_phrases": [
+          "ihtiyaca uygun"
+        ],
+        "matched_phrases": [
+          "ihtiyaca uygun"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002"
+        ]
+      },
+      {
+        "case_id": "near_miss_05",
+        "category": "near_miss",
+        "split": "test",
+        "expected_phrases": [
+          "embedding deneyi",
+          "RAG tasarımı",
+          "sunumu"
+        ],
+        "matched_phrases": [
+          "embedding deneyi",
+          "RAG tasarımı",
+          "sunumu"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:004:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:004"
+        ]
+      },
+      {
+        "case_id": "near_miss_06",
+        "category": "near_miss",
+        "split": "test",
+        "expected_phrases": [
+          "resmi dokümanı",
+          "model kartını",
+          "teknik makaleyi"
+        ],
+        "matched_phrases": [
+          "resmi dokümanı",
+          "teknik makaleyi"
+        ],
+        "missing_phrases": [
+          "model kartını"
+        ],
+        "coverage_ratio": 0.6666666666666666,
+        "passed": false,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:008"
+        ]
+      },
+      {
+        "case_id": "multi_01",
+        "category": "multi_evidence",
+        "split": "development",
+        "expected_phrases": [
+          "model",
+          "embedding",
+          "RAG",
+          "yerel model",
+          "kurumsal problem"
+        ],
+        "matched_phrases": [
+          "model",
+          "embedding",
+          "RAG",
+          "yerel model"
+        ],
+        "missing_phrases": [
+          "kurumsal problem"
+        ],
+        "coverage_ratio": 0.8,
+        "passed": false,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005"
+        ]
+      },
+      {
+        "case_id": "multi_02",
+        "category": "multi_evidence",
+        "split": "development",
+        "expected_phrases": [
+          "chunking",
+          "embedding",
+          "retrieval"
+        ],
+        "matched_phrases": [
+          "chunking",
+          "embedding",
+          "retrieval"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:000:child:005",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003"
+        ]
+      },
+      {
+        "case_id": "multi_03",
+        "category": "multi_evidence",
+        "split": "validation",
+        "expected_phrases": [
+          "ölçüm",
+          "ihtiyaç",
+          "model"
+        ],
+        "matched_phrases": [
+          "ihtiyaç",
+          "model"
+        ],
+        "missing_phrases": [
+          "ölçüm"
+        ],
+        "coverage_ratio": 0.6666666666666666,
+        "passed": false,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003"
+        ]
+      },
+      {
+        "case_id": "multi_04",
+        "category": "multi_evidence",
+        "split": "test",
+        "expected_phrases": [
+          "yerel",
+          "kurumsal",
+          "mimari"
+        ],
+        "matched_phrases": [
+          "yerel",
+          "kurumsal",
+          "mimari"
+        ],
+        "missing_phrases": [],
+        "coverage_ratio": 1.0,
+        "passed": true,
+        "source_ids": [
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:003",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:003:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:004",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:005:child:002",
+          "doc_b20e5ee9255db127f8394092773d5e1c17b5a9e258849e82db27273d44fe9898:ver_04dc4c638fc7ea19267b6cc7524d925bae6d93efcec388a19285c7befef98d61:parent:006:child:001"
+        ]
+      }
+    ]
+  }
+}

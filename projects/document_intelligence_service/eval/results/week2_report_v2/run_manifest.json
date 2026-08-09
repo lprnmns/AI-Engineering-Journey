@@ -1,0 +1,86 @@
+{
+  "run_id": "eval_ablation_reranker_6e0c748354a7_seed17",
+  "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+  "started_at": "2026-08-09T22:32:04.450331+00:00",
+  "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
+  "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
+  "dataset_version": "mentor_program_pdf_rag_golden_v1",
+  "corpus_snapshot_id": "7b1758164164fd41f8892085327a6479c401e3d3ede5c74ec791e596bad4ff47",
+  "qdrant_collection": "document_chunks_v2_bm25",
+  "qdrant_point_count": 26,
+  "chunk_config_hash": "751751a9ffa0e7001decaaf0e920128a217a9d4edf7502478661fc91419a2338",
+  "prompt_version": "structured_prompt_v1",
+  "case_count": 44,
+  "split_counts": {
+    "development": 19,
+    "validation": 11,
+    "test": 14
+  },
+  "language_counts": {
+    "tr": 44
+  },
+  "pipeline": {
+    "parser": "pypdf",
+    "parser_version": "1",
+    "normalizer": "unicode_whitespace_v1",
+    "chunker": "section_aware_v1",
+    "chunker_version": "1",
+    "chunk_size_sentences": "3",
+    "chunk_overlap_sentences": "1",
+    "section_marker_profile": "mentor_program_v1",
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "sparse_encoder": "bm25_qdrant_idf_v2",
+    "sparse_encoder_version": "1",
+    "vector_schema_version": "2",
+    "reranker_model": null,
+    "candidate_k": 30,
+    "fusion_k": 20,
+    "rerank_k": 5,
+    "rrf_k": 60,
+    "llm_model": "gemma3:4b",
+    "prompt_version": "structured_prompt_v1",
+    "metric_implementation_version": "retrieval_metrics_v1"
+  },
+  "models": {
+    "dense": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "sparse": "bm25_qdrant_idf_v2",
+    "reranker": null,
+    "llm": "gemma3:4b"
+  },
+  "retrieval": {
+    "mode": "ablation",
+    "candidate_k": 30,
+    "top_k": 5,
+    "fusion_k": 20,
+    "rerank_k": 5,
+    "fusion_config": {
+      "algorithm": "rrf",
+      "k": 60
+    },
+    "reranker_enabled": true
+  },
+  "warmup_count": 3,
+  "warmup_runs": 3,
+  "warmup_questions": [
+    "Qdrant ne işe yarar?",
+    "Embedding ne demektir?",
+    "RAG akışı hangi adımlardan oluşur?"
+  ],
+  "query_order_seed": 17,
+  "host": {
+    "os": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cpu_count": 8,
+    "memory_bytes": 33319329792,
+    "accelerator": "cpu",
+    "ram_gb": 31.03
+  },
+  "metric_implementation_version": "retrieval_metrics_v1",
+  "llm_called": false,
+  "source_report_git_shas": {
+    "dense": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+    "hybrid": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+    "dense_reranker": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+    "hybrid_reranker": "6e0c748354a755e073e99f27ce1fa663a1e42e5b"
+  }
+}

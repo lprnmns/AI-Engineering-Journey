@@ -1,0 +1,335 @@
+{
+  "positive_flip_count": 8,
+  "negative_flip_count": 12,
+  "five_positive_examples_available": true,
+  "five_negative_examples_available": true,
+  "positive_examples": [
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "direct_04",
+      "category": "direct_fact",
+      "split": "development",
+      "language": "tr",
+      "question": "RAG akışında dokümandan cevaba kadar hangi adımlar bulunur?",
+      "targets": [
+        "rag"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 0.5,
+      "reranker_mrr_at_10": 1.0,
+      "quality_delta": 0.5,
+      "delta": 0.5,
+      "flip": "positive",
+      "baseline_titles": [
+        "purpose",
+        "rag",
+        "purpose",
+        "purpose",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "rag",
+        "deliverables",
+        "purpose",
+        "local_model",
+        "local_model"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "direct_07",
+      "category": "direct_fact",
+      "split": "validation",
+      "language": "tr",
+      "question": "Hafta sonunda yaklaşık ne kadar süreli bir sunum yapılması bekleniyor?",
+      "targets": [
+        "deliverables"
+      ],
+      "baseline_recall_at_5": 0.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 0.0,
+      "reranker_mrr_at_10": 0.5,
+      "quality_delta": 0.5,
+      "delta": 0.5,
+      "flip": "positive",
+      "baseline_titles": [
+        "purpose",
+        "corporate_problem",
+        "purpose",
+        "corporate_problem",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "corporate_problem",
+        "deliverables",
+        "corporate_problem",
+        "purpose",
+        "purpose"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "near_miss_01",
+      "category": "near_miss",
+      "split": "development",
+      "language": "tr",
+      "question": "Embedding çalışmasının sonunda yalnız skorları listelemek yeterli midir?",
+      "targets": [
+        "embedding"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 0.5,
+      "reranker_mrr_at_10": 1.0,
+      "quality_delta": 0.5,
+      "delta": 0.5,
+      "flip": "positive",
+      "baseline_titles": [
+        "purpose",
+        "embedding",
+        "embedding",
+        "local_model",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "embedding",
+        "deliverables",
+        "purpose",
+        "purpose",
+        "purpose"
+      ]
+    },
+    {
+      "comparison": "hybrid_to_hybrid_reranker",
+      "case_id": "near_miss_01",
+      "category": "near_miss",
+      "split": "development",
+      "language": "tr",
+      "question": "Embedding çalışmasının sonunda yalnız skorları listelemek yeterli midir?",
+      "targets": [
+        "embedding"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 0.3333333333333333,
+      "reranker_mrr_at_10": 1.0,
+      "quality_delta": 0.6666666666666667,
+      "delta": 0.6666666666666667,
+      "flip": "positive",
+      "baseline_titles": [
+        "deliverables",
+        "purpose",
+        "embedding",
+        "purpose",
+        "embedding"
+      ],
+      "reranker_titles": [
+        "embedding",
+        "deliverables",
+        "purpose",
+        "purpose",
+        "purpose"
+      ]
+    },
+    {
+      "comparison": "hybrid_to_hybrid_reranker",
+      "case_id": "direct_03",
+      "category": "direct_fact",
+      "split": "development",
+      "language": "tr",
+      "question": "Embedding deneyinde hangi benzerlik ölçüsü kullanılmalıdır?",
+      "targets": [
+        "embedding"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 0.5,
+      "reranker_mrr_at_10": 1.0,
+      "quality_delta": 0.5,
+      "delta": 0.5,
+      "flip": "positive",
+      "baseline_titles": [
+        "deliverables",
+        "embedding",
+        "embedding",
+        "purpose",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "embedding",
+        "deliverables",
+        "embedding",
+        "local_model",
+        "purpose"
+      ]
+    }
+  ],
+  "negative_examples": [
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "direct_08",
+      "category": "direct_fact",
+      "split": "test",
+      "language": "tr",
+      "question": "Mentorun bir kodu çalıştırmanın yanında açıklamanı istediği üç şey nedir?",
+      "targets": [
+        "purpose"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 1.0,
+      "reranker_mrr_at_10": 0.3333333333333333,
+      "quality_delta": -0.6666666666666667,
+      "delta": -0.6666666666666667,
+      "flip": "negative",
+      "baseline_titles": [
+        "purpose",
+        "purpose",
+        "purpose",
+        "model_fundamentals",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "local_model",
+        "deliverables",
+        "purpose",
+        "purpose",
+        "purpose"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "direct_05",
+      "category": "direct_fact",
+      "split": "development",
+      "language": "tr",
+      "question": "Yerel model karşılaştırmasında hangi süre ve kaynak değerleri kaydedilmelidir?",
+      "targets": [
+        "local_model"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 1.0,
+      "reranker_mrr_at_10": 0.5,
+      "quality_delta": -0.5,
+      "delta": -0.5,
+      "flip": "negative",
+      "baseline_titles": [
+        "local_model",
+        "local_model",
+        "corporate_problem",
+        "local_model",
+        "rag"
+      ],
+      "reranker_titles": [
+        "corporate_problem",
+        "local_model",
+        "local_model",
+        "corporate_problem",
+        "local_model"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "multi_03",
+      "category": "multi_evidence",
+      "split": "validation",
+      "language": "tr",
+      "question": "Yerel model seçimini teknik yetenek, ölçüm ve kurumsal ihtiyaca nasıl bağlarım?",
+      "targets": [
+        "model_fundamentals",
+        "local_model",
+        "corporate_problem"
+      ],
+      "baseline_recall_at_5": 0.6666666666666666,
+      "reranker_recall_at_5": 1.0,
+      "baseline_mrr_at_10": 1.0,
+      "reranker_mrr_at_10": 0.5,
+      "quality_delta": -0.5,
+      "delta": -0.5,
+      "flip": "negative",
+      "baseline_titles": [
+        "corporate_problem",
+        "corporate_problem",
+        "rag",
+        "local_model",
+        "rag"
+      ],
+      "reranker_titles": [
+        "deliverables",
+        "corporate_problem",
+        "corporate_problem",
+        "model_fundamentals",
+        "local_model"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "multi_04",
+      "category": "multi_evidence",
+      "split": "test",
+      "language": "tr",
+      "question": "RAG teknolojisini seçerken mimari akış ile yerel ve kurumsal kullanım koşullarını birlikte nasıl değerlendirmeliyim?",
+      "targets": [
+        "local_model",
+        "corporate_problem",
+        "rag"
+      ],
+      "baseline_recall_at_5": 0.6666666666666666,
+      "reranker_recall_at_5": 0.6666666666666666,
+      "baseline_mrr_at_10": 1.0,
+      "reranker_mrr_at_10": 0.5,
+      "quality_delta": -0.5,
+      "delta": -0.5,
+      "flip": "negative",
+      "baseline_titles": [
+        "rag",
+        "corporate_problem",
+        "rag",
+        "purpose",
+        "corporate_problem"
+      ],
+      "reranker_titles": [
+        "deliverables",
+        "rag",
+        "corporate_problem",
+        "corporate_problem",
+        "rag"
+      ]
+    },
+    {
+      "comparison": "dense_to_dense_reranker",
+      "case_id": "near_miss_02",
+      "category": "near_miss",
+      "split": "development",
+      "language": "tr",
+      "question": "RAG bölümünde yalnız model seçimi mi, yoksa başka hangi teslimler de bekleniyor?",
+      "targets": [
+        "rag"
+      ],
+      "baseline_recall_at_5": 1.0,
+      "reranker_recall_at_5": 0.0,
+      "baseline_mrr_at_10": 0.5,
+      "reranker_mrr_at_10": 0.0,
+      "quality_delta": -0.5,
+      "delta": -0.5,
+      "flip": "negative",
+      "baseline_titles": [
+        "local_model",
+        "rag",
+        "corporate_problem",
+        "purpose",
+        "purpose"
+      ],
+      "reranker_titles": [
+        "deliverables",
+        "corporate_problem",
+        "corporate_problem",
+        "local_model",
+        "corporate_problem"
+      ]
+    }
+  ],
+  "interpretation_rule": "Only observed per-case Recall@5 changes are included; missing examples are reported, not fabricated."
+}

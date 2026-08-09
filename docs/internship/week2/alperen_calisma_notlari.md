@@ -681,7 +681,13 @@ RRF katkısı = 1 / (k + rank)
 
 ### Güvenlik ve filtre davranışı
 
-Qdrant retriever yalnız `is_active=true` point'leri arıyor. `document_ids` verilirse arama öncesinde Qdrant payload filtresine ekleniyor. `tenant_id` ve `acl_tags` henüz payload/authorization katmanına bağlanmadığı için sessizce yok sayılmıyor; endpoint açıkça `FEATURE_NOT_READY` döndürüyor.
+Qdrant retriever yalnız `is_active=true` point'leri arıyor. `document_ids`,
+`tenant_id` ve `acl_tags` arama öncesinde Qdrant payload filtresine ekleniyor;
+application katmanı dönen source metadata'sını ikinci kez kontrol ediyor. Bu
+local MVP'de ACL/tenant izolasyonunu gerçekten uygular; authentication veya
+merkezi authorization yerine geçmez. Aşağıdaki ilk notlarda görülen
+`FEATURE_NOT_READY` ifadesi bu davranış bağlanmadan önceki tarihsel ara duruma
+aittir.
 
 ### `/v1/search` neden ayrı?
 
@@ -904,7 +910,7 @@ relevant_sections veya relevant_document_ids,
 expected_phrases, forbidden_phrases
 ```
 
-Çocuk chunk ID'si yerine section adı (`rag`, `local_model` gibi) gold hedefi olarak kullanılabiliyor. Çünkü pipeline version değişince generated point ID değişebilir; fakat mentor PDF'inin bilgi section'ı aynı kalır. `multi_evidence` vakalarında birden fazla section bekleniyor. `prompt_injection` ve `leakage_acl` vakaları cevap üretme yetkisi olmayan istekleri temsil ediyor; ACL özelliği henüz bağlı olmadığı için bunlar hazırlık/regression vakasıdır.
+Çocuk chunk ID'si yerine section adı (`rag`, `local_model` gibi) gold hedefi olarak kullanılabiliyor. Çünkü pipeline version değişince generated point ID değişebilir; fakat mentor PDF'inin bilgi section'ı aynı kalır. `multi_evidence` vakalarında birden fazla section bekleniyor. `prompt_injection` ve `leakage_acl` vakaları cevap üretme yetkisi olmayan istekleri temsil ediyor; ACL vakaları artık Qdrant pre-filter ve application source re-check ile local izolasyon regression'ı olarak çalışıyor. Bu, authenticated principal kullanan production authorization sistemi değildir.
 
 ### Ölçülen metrikler
 
@@ -942,6 +948,11 @@ Bu aşamada golden dataset sözleşmesi, metrik hesaplayıcıları, runner ve re
 > Demo sorularını 44 vakalık versionlanmış golden JSONL sözleşmesine dönüştürdüm. Direct, paraphrase, exact-term, near-miss, no-answer, multi-evidence ve injection/ACL hazırlık sınıfları var; development/validation/test split'i ayrılıyor. Retrieval için Recall@k, candidate Recall@20, MRR, nDCG; sistem davranışı için no-answer hata yönleri ve p50/p95 latency ölçtüm. Reranker öncesi aday penceresini final evidence'tan ayrı trace ediyorum. Altyapı contract testlerinden sonra gerçek Qdrant ablation ile hybrid'in bu snapshot'ta en iyi kalite/latency dengesini verdiğini gösterdim.
 
 ## 22. Gerçek retrieval ablation ve gate sonucu
+
+> Bu bölümün ilk tabloları önceki corpus/runtime snapshot'ının tarihsel kaydıdır.
+> Güncel, tekrar üretilebilir sonuçlar aşağıdaki 32. bölümde ve
+> `eval/results/week2_report_v2/` altında tutulur. Eski değerler yeni sonuçlar
+> gibi yorumlanmamalıdır.
 
 ### Aynı deney koşulu
 
@@ -1257,21 +1268,25 @@ toplam: 4/4
 LLM çağrısı: 0
 ```
 
-Answerability gate toplamında false negative `5/14`ten `3/14`e düştü. Kalan
-vakalar `no_answer_05`, `no_answer_06` ve `leakage_02`; bunlar direct injection
-değil, corpus/ACL ve answerability sınırlarının sonraki çalışmasıdır.
+Bu tarihsel snapshot'ta answerability false negative sayısı farklı bir
+threshold/corpus sürümüne aitti. Güncel temiz snapshot'ta gate sonucu `4/14`
+false negative'dir; validation-only threshold `0.331` olarak seçilmiştir.
+Security policy'nin score üretmeyen vakaları ayrıca değerlendirilir; bu nedenle
+semantic threshold'u injection veya authorization politikasının yerine
+koymuyorum.
 
 ### Threshold notu
 
 Security policy retrieval'dan önce karar verdiği için bu vakalarda numeric
 retrieval score oluşmuyor. Bu yüzden threshold kalibratörü security kategorilerini
-score calibration'dan ayıracak şekilde güncellendi. Security dışı 9 validation
-vakasında hesaplanan öneri `0.338`; daha geniş validation seti olmadan mevcut
-konservatif runtime default'u `0.379` değiştirilmedi.
+score calibration'dan ayıracak şekilde güncellendi. Güncel security dışı 9
+validation vakasında önerilen ve runtime'a alınan eşik `0.331`dir; daha geniş
+validation seti olmadan bunun güçlü genelleme kanıtı olmadığını ayrıca
+belirtiyorum.
 
 ### Mentora kısa anlatım
 
-> Önceden answerability yalnız benzerlik skoruna baktığı için system-prompt extraction ve kaynaksız benchmark iddiası gibi injection soruları retrieval'da yüksek puan alabiliyordu. Domain katmanına retrieval'dan önce çalışan `PromptSafetyPolicy` ekledim. Dört yüksek güvenli saldırı testinde direct injection `2/2`, leakage `2/2` geçti; engellenen istekte source ve LLM yok, reason `SECURITY_POLICY`. Ayrıca Ollama prompt'unda user question ile `UNTRUSTED_EVIDENCE` sınırlarını ayırdım. Bu tam güvenlik iddiası değil; defense-in-depth'in yeni bir katmanı.
+> Önceden answerability yalnız benzerlik skoruna baktığı için system-prompt extraction ve kaynaksız benchmark iddiası gibi injection soruları retrieval'da yüksek puan alabiliyordu. Domain katmanına retrieval'dan önce çalışan `PromptSafetyPolicy` ekledim. Güncel frozen security testinde direct injection `2/2`, leakage/ACL `2/2` geçti; engellenen istekte source ve LLM yok, reason `SECURITY_POLICY`. ACL için ayrıca Qdrant pre-filter ve application source re-check var; bu authentication yerine geçmeyen local izolasyondur. Ayrıca Ollama prompt'unda user question ile `UNTRUSTED_EVIDENCE` sınırlarını ayırdım. Bu tam güvenlik iddiası değil; defense-in-depth'in yeni bir katmanı.
 
 ## 28. PDF içi indirect injection ve evidence containment
 
@@ -1411,12 +1426,17 @@ release-ready: false
 - `Indirect injection`: `EvidenceSafetyPolicy` zararlı chunk'ı context'e
   sokmadan çıkarıyor. Smoke'ta 3/3 saldırı engellendi, benign evidence 1/1
   korundu. Bu sonuç gerçek LLM'in tüm saldırılara dayanıklı olduğunu kanıtlamaz.
-- `Cross-document leakage / ACL`: tamamlanmış değil. `tenant_id` veya `acl_tags`
-  geldiğinde endpoint şu an bilinçli olarak `501 FEATURE_NOT_READY` döndürüyor.
-  Bu fail-closed ara davranıştır; gerçek tenant/ACL filtresi yoktur.
-- `HTML/Markdown exfiltration`: API cevabı JSON'dur ve doğrudan HTML render
-  etmez; fakat sanitizer, URL/image allowlist ve UI escape politikası henüz
-  eklenmedi. Bu nedenle `partial`.
+- `Cross-document leakage / ACL` (tarihsel ara durum): ilk scaffold'ta
+  `tenant_id` veya `acl_tags` için bilinçli olarak `501 FEATURE_NOT_READY`
+  dönülüyordu. Bu kayıt artık güncel davranış değildir. Güncel local MVP'de
+  tenant/ACL filtreleri Qdrant pre-filter olarak uygulanıyor ve application
+  katmanı dönen source metadata'sını yeniden kontrol ediyor; security testinde
+  `4/4` geçiyor. Authentication, policy store ve authenticated principal hâlâ
+  production kapsamının dışındadır.
+- `HTML/Markdown exfiltration`: API cevabı JSON'dur; shipped demo UI answer,
+  source ve trace alanlarını `textContent`/`replaceChildren` ile gösterir ve
+  Markdown, link veya image yorumlamaz. Local UI kapsamında `pass`tir; rich
+  text açılırsa external client için sanitizer/URL-image allowlist gerekir.
 - `RAG poisoning`: content hash, pipeline fingerprint ve stage → verify →
   activate akışı yarım/bozuk version'ın active olmasını engelliyor. Kaynak
   provenance allowlist'i, quarantine ve poisoning detector henüz yok.
@@ -1424,22 +1444,25 @@ release-ready: false
   Rate limit, concurrent job quota, parser timeout ve queue backpressure
   production seviyesinde değil.
 
-### Fail-open ve fail-closed farkı
+### Tarihsel fail-closed ara davranış
 
 Bir güvenlik özelliği hazır değilken istekleri normal akışa bırakmak `fail-open`
-olur ve veri sızıntısı riski taşır. ACL için yaptığımız mevcut davranış
-`fail-closed`: filtre uygulayamadığı isteği başarıyla cevaplamıyor, açıkça
-`FEATURE_NOT_READY` veriyor. Bu üretime hazır olduğumuz anlamına gelmez; yalnız
-eksik özelliğin sessizce yok sayılmadığını gösterir.
+olur ve veri sızıntısı riski taşır. İlk scaffold'ta ACL için yaptığımız
+`FEATURE_NOT_READY` davranışı bu yüzden fail-closed idi. Güncel davranışta
+filtre gerçekten uygulanabildiği için valid local ACL istekleri artık normal
+retrieval akışına girer; production kimlik doğrulama ve merkezi policy kararı
+eklenmeden üretim güvenliği iddiası yapılmaz.
 
 ### Mentora kısa anlatım
 
 > Güvenlik iddiasını tek bir prompt'a bırakmadım; sekiz tehdit sınıfını attack
 > matrix'te kod ve test kanıtlarıyla ayırdım. Direct ve indirect injection için
-> pre-LLM policy'lerim var. ACL henüz bağlı değil; tenant/ACL isteğini 501 ile
-> fail-closed kesiyorum. HTML çıktısında JSON transport var ama sanitizer yok.
-> Upload ve version activation kontrolleri mevcut, rate limit ve provenance
-> gibi production katmanları sonraki iş olarak açıkça listelendi.
+> pre-LLM policy'lerim var. ACL local MVP'de Qdrant pre-filter ve source
+> re-check ile uygulanıyor, security regression `4/4` geçti; fakat bu
+> authentication değildir. HTML çıktısında JSON transport ve safe text render
+> var ama production sanitizer/provenance allowlist yok. Upload ve version
+> activation kontrolleri mevcut, rate limit ve merkezi provenance gibi
+> production katmanları sonraki kapsam olarak açıkça listelendi.
 
 ## 31. Gün 5 — Compose, demo UI ve readiness sınırı
 
@@ -1524,13 +1547,13 @@ hazır sayılmıyor.
 
 ### Son kalite kanıtı
 
-Kök repo dizininden alınan son sonuçlar:
+Kök repo dizininden alınan önceki sonuçlar:
 
 ```text
 110 tests passed
 ruff check: All checks passed
 mypy: Success, no issues found in 72 source files
-security matrix: 8 controls, 27 evidence paths, 0 missing paths
+security matrix: 8 controls, 29 evidence paths, 0 missing paths
 Compose smoke: live, ready, demo UI, Qdrant restart persistence passed
 ```
 
@@ -1582,3 +1605,103 @@ belirtiliyor.
  > container'ı ayrı tutuluyor.
 > Liveness ile readiness'i ayırdım ve smoke script'i readiness geçmeden demo
 > akışını başarılı saymıyor.
+
+## 32. Güncel canonical durum — 10 Ağustos 2026
+
+Bu bölüm, önceki deney notlarındaki ara snapshot'ların üzerine yazılan güncel
+durumdur. Mentor karşısında sayı söylerken önce bu bölümü, sonra bağlı artifact'i
+referans alacağım.
+
+### PDF ve 28 sayfa kabul kontrolü
+
+- Week 2 PDF'in 28 sayfası `pdftoppm -r 150` ile ayrı PNG'lere render edildi;
+  `page-01.png`–`page-28.png` dosyalarının tamamı görsel olarak incelendi.
+- PDF SHA-256: `df95170524478fbea62140bc76b97e521749d9f0c3928a4a64769f39ba7aee19`.
+- Her sayfanın metni, tablo/şablonu ve architecture/sequence/Compose
+  diyagramı `docs/acceptance/week2_pdf_visual_review.md` ve
+  `week2_pdf_acceptance_matrix.md` içinde karşılığıyla kayıtlıdır.
+- `PASS` local MVP'de kod/test/tekrar üretilebilir artifact kanıtı; `PARTIAL`
+  veya `BOUNDARY` ise production authentication, merkezi metrics, sanitizer,
+  video ve mentorun insan puanı gibi repo dışı/sonraki kapsamdır. Bunlar
+  tamamlanmış gibi sunulmayacaktır.
+
+### Güncel retrieval ve answerability ölçümü
+
+Canonical source SHA: `6e0c748354a755e073e99f27ce1fa663a1e42e5b`.
+
+```text
+Qdrant collection: document_chunks_v2_bm25
+active points: 26
+dense dimension: 384
+BM25 state SHA: ba63c2d142599e0ea4c461f2cbc35b67a14a7b49c9c7b59f2ced4e5f00c199d0
+dataset: 44 golden vaka / 30 answerable retrieval case
+
+Dense:              Recall@5 0.901, p95 39.3 ms
+BM25:               Recall@5 0.818, p95  7.8 ms
+Hybrid RRF:         Recall@5 0.923, p95 37.3 ms
+Dense + reranker:   Recall@5 0.912, p95 1364.7 ms
+Hybrid + reranker:  Recall@5 0.912, p95 1402.1 ms
+
+Answerability threshold: 0.331
+Validation FP/FN: 0/7, 0/2
+Frozen security gate: 4/4
+Evidence coverage: 25/30 fully covered, mean 94.3%
+```
+
+Reranker bu snapshot'ta hem daha yavaş hem de final retrieval kalitesinde daha
+zayıf olduğu için varsayılan kapalıdır. Hybrid, bu veri üzerinde en iyi kalite/
+latency dengesidir. Threshold yalnız validation split'inde seçildi; production
+güvenlik veya authorization kararı değildir.
+
+### Güncel local Gemma smoke'u
+
+```text
+model: Ollama gemma3:4b
+embedding: 11406.7 ms
+LLM: 39702.6 ms
+total: 51134.0 ms
+decision: answered
+canonical sources: 2
+numeric warnings: []
+phrase coverage: 0/3 (diagnostic; otomatik ret değil)
+```
+
+Bu tek bounded CPU smoke'u retrieval'ın ve model çağrısının gerçekten
+çalıştığını kanıtlar; genel LLM doğruluk oranı değildir. Phrase coverage
+sonucu ayrıca “model cevap üretti” ile “beklenen kapsamı verdi” ayrımını
+gösterir.
+
+### Güncel güvenlik ve erişim sınırı
+
+- Direct prompt injection retrieval'dan önce `PromptSafetyPolicy` ile kesilir.
+- Indirect injection için `EvidenceSafetyPolicy` malicious evidence'i
+  context'e sokmadan filtreler.
+- Tenant/ACL filtreleri Qdrant pre-filter olarak uygulanır; application source
+  re-check ikinci savunmadır. Security regression `4/4` geçmiştir.
+- Bu local ACL izolasyonu authenticated request principal, merkezi policy store,
+  signed provenance veya production authorization değildir.
+- Rich text dışarıdan açılırsa URL/image sanitizer gerekir; mevcut shipped UI
+  link/image yorumlamadığı için bu payload'lar inert text'tir. Provenance
+  allowlist/quarantine, rate limit ve merkezi metrics/retention sonraki
+  production kapsamıdır.
+
+### Son kalite kapısı
+
+```text
+Full repository tests: 456 passed, 1 skipped
+Ruff: clean
+Mypy: 123 source files, no issues
+Docker Compose config: passed
+Compose smoke: passed
+  - API live/ready
+  - worker
+  - demo UI
+  - sample PDF ingestion
+  - Qdrant restart persistence
+```
+
+Smoke scripti yalnız dedicated Week 2 stack'ini kapatır; hostta daha önce çalışan
+`127.0.0.1:6333` Qdrant servisine dokunmaz. Sonraki commit, bu canonical not ve
+artifact'lerin paketleme commit'i olacaktır; benchmark manifestindeki source
+SHA'nın paketleme commit'inden farklı olması Git'in self-referential SHA
+üretilememesi nedeniyle beklenen durumdur.

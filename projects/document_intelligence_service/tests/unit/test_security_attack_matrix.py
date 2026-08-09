@@ -17,11 +17,11 @@ def test_security_attack_matrix_has_unique_controls_and_complete_evidence() -> N
 
     assert report["summary"] == {
         "control_count": 8,
-        "status_counts": {"not_ready": 0, "partial": 4, "pass": 4},
-        "evidence_path_count": 28,
+        "status_counts": {"not_ready": 0, "partial": 3, "pass": 5},
+        "evidence_path_count": 29,
         "missing_evidence_path_count": 0,
         "missing_evidence_paths": [],
-        "release_ready": True,
+        "release_ready": False,
     }
 
 

@@ -1,15 +1,16 @@
 {
-  "status": "superseded_legacy_snapshot",
-  "canonical_artifact": "eval/results/week2_report_v2/ablation_summary_v2.json",
-  "canonical_git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
   "manifest": {
-    "git_sha": "b8389677f656faa945885e3e58295ab7fce4643a",
+    "run_id": "eval_ablation_reranker_6e0c748354a7_seed17",
+    "git_sha": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+    "started_at": "2026-08-09T22:32:04.450331+00:00",
     "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
     "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
     "dataset_version": "mentor_program_pdf_rag_golden_v1",
     "corpus_snapshot_id": "7b1758164164fd41f8892085327a6479c401e3d3ede5c74ec791e596bad4ff47",
     "qdrant_collection": "document_chunks_v2_bm25",
     "qdrant_point_count": 26,
+    "chunk_config_hash": "751751a9ffa0e7001decaaf0e920128a217a9d4edf7502478661fc91419a2338",
+    "prompt_version": "structured_prompt_v1",
     "case_count": 44,
     "split_counts": {
       "development": 19,
@@ -25,17 +26,42 @@
       "normalizer": "unicode_whitespace_v1",
       "chunker": "section_aware_v1",
       "chunker_version": "1",
+      "chunk_size_sentences": "3",
+      "chunk_overlap_sentences": "1",
+      "section_marker_profile": "mentor_program_v1",
       "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
       "sparse_encoder": "bm25_qdrant_idf_v2",
+      "sparse_encoder_version": "1",
+      "vector_schema_version": "2",
       "reranker_model": null,
-      "vector_schema_version": "2"
+      "candidate_k": 30,
+      "fusion_k": 20,
+      "rerank_k": 5,
+      "rrf_k": 60,
+      "llm_model": "gemma3:4b",
+      "prompt_version": "structured_prompt_v1",
+      "metric_implementation_version": "retrieval_metrics_v1"
+    },
+    "models": {
+      "dense": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "sparse": "bm25_qdrant_idf_v2",
+      "reranker": null,
+      "llm": "gemma3:4b"
     },
     "retrieval": {
       "mode": "ablation",
+      "candidate_k": 30,
       "top_k": 5,
+      "fusion_k": 20,
+      "rerank_k": 5,
+      "fusion_config": {
+        "algorithm": "rrf",
+        "k": 60
+      },
       "reranker_enabled": true
     },
     "warmup_count": 3,
+    "warmup_runs": 3,
     "warmup_questions": [
       "Qdrant ne işe yarar?",
       "Embedding ne demektir?",
@@ -47,14 +73,16 @@
       "python": "3.12.3",
       "cpu_count": 8,
       "memory_bytes": 33319329792,
-      "accelerator": "cpu"
+      "accelerator": "cpu",
+      "ram_gb": 31.03
     },
+    "metric_implementation_version": "retrieval_metrics_v1",
     "llm_called": false,
     "source_report_git_shas": {
-      "dense": "d039c512c1fd32945815dcb6c66f993a101bdcd2",
-      "hybrid": "d039c512c1fd32945815dcb6c66f993a101bdcd2",
-      "dense_reranker": "d039c512c1fd32945815dcb6c66f993a101bdcd2",
-      "hybrid_reranker": "d039c512c1fd32945815dcb6c66f993a101bdcd2"
+      "dense": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+      "hybrid": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+      "dense_reranker": "6e0c748354a755e073e99f27ce1fa663a1e42e5b",
+      "hybrid_reranker": "6e0c748354a755e073e99f27ce1fa663a1e42e5b"
     }
   },
   "variants": [
@@ -69,8 +97,8 @@
       "recall_at_5": 0.9011111111111112,
       "mrr_at_10": 0.875,
       "ndcg_at_10": 0.9296036568794085,
-      "p50_ms": 30.247788003180176,
-      "p95_ms": 37.55341208889149
+      "p50_ms": 29.47077003773302,
+      "p95_ms": 39.31428123032674
     },
     {
       "variant": "B_hybrid",
@@ -83,8 +111,8 @@
       "recall_at_5": 0.9233333333333333,
       "mrr_at_10": 0.8777777777777778,
       "ndcg_at_10": 0.9517558220985248,
-      "p50_ms": 33.66702701896429,
-      "p95_ms": 41.81137686828151
+      "p50_ms": 30.90506000444293,
+      "p95_ms": 37.27037109201775
     },
     {
       "variant": "C_dense_reranker",
@@ -97,8 +125,8 @@
       "recall_at_5": 0.9122222222222223,
       "mrr_at_10": 0.836111111111111,
       "ndcg_at_10": 0.9328739389099465,
-      "p50_ms": 1085.8821744914167,
-      "p95_ms": 1350.4381417122204
+      "p50_ms": 1087.700705975294,
+      "p95_ms": 1364.7124030510895
     },
     {
       "variant": "D_hybrid_reranker",
@@ -111,8 +139,8 @@
       "recall_at_5": 0.9122222222222223,
       "mrr_at_10": 0.8333333333333334,
       "ndcg_at_10": 0.9328739389099465,
-      "p50_ms": 1019.2872625193559,
-      "p95_ms": 1448.4162370441481
+      "p50_ms": 1061.933032469824,
+      "p95_ms": 1402.0904843346216
     }
   ],
   "slices": {
@@ -1510,9 +1538,9 @@
       "language": "tr",
       "question": "Yerel model seçimini teknik yetenek, ölçüm ve kurumsal ihtiyaca nasıl bağlarım?",
       "targets": [
-        "corporate_problem",
+        "model_fundamentals",
         "local_model",
-        "model_fundamentals"
+        "corporate_problem"
       ],
       "baseline_recall_at_5": 0.6666666666666666,
       "reranker_recall_at_5": 1.0,
@@ -1544,9 +1572,9 @@
       "language": "tr",
       "question": "RAG teknolojisini seçerken mimari akış ile yerel ve kurumsal kullanım koşullarını birlikte nasıl değerlendirmeliyim?",
       "targets": [
-        "rag",
+        "local_model",
         "corporate_problem",
-        "local_model"
+        "rag"
       ],
       "baseline_recall_at_5": 0.6666666666666666,
       "reranker_recall_at_5": 0.6666666666666666,
@@ -1835,9 +1863,9 @@
       "language": "tr",
       "question": "Yerel model seçimini teknik yetenek, ölçüm ve kurumsal ihtiyaca nasıl bağlarım?",
       "targets": [
-        "corporate_problem",
+        "model_fundamentals",
         "local_model",
-        "model_fundamentals"
+        "corporate_problem"
       ],
       "baseline_recall_at_5": 0.3333333333333333,
       "reranker_recall_at_5": 1.0,
@@ -1869,9 +1897,9 @@
       "language": "tr",
       "question": "RAG teknolojisini seçerken mimari akış ile yerel ve kurumsal kullanım koşullarını birlikte nasıl değerlendirmeliyim?",
       "targets": [
-        "rag",
+        "local_model",
         "corporate_problem",
-        "local_model"
+        "rag"
       ],
       "baseline_recall_at_5": 0.6666666666666666,
       "reranker_recall_at_5": 0.6666666666666666,
@@ -2264,9 +2292,9 @@
         "language": "tr",
         "question": "Yerel model seçimini teknik yetenek, ölçüm ve kurumsal ihtiyaca nasıl bağlarım?",
         "targets": [
-          "corporate_problem",
+          "model_fundamentals",
           "local_model",
-          "model_fundamentals"
+          "corporate_problem"
         ],
         "baseline_recall_at_5": 0.6666666666666666,
         "reranker_recall_at_5": 1.0,
@@ -2298,9 +2326,9 @@
         "language": "tr",
         "question": "RAG teknolojisini seçerken mimari akış ile yerel ve kurumsal kullanım koşullarını birlikte nasıl değerlendirmeliyim?",
         "targets": [
-          "rag",
+          "local_model",
           "corporate_problem",
-          "local_model"
+          "rag"
         ],
         "baseline_recall_at_5": 0.6666666666666666,
         "reranker_recall_at_5": 0.6666666666666666,

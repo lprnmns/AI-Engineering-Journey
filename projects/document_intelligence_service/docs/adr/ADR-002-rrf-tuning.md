@@ -18,9 +18,9 @@ Dense ve sparse rank listelerinde skor ölçekleri farklıdır. Ham skorları to
 
 Golden set üzerinde Recall@k, MRR, nDCG ve p95 latency; query type ve dil
 slice'larıyla raporlanacak. Temiz 44-vaka smoke'unda hybrid RRF Recall@5
-`0.923`, MRR@10 `0.878`, nDCG@10 `0.952`, p95 `41.8 ms` verdi. Hybrid +
-reranker Recall@5 `0.912`, MRR@10 `0.833`, nDCG@10 `0.933`, p95 `1448.4 ms`
-kaldı.
+`0.923`, MRR@10 `0.878`, nDCG@10 `0.952`, p95 `37.3 ms` verdi. Hybrid +
+reranker Recall@5 `0.912`, MRR@10 `0.833`, nDCG@10 `0.933`, p95 `1402.1 ms`
+ölçüldü.
 
 Bu nedenle ilk local varsayılan `hybrid + reranker` değil, `hybrid` ve reranker kapalıdır. Reranker yalnız validation setinde kalite kazanımı ve latency bütçesi birlikte sağlanırsa açılabilir.
 

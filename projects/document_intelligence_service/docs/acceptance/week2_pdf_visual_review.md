@@ -1,6 +1,10 @@
 # Hafta 2 PDF — Sayfa Sayfa Görsel ve Şablon İnceleme Kaydı
 
-Kaynak: `/home/alperen/Downloads/Alperen_Manas_Yapay_Zeka_Mühendisligi_Gelisim_Programı_2_Hafta.pdf`
+Kaynak: `/home/alperen/Downloads/Alperen_Manas_Yapay_Zeka_Muhendisligi_Gelisim_Programi_2_Hafta.pdf`
+
+Görsel doğrulama: PDF bilgisi `28` sayfa; tüm sayfalar `pdftoppm -r 150`
+ile ayrı PNG olarak render edildi ve `page-01.png`–`page-28.png` aralığı tek
+tek incelendi. Kaynak PDF SHA-256: `df95170524478fbea62140bc76b97e521749d9f0c3928a4a64769f39ba7aee19`.
 
 Bu kayıt 28 sayfanın metin akışını, tablolarını, kod şablonlarını, mimari/sequence
 diyagramlarını, checklist ve teslim tablolarını tek tek repo kanıtlarıyla

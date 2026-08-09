@@ -61,7 +61,7 @@ Structured query trace: request ID, question hash, stage latency and reason code
 Run manifest:
 
 ```text
-git_sha: b8389677f656faa945885e3e58295ab7fce4643a
+git_sha: 6e0c748354a755e073e99f27ce1fa663a1e42e5b
 active Qdrant points: 26 (collection toplamı: 26; eski/inactive version yok)
 qdrant collection: document_chunks_v2_bm25
 pipeline: section_aware_v1 + paraphrase-multilingual-MiniLM-L12-v2 + bm25_qdrant_idf_v2
@@ -73,11 +73,11 @@ LLM: çağrılmadı
 
 | Strategy | Candidate Recall@20 | Recall@5 | MRR@10 | nDCG@10 | Total p50 | Total p95 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Dense | 0.993 | 0.901 | 0.875 | 0.930 | 30.2 ms | 37.6 ms |
-| Sparse/BM25 mode | 0.987 | 0.818 | 0.784 | 0.838 | 5.7 ms | 8.4 ms |
-| Hybrid RRF | 0.993 | **0.923** | **0.878** | **0.952** | 33.7 ms | **41.8 ms** |
-| Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 1085.9 ms | 1350.4 ms |
-| Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 1019.3 ms | 1448.4 ms |
+| Dense | 0.993 | 0.901 | 0.875 | 0.930 | 29.5 ms | 39.3 ms |
+| Sparse/BM25 mode | 0.987 | 0.818 | 0.784 | 0.838 | 5.6 ms | 7.8 ms |
+| Hybrid RRF | 0.993 | **0.923** | **0.878** | **0.952** | 30.9 ms | **37.3 ms** |
+| Dense + reranker | 0.993 | 0.912 | 0.836 | 0.933 | 1087.7 ms | 1364.7 ms |
+| Hybrid + reranker | 0.993 | 0.912 | 0.833 | 0.933 | 1061.9 ms | 1402.1 ms |
 
 Sparse/BM25 mode artık exact vocabulary kullanan `BM25SparseEncoder` kullanır.
 BM25 term-frequency saturation encoder'da, corpus-level IDF Qdrant'ın IDF
@@ -89,7 +89,7 @@ Türkçe morfoloji yine ayrı bir tokenizer/lemmatizer kapsamıdır.
 
 - Hybrid, bu temiz corpus'ta dense'e göre Recall@5'i yaklaşık `+0.022`, sparse baseline'a göre `+0.106` artırdı.
 - Üç yöntemde de Candidate Recall@20 çok yüksek (`0.987–0.993`). Sorun çoğunlukla doğru section'ın aday havuzuna girmemesi değil, final sıralamadaki yeridir.
-- Reranker, hybrid'e göre Recall@5'i `0.923`ten `0.912`ye, MRR@10'u `0.878`den `0.833`e düşürdü; p95'i `41.8 ms`ten `1448.4 ms`e çıkardı.
+- Reranker, hybrid'e göre Recall@5'i `0.923`ten `0.912`ye, MRR@10'u `0.878`den `0.833`e düşürdü; bu koşuda p95'i `37.3 ms`ten `1402.1 ms`e çıkardı.
 - Reranker'ın candidate recall'ı artırmadı (`0.993` → `0.993`); doğru kanıt zaten aday havuzundaydı. Ablation'da `8` pozitif ve `12` negatif flip raporlandı. Somut negatif örneklerden biri `near_miss_02`; hybrid'in bulduğu `rag` section'ı reranker final top-5'ten çıkardı.
 
 Karar: reranker varsayılan kapalı kalıyor. İleride farklı cross-encoder, daha iyi section-aware evidence aggregation veya validation split üzerinde threshold/reranker tuning yapılmadan varsayılan açılmayacak.
@@ -114,7 +114,7 @@ no-answer false positive: 0 / 30 = 0.0%
 no-answer false negative: 4 / 14 = 28.6%
   → corpus dışı vakalar cevaplanabilir sanıldı
 
-gate total p50/p95: 29.4 ms / 35.4 ms
+gate total p50/p95: 34.9 ms / 39.0 ms
 LLM çağrısı: 0
 ```
 
@@ -155,7 +155,7 @@ ikinci candidate'ın dense skoru `0.488` olmasına rağmen eski margin hesabı
 `0.456 - 0.488` yapıyordu. RRF sırası dense skor sırası olmadığı için valid bir
 soru negatif margin ile reddedilebiliyordu. `5036c5c` commit'inde top-score ve
 margin, seçilen score kind içindeki karşılaştırılabilir skorlar sıralanarak
-hesaplandı. Benchmark ve calibration temiz active snapshot üzerinde `b838967`
+hesaplandı. Benchmark ve calibration temiz active snapshot üzerinde `6e0c748`
 ile yeniden üretildi.
 
 ## Security gate regression — test split
@@ -241,9 +241,9 @@ model: ollama / gemma3:4b
 answer: Yerel model karşılaştırmasında teknik doğruluk, uygulama kalitesi, mühendislik yorumu ve bağımsız ilerleme değerleri ölçülmelidir.
 warnings: []
 canonical sources: 2
-embedding: 10279.1 ms
-LLM: 44211.2 ms
-total: 54519.1 ms
+embedding: 11406.7 ms
+LLM: 39702.6 ms
+total: 51134.0 ms
 ```
 
 Bu gerçek model cevabında numeric validator warning üretmedi; ancak phrase
