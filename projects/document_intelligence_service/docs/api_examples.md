@@ -89,7 +89,7 @@ Response'taki `sources` canonical Qdrant payload'ından, `retrieval` ise dense/s
 
 `DIS_RERANKER_ENABLED=true` seçilirse RRF sonrası bounded cross-encoder devreye girer; en fazla 20 adayı skorlayıp en fazla 5 final kaynak döndürür. CPU cold-start ve inference latency'si baseline ile ayrı ölçülmelidir.
 
-Query önce answerability gate'ten geçer. `NO_EVIDENCE` veya `LOW_RELEVANCE` kararında Ollama çağrılmaz ve `llm_ms=0` kalır. Kanıt yeterliyse `gemma3:4b` yalnız bounded evidence prompt'u ile çağrılır. Qdrant/embedding çalıştığı halde Ollama üretimi başarısızsa bu no-answer değildir; güvenli `503 DEPENDENCY_UNAVAILABLE` döner.
+Query önce direct-injection safety policy'sinden, sonra answerability gate'ten geçer. `SECURITY_POLICY`, `NO_EVIDENCE` veya `LOW_RELEVANCE` kararında retrieval veya Ollama çağrısı atlanır ve `llm_ms=0` kalır. Kanıt yeterliyse `gemma3:4b` yalnız bounded evidence prompt'u ile çağrılır. Qdrant/embedding çalıştığı halde Ollama üretimi başarısızsa bu no-answer değildir; güvenli `503 DEPENDENCY_UNAVAILABLE` döner.
 
 Answered response'ta `warnings` alanı, model çıktısının final evidence ile
 karşılaştırılmasından doğan structured output/evidence uyarılarını taşır.

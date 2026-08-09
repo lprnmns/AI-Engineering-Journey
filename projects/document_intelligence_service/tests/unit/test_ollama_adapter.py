@@ -98,7 +98,9 @@ def test_adapter_bounds_prompt_and_returns_model_metadata(
     assert options["num_predict"] == 32
     prompt = FakeAsyncClient.last_payload["prompt"]
     assert isinstance(prompt, str)
-    assert "B" not in prompt
+    assert "source=source-2" not in prompt
+    assert "BEGIN_USER_QUESTION" in prompt
+    assert "BEGIN_UNTRUSTED_EVIDENCE" in prompt
 
 
 def test_adapter_rejects_empty_evidence_before_http() -> None:

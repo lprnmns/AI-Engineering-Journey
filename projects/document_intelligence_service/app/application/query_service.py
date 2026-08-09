@@ -20,6 +20,7 @@ from ..domain.evidence_validation import (
     validate_answer_against_evidence,
 )
 from ..domain.generation import AnswerGenerationError
+from ..domain.prompt_safety import PromptSafetyPolicy
 from ..domain.retrieval import RetrievedChunk, RetrievalResult
 from .ports import AnswerGenerator
 from .retrieval_service import RetrievalService
@@ -51,10 +52,12 @@ class QueryService:
         retrieval_service: RetrievalService,
         answerability: AnswerabilityPolicy,
         answer_generator: AnswerGenerator,
+        prompt_safety: PromptSafetyPolicy | None = None,
     ) -> None:
         self._retrieval_service = retrieval_service
         self._answerability = answerability
         self._answer_generator = answer_generator
+        self._prompt_safety = prompt_safety or PromptSafetyPolicy()
 
     async def execute(
         self,
@@ -67,6 +70,27 @@ class QueryService:
         """Run the bounded query sequence and skip generation when unsafe."""
 
         started = perf_counter()
+        if self._prompt_safety.evaluate(question).blocked:
+            retrieval = _empty_retrieval(mode)
+            gate = assess_answerability(
+                question=question,
+                retrieval=retrieval,
+                answerability=self._answerability,
+                prompt_safety=self._prompt_safety,
+            )
+            return QueryExecutionResult(
+                decision=gate.decision,
+                answer=None,
+                no_answer_reason=gate.reason,
+                sources=(),
+                retrieval=retrieval,
+                provider=None,
+                model=None,
+                llm_ms=0.0,
+                total_ms=(perf_counter() - started) * 1000,
+                answerability=gate,
+                warnings=(),
+            )
         retrieval = await asyncio.to_thread(
             self._retrieval_service.search,
             question=question,
@@ -180,9 +204,19 @@ def assess_answerability(
     question: str,
     retrieval: RetrievalResult,
     answerability: AnswerabilityPolicy,
+    prompt_safety: PromptSafetyPolicy | None = None,
 ) -> AnswerabilityDecision:
     """Apply the pre-LLM gate to a previously captured retrieval result."""
 
+    safety = prompt_safety or PromptSafetyPolicy()
+    if safety.evaluate(question).blocked:
+        return AnswerabilityDecision(
+            decision=Decision.NO_ANSWER,
+            reason=NoAnswerReason.SECURITY_POLICY,
+            top_score=None,
+            score_margin=None,
+            coverage_ratio=0.0,
+        )
     signals, score_kind = build_answerability_signals(question, retrieval)
     return answerability.decide(signals=signals, score_kind=score_kind)
 
@@ -220,4 +254,18 @@ def build_answerability_signals(
             ),
         ),
         score_kind,
+    )
+
+
+def _empty_retrieval(mode: RetrievalMode) -> RetrievalResult:
+    """Create a zero-cost trace for a query blocked before retrieval."""
+
+    return RetrievalResult(
+        mode=mode.value,
+        candidates=(),
+        dense_candidates=0,
+        sparse_candidates=0,
+        rrf_candidates=0,
+        embedding_ms=0.0,
+        search_ms=0.0,
     )

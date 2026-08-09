@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .calibration import calibrate_threshold
 from .contracts import load_jsonl, validate_case_set
+from .security import SECURITY_CATEGORIES
 
 DEFAULT_DATASET = Path("data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl")
 DEFAULT_GATE_RESULTS = Path(
@@ -37,11 +38,22 @@ def main() -> None:
             raise ValueError("invalid gate observation")
         case_id = observation.get("case_id")
         top_score = observation.get("top_score")
-        if not isinstance(case_id, str) or not isinstance(top_score, (int, float)):
-            raise ValueError("gate observation needs case_id and numeric top_score")
+        if not isinstance(case_id, str):
+            raise ValueError("gate observation needs a string case_id")
+        if top_score is None:
+            # A pre-retrieval security block intentionally has no retrieval
+            # score. Security policy is evaluated by its own frozen attack set,
+            # not by the answerability threshold.
+            continue
+        if not isinstance(top_score, (int, float)):
+            raise ValueError("gate observation top_score must be numeric or null")
         scores[case_id] = float(top_score)
 
-    validation_cases = tuple(case for case in cases if case.split == "validation")
+    validation_cases = tuple(
+        case
+        for case in cases
+        if case.split == "validation" and case.category not in SECURITY_CATEGORIES
+    )
     calibration = calibrate_threshold(
         validation_cases,
         scores,
@@ -69,4 +81,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

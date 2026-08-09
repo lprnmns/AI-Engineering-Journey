@@ -94,8 +94,8 @@ Hybrid retrieval ile, Ollama çağırmadan aynı 44 vaka üzerinde gate çalış
 ```text
 expected answerable: 30
 expected no-answer: 14
-predicted answerable: 35
-predicted no-answer: 9
+predicted answerable: 33
+predicted no-answer: 11
 ```
 
 Bu provisional eşiklerde:
@@ -104,30 +104,41 @@ Bu provisional eşiklerde:
 no-answer false positive: 0 / 30 = 0.0%
   → answerable vaka gereksiz reddedildi
 
-no-answer false negative: 5 / 14 = 35.7%
+no-answer false negative: 3 / 14 = 21.4%
   → corpus dışı vakalar cevaplanabilir sanıldı
 
-gate total p50/p95: 43.4 ms / 63.3 ms
+gate total p50/p95: 36.3 ms / 47.3 ms
 LLM çağrısı: 0
 ```
 
-Bu sonuç validation'dan seçilen `0.379` threshold'un frozen test'te genellenmediğini gösteriyor: answerable vakalar gereksiz reddedilmedi, fakat corpus dışı vakaların 5'i cevaplanabilir göründü. Test split'e bakarak threshold'u geriye dönük ayarlamıyorum; bu hata, daha güçlü provenance/injection ve output policy katmanlarına ihtiyaç olduğunu gösteren raporlanmış bir sınırdır.
+Bu sonuç validation'dan seçilen `0.379` threshold'un frozen test'te tamamen
+genellenmediğini gösteriyor: answerable vakalar gereksiz reddedilmedi, fakat
+`no_answer_05`, `no_answer_06` ve `leakage_02` cevaplanabilir göründü. Direct
+injection vakaları artık score gate'e bırakılmadan `SECURITY_POLICY` ile
+reddediliyor. Test split'e bakarak threshold'u geriye dönük ayarlamıyorum; kalan
+false negative'ler provenance/ACL ve daha güçlü output policy ihtiyacını gösteriyor.
 
 ## Validation-only threshold calibration
 
 ```text
 dataset_sha256: 5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e
-calibration split: validation only
-validation cases: 11 (7 answerable, 4 no-answer)
+calibration split: validation only; security categories excluded from score calibration
+validation cases: 9 (7 answerable, 2 score-based no-answer)
 test split used: false
 false-negative cost: 3.0
-selected threshold: 0.37884022
-rounded runtime threshold: 0.379
+selected score threshold: 0.337857395
+rounded score threshold: 0.338
 validation false-positive: 0 / 7 = 0.0%
-validation false-negative: 1 / 4 = 25.0%
+validation false-negative: 0 / 2 = 0.0%
 ```
 
-Bu sonuç küçük validation split nedeniyle güçlü genelleme kanıtı değildir; threshold yalnız aynı embedding, corpus ve pipeline snapshot'ı için uygulanmıştır. Calibration çıktısı [hybrid_threshold_calibration.json](../eval/results/hybrid_threshold_calibration.json) dosyasındadır.
+`0.338` yalnız score-bearing, security dışı dokuz vakalık küçük validation
+alt kümesinin önerisidir; güçlü genelleme kanıtı değildir. Operasyon varsayılanı
+`0.379` olarak korunmuştur. Böylece yeni security policy'nin skor üretmediği
+vakalarla threshold kararı birbirine karıştırılmıyor; runtime ayarını daha geniş
+bir validation seti olmadan sessizce değiştirmiyorum. Calibration çıktısı
+[hybrid_threshold_calibration.json](../eval/results/hybrid_threshold_calibration.json)
+dosyasındadır.
 
 ### Skor sırası düzeltmesi
 
@@ -145,14 +156,32 @@ Prompt-injection ve cross-document leakage vakaları threshold seçimine dahil e
 
 ```text
 test security cases: 4
-passed: 2 / 4 = 50%
+passed: 4 / 4 = 100%
 leakage_acl: 2 / 2 passed
-prompt_injection: 0 / 2 passed
-failures: injection_03, injection_04
+prompt_injection: 2 / 2 passed
+failures: none
 LLM çağrısı: 0
 ```
 
-Bu bir “model güvenli” sonucu değildir; tam tersine mevcut uygulama gate'inin iki direct/system-prompt injection hazırlık vakasını kaçırdığını gösteren kırmızı sonuçtur. `AnswerabilityPolicy` yalnız evidence score ve coverage ile çalıştığı için, sorunun talimat kısmını güvenilir kabul edip etmemeyi tek başına çözemez. Sonraki savunma katmanı structured prompt, output fact/evidence validation ve gerektiğinde güvenli handoff olmalıdır. Ham rapor [security_test_gate.json](../eval/results/security_test_gate.json) dosyasındadır.
+Bu sonuç modelin tek başına güvenli olduğunu göstermez; direct injection için
+uygulama seviyesinde ayrı bir politika eklendiğini gösterir. `PromptSafetyPolicy`
+yüksek güvenli kalıpları retrieval'dan önce kontrol ediyor: önceki kuralları
+geçersiz kılma, kaynakları görmezden gelme, system prompt/gizli kural çıkarma ve
+kaynaksız kesin iddia üretme. Engellenen istek `SECURITY_POLICY` no-answer döner,
+source listesi boş kalır ve LLM çağrılmaz. Kavramsal “system prompt nedir?”
+soruları ise engellenmez. Ham rapor [security_test_gate.json](../eval/results/security_test_gate.json)
+dosyasındadır.
+
+### Defense-in-depth sınırı
+
+Bu katman yalnız direct user-query injection'ını dar ve deterministik kurallarla
+ele alır. Bilinmeyen saldırılar ve PDF içindeki instruction-like metinler için
+Ollama system prompt'unda evidence açıkça `UNTRUSTED_EVIDENCE` olarak işaretlenir;
+çıktı kaynakları model metninden değil canonical retrieval nesnelerinden alınır.
+Bu yüzden güvenlik kararı tek bir regex veya tek bir LLM prompt'una değil,
+`PromptSafetyPolicy → answerability → structured prompt → output validation`
+zincirine yayılır. Rule set büyütülürken benign soru false positive oranı ayrıca
+ölçülmelidir.
 
 ## Real local Gemma output-validation smoke — 2026-08-09
 

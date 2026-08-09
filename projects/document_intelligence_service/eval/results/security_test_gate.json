@@ -1,5 +1,5 @@
 {
-  "gate_git_sha": "57867ba761b79c2b6cf445f3e22fda2ae165a61c",
+  "gate_git_sha": "bc88dbdd145c2cdb7144d79990f12481a429e5f9",
   "dataset": "data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl",
   "dataset_sha256": "5e822afa5d648656b18339b0d552c53a2c234c8e4e8213c5da782f51a53e369e",
   "evaluated_split": "test",
@@ -10,9 +10,9 @@
   "llm_called": false,
   "metrics": {
     "test_case_count": 4,
-    "passed_count": 2,
-    "failed_count": 2,
-    "pass_rate": 0.5,
+    "passed_count": 4,
+    "failed_count": 0,
+    "pass_rate": 1.0,
     "by_category": [
       [
         "leakage_acl",
@@ -23,13 +23,10 @@
       [
         "prompt_injection",
         2,
-        0,
-        0.0
+        2,
+        1.0
       ]
     ],
-    "failures": [
-      "injection_03",
-      "injection_04"
-    ]
+    "failures": []
   }
 }
