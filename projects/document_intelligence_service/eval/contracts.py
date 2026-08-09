@@ -62,6 +62,7 @@ class GoldenCase:
     expected_phrases: tuple[str, ...] = ()
     forbidden_phrases: tuple[str, ...] = ()
     notes: str = ""
+    language: str = "tr"
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, object]) -> "GoldenCase":
@@ -82,6 +83,9 @@ class GoldenCase:
         expected_answerable = raw.get("expected_answerable")
         if not isinstance(expected_answerable, bool):
             raise ValueError("expected_answerable must be a boolean")
+        language = raw.get("language", "tr")
+        if not isinstance(language, str) or not language.strip():
+            raise ValueError("language must be a non-empty string")
 
         relevant_document_ids = _string_tuple(raw, "relevant_document_ids")
         relevant_sections = _string_tuple(raw, "relevant_sections")
@@ -111,6 +115,7 @@ class GoldenCase:
             expected_phrases=_string_tuple(raw, "expected_phrases"),
             forbidden_phrases=_string_tuple(raw, "forbidden_phrases"),
             notes=_optional_string(raw, "notes"),
+            language=language.strip().lower(),
         )
 
     def target_keys(self) -> frozenset[str]:
@@ -238,4 +243,3 @@ def _literal(value: str, allowed: frozenset[str], field: str) -> str:
     if value not in allowed:
         raise ValueError(f"unsupported {field}: {value}")
     return value
-

@@ -2,8 +2,10 @@
 
 from argparse import ArgumentParser
 from dataclasses import asdict
+import csv
 import json
 from pathlib import Path
+import random
 import subprocess
 
 from ..app.domain.answerability import AnswerabilityPolicy
@@ -13,6 +15,7 @@ from ..app.main import build_retrieval_service
 from ..app.settings import Settings
 from .contracts import load_jsonl, validate_case_set
 from .runner import run_answerability_benchmark
+from .reporting import build_run_manifest
 
 DEFAULT_DATASET = Path("data/evaluations/mentor_program_pdf_rag_golden_v1.jsonl")
 DEFAULT_WARMUPS = (
@@ -31,9 +34,12 @@ def main() -> None:
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--split", choices=("all", "development", "validation", "test"), default="all")
+    parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--point-count", type=int, default=None)
     args = parser.parse_args()
 
-    cases = validate_case_set(
+    all_cases = validate_case_set(
         load_jsonl(args.dataset),
         minimum_count=44,
         expected_category_counts={
@@ -47,6 +53,11 @@ def main() -> None:
             "leakage_acl": 4,
         },
     )
+    ordered_cases = [
+        case for case in all_cases if args.split == "all" or case.split == args.split
+    ]
+    random.Random(args.seed).shuffle(ordered_cases)
+    cases = tuple(ordered_cases)
     settings = Settings(
         section_marker_profile="mentor_program_v1",
         reranker_enabled=args.reranker,
@@ -66,6 +77,29 @@ def main() -> None:
         mode=RetrievalMode(args.mode),
         top_k=args.top_k,
         warmup_questions=DEFAULT_WARMUPS,
+    )
+    manifest = build_run_manifest(
+        dataset_path=args.dataset,
+        cases=cases,
+        qdrant_collection="document_chunks_v2_bm25",
+        point_count=args.point_count,
+        pipeline_config={
+            "embedding_model": PipelineConfig().embedding_model,
+            "sparse_encoder": PipelineConfig().sparse_encoder,
+            "reranker_model": PipelineConfig().reranker_model if args.reranker else None,
+            "answerability_policy": {
+                "min_dense_score": policy.min_dense_score,
+                "min_sparse_score": policy.min_sparse_score,
+                "min_rerank_score": policy.min_rerank_score,
+                "min_margin": policy.min_margin,
+                "min_coverage": policy.min_coverage,
+            },
+        },
+        mode=args.mode,
+        reranker_enabled=args.reranker,
+        top_k=args.top_k,
+        warmup_questions=DEFAULT_WARMUPS,
+        query_order_seed=args.seed,
     )
     report = {
         "git_sha": subprocess.check_output(
@@ -87,12 +121,46 @@ def main() -> None:
         "qdrant_collection": "document_chunks_v2_bm25",
         "sparse_encoder": PipelineConfig().sparse_encoder,
         "run": asdict(run),
+        "manifest": manifest,
+        "query_order": [case.case_id for case in cases],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    by_id = {case.case_id: case for case in cases}
+    for observation in run.observations:
+        case = by_id[observation.case_id]
+        rows.append(
+            {
+                "case_id": case.case_id,
+                "category": case.category,
+                "split": case.split,
+                "language": case.language,
+                "expected_answerable": case.expected_answerable,
+                "decision": observation.decision,
+                "reason": observation.reason,
+                "status": observation.status,
+                "error_code": observation.error_code,
+                "error_message": observation.error_message,
+                "total_ms": observation.total_ms,
+                "top_score": observation.top_score,
+                "score_margin": observation.score_margin,
+                "coverage_ratio": observation.coverage_ratio,
+            }
+        )
+    raw_jsonl = args.output.with_name(f"{args.output.stem}_raw.jsonl")
+    raw_csv = args.output.with_name(f"{args.output.stem}_raw.csv")
+    with raw_jsonl.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with raw_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=tuple(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
     metrics = run.metrics
     print(
         json.dumps(
